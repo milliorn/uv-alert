@@ -1,0 +1,10 @@
+{
+  "release-type": "simple",
+  "extra-files": [
+    {
+      "type": "yaml",
+      "path": "pubspec.yaml",
+      "jsonpath": "$.version"
+    }
+  ]
+}
