@@ -1,0 +1,52 @@
+ci/cd:
+  - changed-files:
+      - any-glob-to-any-file:
+          - .github/workflows/**
+
+github_actions:
+  - changed-files:
+      - any-glob-to-any-file:
+          - .github/**
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - pubspec.yaml
+          - pubspec.lock
+
+android:
+  - changed-files:
+      - any-glob-to-any-file:
+          - android/**
+
+ios:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ios/**
+
+dart:
+  - changed-files:
+      - any-glob-to-any-file:
+          - lib/**/*.dart
+          - test/**/*.dart
+
+assets:
+  - changed-files:
+      - any-glob-to-any-file:
+          - assets/**
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.md"
+          - docs/**
+
+configuration:
+  - changed-files:
+      - any-glob-to-any-file:
+          - analysis_options.yaml
+          - release-please-config.json
+          - .gitignore
+          - .metadata
+          - "**/*.yml"
+          - "**/*.yaml"
