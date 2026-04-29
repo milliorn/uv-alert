@@ -53,18 +53,3 @@ jobs:
         if: steps.decision.outputs.action == 'deny'
         run: |
           gh pr close "$PR_URL" --comment "Auto-closed: ecosystem \`${{ steps.metadata.outputs.package-ecosystem }}\` / update-type \`${{ steps.metadata.outputs.update-type }}\` did not match any allow-list rule. Check dependabot.yml if this is unexpected."
-
-  review-release-please-pr:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    if: "${{ github.event.pull_request.user.login == 'github-actions[bot]' && startsWith(github.event.pull_request.title, 'chore(main): release') }}"
-    env:
-      PR_URL: ${{ github.event.pull_request.html_url }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    steps:
-      - name: Allow — approve and merge
-        if: github.actor != github.event.pull_request.user.login
-        run: |
-          gh pr review "$PR_URL" --approve -b "Auto-approved: release-please release PR."
-          gh pr merge "$PR_URL" --squash --auto
