@@ -1,3 +1,8 @@
+DateTime _fromEpochSeconds(int s) =>
+    DateTime.fromMillisecondsSinceEpoch(s * 1000, isUtc: true);
+
+int _toEpochSeconds(DateTime dt) => dt.millisecondsSinceEpoch ~/ 1000;
+
 class UvForecastEntry {
   final DateTime time;
   final double uvi;
@@ -6,7 +11,7 @@ class UvForecastEntry {
 
   factory UvForecastEntry.fromJson(Map<String, dynamic> json) {
     return UvForecastEntry(
-      time: DateTime.fromMillisecondsSinceEpoch(json['dt'] * 1000, isUtc: true),
+      time: _fromEpochSeconds(json['dt'] as int),
       uvi: (json['uvi'] as num).toDouble(),
     );
   }
