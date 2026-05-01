@@ -45,14 +45,8 @@ class UvData {
 
     return UvData(
       currentUvi: (current['uvi'] as num).toDouble(),
-      sunrise: DateTime.fromMillisecondsSinceEpoch(
-        current['sunrise'] * 1000,
-        isUtc: true,
-      ),
-      sunset: DateTime.fromMillisecondsSinceEpoch(
-        current['sunset'] * 1000,
-        isUtc: true,
-      ),
+      sunrise: _fromEpochSeconds(current['sunrise'] as int),
+      sunset: _fromEpochSeconds(current['sunset'] as int),
       clouds: (current['clouds'] as num).toInt(),
       hourly: (json['hourly'] as List? ?? [])
           .map((h) => UvForecastEntry.fromJson(h as Map<String, dynamic>))
