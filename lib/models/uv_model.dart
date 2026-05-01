@@ -68,7 +68,9 @@ class UvData {
       daily: (json['daily'] as List).map((d) => DailyUv.fromJson(d)).toList(),
       timezone: json['timezone'] as String,
       timezoneOffset: json['timezone_offset'] as int,
-      fetchedAt: DateTime.now().toUtc(),
+      fetchedAt: json['fetched_at'] != null
+          ? DateTime.parse(json['fetched_at'] as String)
+          : DateTime.now().toUtc(),
     );
   }
 
