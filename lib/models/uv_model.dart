@@ -66,19 +66,15 @@ class UvData {
     return {
       'current': {
         'uvi': currentUvi,
-        'sunrise': sunrise.millisecondsSinceEpoch ~/ 1000,
-        'sunset': sunset.millisecondsSinceEpoch ~/ 1000,
+        'sunrise': _toEpochSeconds(sunrise),
+        'sunset': _toEpochSeconds(sunset),
         'clouds': clouds,
       },
       'hourly': hourly
-          .map(
-            (h) => {'dt': h.time.millisecondsSinceEpoch ~/ 1000, 'uvi': h.uvi},
-          )
+          .map((h) => {'dt': _toEpochSeconds(h.time), 'uvi': h.uvi})
           .toList(),
       'daily': daily
-          .map(
-            (d) => {'dt': d.time.millisecondsSinceEpoch ~/ 1000, 'uvi': d.uvi},
-          )
+          .map((d) => {'dt': _toEpochSeconds(d.time), 'uvi': d.uvi})
           .toList(),
       'timezone': timezone,
       'timezone_offset': timezoneOffset,
