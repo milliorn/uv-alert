@@ -11,8 +11,10 @@ class Cache {
   Future<void> store(UvData data) async {
     final json = jsonEncode(data.toJson());
 
-    await _prefs.setCachedPayload(json);
-    await _prefs.setCachedPayloadAt(data.fetchedAt.toIso8601String());
+    await Future.wait([
+      _prefs.setCachedPayload(json),
+      _prefs.setCachedPayloadAt(data.fetchedAt.toIso8601String()),
+    ]);
   }
 
   UvData? read() {
