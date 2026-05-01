@@ -10,22 +10,28 @@ class Cache {
 
   Future<void> store(UvData data) async {
     final json = jsonEncode(data.toJson());
+
     await _prefs.setCachedPayload(json);
     await _prefs.setCachedPayloadAt(data.fetchedAt.toIso8601String());
   }
 
   UvData? read() {
     final raw = _prefs.cachedPayload;
+
     if (raw == null) return null;
+
     return UvData.fromJson(jsonDecode(raw));
   }
 
-  bool isStale() {
-    final at = _prefs.cachedPayloadAt;
-    if (at == null) return true;
-    final fetched = DateTime.parse(at);
+  bool get isStale {
+    final cachedAt = _prefs.cachedPayloadAt;
+
+    if (cachedAt == null) return true;
+
+    final fetched = DateTime.parse(cachedAt);
+
     return DateTime.now().toUtc().difference(fetched).inHours >= 24;
   }
 
-  bool isEmpty() => _prefs.cachedPayload == null;
+  bool get isEmpty => _prefs.cachedPayload == null;
 }
