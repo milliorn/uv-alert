@@ -47,4 +47,9 @@ class Preferences {
   String? get cachedPayloadAt => _prefs.getString(_keyCachedPayloadAt);
   Future<void> setCachedPayloadAt(String isoTimestamp) =>
       _prefs.setString(_keyCachedPayloadAt, isoTimestamp);
+
+  Future<void> clearCache() => Future.wait([
+        _prefs.remove(_keyCachedPayload),
+        _prefs.remove(_keyCachedPayloadAt),
+      ]);
 }
