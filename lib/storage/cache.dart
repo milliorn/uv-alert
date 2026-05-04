@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/storage/preferences.dart';
 
+const _cacheMaxAgeHours = 24;
+
 class Cache {
   final Preferences _prefs;
 
