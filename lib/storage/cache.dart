@@ -24,7 +24,12 @@ class Cache {
 
     if (raw == null) return null;
 
-    return UvData.fromJson(jsonDecode(raw));
+    try {
+      return UvData.fromJson(jsonDecode(raw));
+    } catch (_) {
+      _prefs.clearCache();
+      return null;
+    }
   }
 
   bool get isStale {
@@ -34,7 +39,7 @@ class Cache {
 
     final fetched = DateTime.parse(cachedAt);
 
-    return DateTime.now().toUtc().difference(fetched).inHours >= 24;
+    return DateTime.now().toUtc().difference(fetched).inHours >= _cacheMaxAgeHours;
   }
 
   bool get isEmpty => _prefs.cachedPayload == null;
