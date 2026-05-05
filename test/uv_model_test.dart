@@ -57,7 +57,9 @@ void main() {
     });
 
     test('fromJson falls back to now when fetched_at is absent', () {
-      final before = DateTime.now().toUtc().subtract(const Duration(seconds: 1));
+      final before = DateTime.now().toUtc().subtract(
+        const Duration(seconds: 1),
+      );
       final json = Map<String, dynamic>.from(sampleJson)..remove('fetched_at');
       final data = UvData.fromJson(json);
       final after = DateTime.now().toUtc().add(const Duration(seconds: 1));

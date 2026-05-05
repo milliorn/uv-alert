@@ -31,9 +31,9 @@ class UvApi {
       return _cache.read()!;
     }
 
-    final uri = Uri.parse('$_proxyBaseUrl/api/uv').replace(
-      queryParameters: {'lat': lat.toString(), 'lon': lon.toString()},
-    );
+    final uri = Uri.parse(
+      '$_proxyBaseUrl/api/uv',
+    ).replace(queryParameters: {'lat': lat.toString(), 'lon': lon.toString()});
 
     final response = await _httpClient
         .get(uri, headers: {'X-Device-ID': uuid})

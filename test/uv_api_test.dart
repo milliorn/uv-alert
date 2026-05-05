@@ -13,30 +13,30 @@ class MockCache extends Mock implements Cache {}
 class _FakeUvData extends Fake implements UvData {}
 
 UvData _makeData() => UvData(
-      currentUvi: 5.0,
-      sunrise: DateTime.utc(2023, 11, 14, 6),
-      sunset: DateTime.utc(2023, 11, 14, 18),
-      clouds: 0,
-      hourly: [],
-      daily: [],
-      timezone: 'UTC',
-      timezoneOffset: 0,
-      fetchedAt: DateTime.utc(2023, 11, 14, 12),
-    );
+  currentUvi: 5.0,
+  sunrise: DateTime.utc(2023, 11, 14, 6),
+  sunset: DateTime.utc(2023, 11, 14, 18),
+  clouds: 0,
+  hourly: [],
+  daily: [],
+  timezone: 'UTC',
+  timezoneOffset: 0,
+  fetchedAt: DateTime.utc(2023, 11, 14, 12),
+);
 
 Map<String, dynamic> _apiJson() => {
-      'current': {
-        'uvi': 5.0,
-        'sunrise': 1699945200,
-        'sunset': 1699988400,
-        'clouds': 0,
-      },
-      'hourly': [],
-      'daily': [],
-      'timezone': 'UTC',
-      'timezone_offset': 0,
-      'fetched_at': '2023-11-14T12:00:00.000Z',
-    };
+  'current': {
+    'uvi': 5.0,
+    'sunrise': 1699945200,
+    'sunset': 1699988400,
+    'clouds': 0,
+  },
+  'hourly': [],
+  'daily': [],
+  'timezone': 'UTC',
+  'timezone_offset': 0,
+  'fetched_at': '2023-11-14T12:00:00.000Z',
+};
 
 http.Client _clientReturning(int status, Map<String, dynamic> body) {
   return MockClient((_) async => http.Response(jsonEncode(body), status));
@@ -59,10 +59,7 @@ void main() {
       when(() => mockCache.isValid).thenReturn(true);
       when(() => mockCache.read()).thenReturn(cached);
 
-      final api = UvApi(
-        cache: mockCache,
-        proxyBaseUrl: 'http://example.com',
-      );
+      final api = UvApi(cache: mockCache, proxyBaseUrl: 'http://example.com');
 
       final result = await api.fetch(lat: 40.7, lon: -74.0, uuid: 'uuid-1');
 
@@ -99,7 +96,9 @@ void main() {
 
       await expectLater(
         () => api.fetch(lat: 40.7, lon: -74.0, uuid: 'uuid-1'),
-        throwsA(isA<UvApiException>().having((e) => e.statusCode, 'statusCode', 500)),
+        throwsA(
+          isA<UvApiException>().having((e) => e.statusCode, 'statusCode', 500),
+        ),
       );
     });
 
@@ -109,9 +108,7 @@ void main() {
       final api = UvApi(
         cache: mockCache,
         proxyBaseUrl: 'http://example.com',
-        httpClient: MockClient(
-          (_) async => http.Response('not json', 200),
-        ),
+        httpClient: MockClient((_) async => http.Response('not json', 200)),
       );
 
       await expectLater(

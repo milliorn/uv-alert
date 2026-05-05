@@ -39,7 +39,8 @@ class Cache {
 
     final fetched = DateTime.parse(cachedAt);
 
-    return DateTime.now().toUtc().difference(fetched).inHours >= _cacheMaxAgeHours;
+    return DateTime.now().toUtc().difference(fetched).inHours >=
+        _cacheMaxAgeHours;
   }
 
   bool get isEmpty => _prefs.cachedPayload == null;

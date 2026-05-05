@@ -51,18 +51,18 @@ class Preferences {
       _prefs.setString(_keyCachedPayloadAt, isoTimestamp);
 
   Future<void> clearCache() => Future.wait([
-        _prefs.remove(_keyCachedPayload),
-        _prefs.remove(_keyCachedPayloadAt),
-      ]);
+    _prefs.remove(_keyCachedPayload),
+    _prefs.remove(_keyCachedPayloadAt),
+  ]);
 
   Future<void> clearAll() => Future.wait([
-        _prefs.remove(_keyFirstLaunch),
-        _prefs.remove(_keyUuid),
-        _prefs.remove(_keyTheme),
-        _prefs.remove(_keyUseGps),
-        _prefs.remove(_keyManualLocation),
-        _prefs.remove(_keyNotificationsEnabled),
-        _prefs.remove(_keyCachedPayload),
-        _prefs.remove(_keyCachedPayloadAt),
-      ]);
+    _prefs.remove(_keyFirstLaunch),
+    _prefs.remove(_keyUuid),
+    _prefs.remove(_keyTheme),
+    _prefs.remove(_keyUseGps),
+    _prefs.remove(_keyManualLocation),
+    _prefs.remove(_keyNotificationsEnabled),
+    _prefs.remove(_keyCachedPayload),
+    _prefs.remove(_keyCachedPayloadAt),
+  ]);
 }
