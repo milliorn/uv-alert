@@ -4,13 +4,20 @@ import 'package:http/http.dart' as http;
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/storage/cache.dart';
 
+const _defaultTimeout = Duration(seconds: 10);
+
 class UvApi {
   final Cache _cache;
   final String _proxyBaseUrl;
+  final Duration _timeout;
 
-  UvApi({required Cache cache, required String proxyBaseUrl})
-    : _cache = cache,
-      _proxyBaseUrl = proxyBaseUrl;
+  UvApi({
+    required Cache cache,
+    required String proxyBaseUrl,
+    Duration timeout = _defaultTimeout,
+  }) : _cache = cache,
+       _proxyBaseUrl = proxyBaseUrl,
+       _timeout = timeout;
 
   Future<UvData> fetch({
     required double lat,
@@ -22,14 +29,12 @@ class UvApi {
     }
 
     final uri = Uri.parse('$_proxyBaseUrl/api/uv').replace(
-      queryParameters: {
-        'lat': lat.toString(),
-        'lon': lon.toString(),
-        'uuid': uuid,
-      },
+      queryParameters: {'lat': lat.toString(), 'lon': lon.toString()},
     );
 
-    final response = await http.get(uri).timeout(const Duration(seconds: 10));
+    final response = await http
+        .get(uri, headers: {'X-Device-ID': uuid})
+        .timeout(_timeout);
 
     if (response.statusCode != 200) {
       throw UvApiException(response.statusCode, response.body);
