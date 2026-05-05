@@ -10,6 +10,8 @@ import 'package:uvalert/storage/cache.dart';
 
 class MockCache extends Mock implements Cache {}
 
+class _FakeUvData extends Fake implements UvData {}
+
 UvData _makeData() => UvData(
       currentUvi: 5.0,
       sunrise: DateTime.utc(2023, 11, 14, 6),
@@ -42,6 +44,10 @@ http.Client _clientReturning(int status, Map<String, dynamic> body) {
 
 void main() {
   late MockCache mockCache;
+
+  setUpAll(() {
+    registerFallbackValue(_FakeUvData());
+  });
 
   setUp(() {
     mockCache = MockCache();
