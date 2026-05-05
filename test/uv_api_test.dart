@@ -103,8 +103,6 @@ void main() {
     });
 
     test('throws UvApiException on malformed JSON body', () async {
-      when(() => mockCache.isValid).thenReturn(false);
-
       final api = UvApi(
         cache: mockCache,
         proxyBaseUrl: 'http://example.com',
