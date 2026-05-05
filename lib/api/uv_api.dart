@@ -11,6 +11,7 @@ class UvApi {
   final String _proxyBaseUrl;
   final Duration _timeout;
   final http.Client _httpClient;
+  final bool _ownsClient;
 
   UvApi({
     required Cache cache,
@@ -20,7 +21,12 @@ class UvApi {
   }) : _cache = cache,
        _proxyBaseUrl = proxyBaseUrl,
        _timeout = timeout,
+       _ownsClient = httpClient == null,
        _httpClient = httpClient ?? http.Client();
+
+  void dispose() {
+    if (_ownsClient) _httpClient.close();
+  }
 
   Future<UvData> fetch({
     required double lat,
