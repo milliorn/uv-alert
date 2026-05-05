@@ -52,7 +52,7 @@ void main() {
 
     test('is stale when timestamp is 25 hours old', () async {
       final old = DateTime.now().toUtc().subtract(const Duration(hours: 25));
-      await prefs.setCachedPayload('{}');
+      await cache.store(_makeData(fetchedAt: old));
       await prefs.setCachedPayloadAt(old.toIso8601String());
       expect(cache.isStale, isTrue);
     });
