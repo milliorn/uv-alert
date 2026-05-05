@@ -10,14 +10,17 @@ class UvApi {
   final Cache _cache;
   final String _proxyBaseUrl;
   final Duration _timeout;
+  final http.Client _httpClient;
 
   UvApi({
     required Cache cache,
     required String proxyBaseUrl,
     Duration timeout = _defaultTimeout,
+    http.Client? httpClient,
   }) : _cache = cache,
        _proxyBaseUrl = proxyBaseUrl,
-       _timeout = timeout;
+       _timeout = timeout,
+       _httpClient = httpClient ?? http.Client();
 
   Future<UvData> fetch({
     required double lat,
@@ -32,7 +35,7 @@ class UvApi {
       queryParameters: {'lat': lat.toString(), 'lon': lon.toString()},
     );
 
-    final response = await http
+    final response = await _httpClient
         .get(uri, headers: {'X-Device-ID': uuid})
         .timeout(_timeout);
 
