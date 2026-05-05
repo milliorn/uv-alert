@@ -31,6 +31,8 @@ class Preferences {
   bool get useGps => _prefs.getBool(_keyUseGps) ?? true;
   Future<void> setUseGps(bool value) => _prefs.setBool(_keyUseGps, value);
 
+  // TODO(location): stored as a raw string; migrate to a structured type
+  // (lat/lon pair or named-place object) when the location feature lands.
   String? get manualLocation => _prefs.getString(_keyManualLocation);
   Future<void> setManualLocation(String location) =>
       _prefs.setString(_keyManualLocation, location);
