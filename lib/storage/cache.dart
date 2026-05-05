@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/storage/preferences.dart';
 
@@ -26,8 +28,13 @@ class Cache {
 
     try {
       return UvData.fromJson(jsonDecode(raw));
-    } catch (_) {
-      _prefs.clearCache();
+    } on FormatException catch (e) {
+      if (kDebugMode) debugPrint('Cache.read: corrupt payload: $e');
+      unawaited(_prefs.clearCache());
+      return null;
+    } on TypeError catch (e) {
+      if (kDebugMode) debugPrint('Cache.read: type mismatch in payload: $e');
+      unawaited(_prefs.clearCache());
       return null;
     }
   }
