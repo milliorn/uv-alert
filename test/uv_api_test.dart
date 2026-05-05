@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -148,6 +149,20 @@ void main() {
       await api.fetch(lat: 40.7, lon: -74.0, uuid: 'my-device-uuid');
 
       expect(deviceId, 'my-device-uuid');
+    });
+
+    test('propagates TimeoutException when request exceeds timeout', () async {
+      final api = UvApi(
+        cache: mockCache,
+        proxyBaseUrl: 'http://example.com',
+        timeout: const Duration(milliseconds: 1),
+        httpClient: MockClient((_) => Completer<http.Response>().future),
+      );
+
+      await expectLater(
+        () => api.fetch(lat: 40.7, lon: -74.0, uuid: 'uuid-1'),
+        throwsA(isA<TimeoutException>()),
+      );
     });
   });
 
