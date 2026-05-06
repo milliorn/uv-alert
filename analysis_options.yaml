@@ -14,3 +14,6 @@ linter:
     public_member_api_docs: false
     require_trailing_commas: false
     avoid_futureor_void: true
+    unnecessary_underscores: true
+    use_null_aware_elements: true
+    strict_top_level_inference: true
