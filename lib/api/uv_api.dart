@@ -41,6 +41,8 @@ class UvApi {
       '$_proxyBaseUrl/api/uv',
     ).replace(queryParameters: {'lat': lat.toString(), 'lon': lon.toString()});
 
+    // TODO(retry): add exponential backoff for TimeoutException
+    //   and transient errors
     final response = await _httpClient
         .get(uri, headers: {'X-Device-ID': uuid})
         .timeout(_timeout);
