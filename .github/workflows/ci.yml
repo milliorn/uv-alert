@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test with coverage
+        run: flutter test --coverage
+
+      - name: Enforce 100% line coverage
+        run: |
+          awk '/^SF:/{sf=$0} /^LF:/{lf=$0} /^LH:/{lh=$0; \
+            gsub(/SF:/,"",sf); gsub(/LF:/,"",lf); gsub(/LH:/,"",lh); \
+            if (lf != lh) {print "FAIL: " sf " covered " lh "/" lf " lines"; fail=1}} \
+            END{exit fail}' coverage/lcov.info
