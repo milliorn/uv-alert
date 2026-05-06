@@ -1,5 +1,8 @@
 include: package:very_good_analysis/analysis_options.yaml
 
+formatter:
+  page_width: 80
+
 analyzer:
   language:
     strict-casts: true
@@ -8,12 +11,6 @@ analyzer:
 
 linter:
   rules:
-    # Disabled: app (not a library), doc comments on every member is noise
     public_member_api_docs: false
-    # Additional rules beyond very_good_analysis
-    always_put_required_named_parameters_first: true
-    avoid_catching_errors: true
-    avoid_dynamic_calls: true
+    require_trailing_commas: false
     avoid_futureor_void: true
-    only_throw_errors: true
-    use_enums: true
