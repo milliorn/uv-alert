@@ -60,8 +60,7 @@ void main() {
 
     test('is not stale when timestamp is 23 hours old', () async {
       final recent = DateTime.now().toUtc().subtract(const Duration(hours: 23));
-      final data = _makeData(fetchedAt: recent);
-      await cache.store(data);
+      await cache.store(_makeData(fetchedAt: recent));
       expect(cache.isStale, isFalse);
     });
   });
