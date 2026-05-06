@@ -11,6 +11,8 @@ import 'package:uvalert/storage/cache.dart';
 
 class MockCache extends Mock implements Cache {}
 
+class MockHttpClient extends Mock implements http.Client {}
+
 class _FakeUvData extends Fake implements UvData {}
 
 UvData _makeData() => UvData(
@@ -163,6 +165,34 @@ void main() {
         () => api.fetch(lat: 40.7, lon: -74.0, uuid: 'uuid-1'),
         throwsA(isA<TimeoutException>()),
       );
+    });
+  });
+
+  group('UvApi.dispose', () {
+    test('completes without error when UvApi owns the client', () {
+      // httpClient omitted → _ownsClient = true; dispose() calls close() on
+      // the internally created client. We can't intercept that client, so we
+      // just confirm dispose() does not throw.
+      final api = UvApi(
+        cache: mockCache,
+        proxyBaseUrl: 'http://example.com',
+      );
+
+      expect(api.dispose, returnsNormally);
+    });
+
+    test('does not close the client when UvApi does not own it', () {
+      final client = MockHttpClient();
+
+      final api = UvApi(
+        cache: mockCache,
+        proxyBaseUrl: 'http://example.com',
+        httpClient: client,
+      );
+
+      api.dispose();
+
+      verifyNever(() => client.close());
     });
   });
 
