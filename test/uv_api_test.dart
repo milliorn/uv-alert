@@ -11,6 +11,8 @@ import 'package:uvalert/storage/cache.dart';
 
 class MockCache extends Mock implements Cache {}
 
+// Used only in the dispose group to verify close() is never called on
+// externally-owned clients; MockClient suffices everywhere else.
 class MockHttpClient extends Mock implements http.Client {}
 
 class _FakeUvData extends Fake implements UvData {}
