@@ -53,7 +53,6 @@ void main() {
     test('is stale when timestamp is 25 hours old', () async {
       final old = DateTime.now().toUtc().subtract(const Duration(hours: 25));
       await cache.store(_makeData(fetchedAt: old));
-      await prefs.setCachedPayloadAt(old.toIso8601String());
       expect(cache.isStale, isTrue);
     });
 
@@ -77,10 +76,7 @@ void main() {
 
     test('is invalid when data is stale', () async {
       final old = DateTime.now().toUtc().subtract(const Duration(hours: 25));
-      final data = _makeData(fetchedAt: old);
-      await cache.store(data);
-      // Manually override the timestamp to simulate stale entry.
-      await prefs.setCachedPayloadAt(old.toIso8601String());
+      await cache.store(_makeData(fetchedAt: old));
       expect(cache.isValid, isFalse);
     });
   });
