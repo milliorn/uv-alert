@@ -33,9 +33,9 @@ class UvApi {
     required double lon,
     required String uuid,
   }) async {
-    if (_cache.isValid) {
-      return _cache.read()!;
-    }
+    final cached = _cache.read();
+    
+    if (cached != null && _cache.isValid) return cached;
 
     final uri = Uri.parse(
       '$_proxyBaseUrl/api/uv',
