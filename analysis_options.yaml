@@ -10,6 +10,25 @@ analyzer:
     strict-inference: true
     strict-raw-types: true
 
+  errors:
+    inference_failure_on_collection_literal: error
+    inference_failure_on_function_invocation: error
+    inference_failure_on_function_return_type: error
+    inference_failure_on_instance_creation: error
+    inference_failure_on_uninitialized_variable: error
+    inference_failure_on_untyped_parameter: error
+    unused_element: error
+    unused_local_variable: error
+    unused_import: error
+    unused_field: error
+    unnecessary_cast: error
+    unnecessary_null_comparison: error
+    unnecessary_non_null_assertion: error
+    dead_null_aware_expression: error
+    null_check_always_fails: error
+    collection_methods_unrelated_type: error
+    unrelated_type_equality_checks: error
+
 linter:
   rules:
     public_member_api_docs: false
