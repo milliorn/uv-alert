@@ -103,6 +103,14 @@ void main() {
       expect(result, isNull);
       expect(cache.isEmpty, isTrue);
     });
+
+    test('clears cache and returns null when payload is not a JSON object',
+        () async {
+      await prefs.setCachedPayload('[1, 2, 3]');
+      final result = cache.read();
+      expect(result, isNull);
+      expect(cache.isEmpty, isTrue);
+    });
   });
 
   group('Cache store', () {
