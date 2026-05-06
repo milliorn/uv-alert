@@ -8,9 +8,9 @@ import 'package:uvalert/storage/preferences.dart';
 const _cacheMaxAgeHours = 24;
 
 class Cache {
-  final Preferences _prefs;
 
   Cache(this._prefs);
+  final Preferences _prefs;
 
   Future<void> store(UvData data) async {
     final json = jsonEncode(data.toJson());
@@ -27,13 +27,15 @@ class Cache {
     if (raw == null) return null;
 
     try {
-      return UvData.fromJson(jsonDecode(raw));
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) {
+        if (kDebugMode) debugPrint('Cache.read: unexpected payload shape');
+        unawaited(_prefs.clearCache());
+        return null;
+      }
+      return UvData.fromJson(decoded);
     } on FormatException catch (e) {
       if (kDebugMode) debugPrint('Cache.read: corrupt payload: $e');
-      unawaited(_prefs.clearCache());
-      return null;
-    } on TypeError catch (e) {
-      if (kDebugMode) debugPrint('Cache.read: type mismatch in payload: $e');
       unawaited(_prefs.clearCache());
       return null;
     }

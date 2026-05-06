@@ -70,7 +70,7 @@ void main() {
 
     test('setUseGps toggles value', () async {
       final prefs = await Preferences.load();
-      await prefs.setUseGps(false);
+      await prefs.setUseGps(value: false);
       expect(prefs.useGps, isFalse);
     });
 
@@ -82,7 +82,7 @@ void main() {
 
     test('setNotificationsEnabled stores and retrieves value', () async {
       final prefs = await Preferences.load();
-      await prefs.setNotificationsEnabled(true);
+      await prefs.setNotificationsEnabled(value: true);
       expect(prefs.notificationsEnabled, isTrue);
     });
 
@@ -118,9 +118,9 @@ void main() {
       final prefs = await Preferences.load();
       await prefs.setUuid('abc');
       await prefs.setTheme('dark');
-      await prefs.setUseGps(false);
+      await prefs.setUseGps(value: false);
       await prefs.setManualLocation('Boston');
-      await prefs.setNotificationsEnabled(true);
+      await prefs.setNotificationsEnabled(value: true);
       await prefs.setCachedPayload('data');
       await prefs.setCachedPayloadAt('2023-11-14T12:00:00.000Z');
       await prefs.setFirstLaunchDone();

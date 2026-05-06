@@ -7,7 +7,7 @@ import 'package:uvalert/storage/preferences.dart';
 UvData _makeData({DateTime? fetchedAt}) {
   final now = fetchedAt ?? DateTime.now().toUtc();
   return UvData(
-    currentUvi: 5.0,
+    currentUvi: 5,
     sunrise: now,
     sunset: now.add(const Duration(hours: 12)),
     clouds: 10,
@@ -115,8 +115,8 @@ void main() {
     });
 
     test('overwrites previously stored data', () async {
-      final first = _makeData(fetchedAt: DateTime.utc(2023, 1, 1));
-      final second = _makeData(fetchedAt: DateTime.utc(2024, 1, 1));
+      final first = _makeData(fetchedAt: DateTime.utc(2023));
+      final second = _makeData(fetchedAt: DateTime.utc(2024));
       await cache.store(first);
       await cache.store(second);
 

@@ -4,8 +4,6 @@ DateTime _fromEpochSeconds(int s) =>
 int _toEpochSeconds(DateTime dt) => dt.millisecondsSinceEpoch ~/ 1000;
 
 class UvForecastEntry {
-  final DateTime time;
-  final double uvi;
 
   const UvForecastEntry({required this.time, required this.uvi});
 
@@ -15,20 +13,13 @@ class UvForecastEntry {
       uvi: (json['uvi'] as num).toDouble(),
     );
   }
+  final DateTime time;
+  final double uvi;
 
   Map<String, dynamic> toJson() => {'dt': _toEpochSeconds(time), 'uvi': uvi};
 }
 
 class UvData {
-  final double currentUvi;
-  final DateTime sunrise;
-  final DateTime sunset;
-  final int clouds;
-  final List<UvForecastEntry> hourly;
-  final List<UvForecastEntry> daily;
-  final String timezone;
-  final int timezoneOffset;
-  final DateTime fetchedAt;
 
   const UvData({
     required this.currentUvi,
@@ -63,6 +54,15 @@ class UvData {
           : DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
     );
   }
+  final double currentUvi;
+  final DateTime sunrise;
+  final DateTime sunset;
+  final int clouds;
+  final List<UvForecastEntry> hourly;
+  final List<UvForecastEntry> daily;
+  final String timezone;
+  final int timezoneOffset;
+  final DateTime fetchedAt;
 
   Map<String, dynamic> toJson() {
     return {

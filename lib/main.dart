@@ -13,7 +13,8 @@ void main() {
       FlutterError.onError = (FlutterErrorDetails details) {
         FlutterError.presentError(details);
         if (kReleaseMode) {
-          // TODO: forward to crash reporting (e.g. Sentry, Firebase Crashlytics)
+          // TODO(crashes): forward to crash reporting
+          // (e.g. Sentry, Firebase Crashlytics)
         }
       };
 
@@ -22,7 +23,8 @@ void main() {
     (Object error, StackTrace stack) {
       debugPrint('Unhandled async error: $error\n$stack');
       if (kReleaseMode) {
-        // TODO: forward to crash reporting (e.g. Sentry, Firebase Crashlytics)
+        // TODO(crashes): forward to crash reporting
+        // (e.g. Sentry, Firebase Crashlytics)
       }
     },
   );

@@ -33,7 +33,7 @@ void main() {
 
     test('parses epoch seconds into UTC DateTime', () {
       final entry = UvForecastEntry.fromJson({'dt': 0, 'uvi': 1.0});
-      expect(entry.time, DateTime.utc(1970, 1, 1));
+      expect(entry.time, DateTime.utc(1970));
     });
 
     test('accepts integer uvi', () {
@@ -60,7 +60,10 @@ void main() {
       final json = Map<String, dynamic>.from(sampleJson)..remove('fetched_at');
       final data = UvData.fromJson(json);
 
-      expect(data.fetchedAt, DateTime.fromMillisecondsSinceEpoch(0, isUtc: true));
+      expect(
+        data.fetchedAt,
+        DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+      );
     });
 
     test('fromJson handles missing hourly/daily lists', () {

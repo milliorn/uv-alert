@@ -1,6 +1,8 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Preferences {
+
+  Preferences._(this._prefs);
   static const _keyFirstLaunch = 'first_launch';
   static const _keyUuid = 'uuid';
   static const _keyTheme = 'theme';
@@ -11,8 +13,6 @@ class Preferences {
   static const _keyCachedPayloadAt = 'cached_payload_at';
 
   final SharedPreferences _prefs;
-
-  Preferences._(this._prefs);
 
   static Future<Preferences> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -29,7 +29,8 @@ class Preferences {
   Future<void> setTheme(String theme) => _prefs.setString(_keyTheme, theme);
 
   bool get useGps => _prefs.getBool(_keyUseGps) ?? true;
-  Future<void> setUseGps(bool value) => _prefs.setBool(_keyUseGps, value);
+  Future<void> setUseGps({required bool value}) =>
+      _prefs.setBool(_keyUseGps, value);
 
   // TODO(location): stored as a raw string; migrate to a structured type
   // (lat/lon pair or named-place object) when the location feature lands.
@@ -39,7 +40,7 @@ class Preferences {
 
   bool get notificationsEnabled =>
       _prefs.getBool(_keyNotificationsEnabled) ?? false;
-  Future<void> setNotificationsEnabled(bool value) =>
+  Future<void> setNotificationsEnabled({required bool value}) =>
       _prefs.setBool(_keyNotificationsEnabled, value);
 
   String? get cachedPayload => _prefs.getString(_keyCachedPayload);

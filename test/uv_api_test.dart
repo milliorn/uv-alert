@@ -16,7 +16,7 @@ class MockHttpClient extends Mock implements http.Client {}
 class _FakeUvData extends Fake implements UvData {}
 
 UvData _makeData() => UvData(
-  currentUvi: 5.0,
+  currentUvi: 5,
   sunrise: DateTime.utc(2023, 11, 14, 6),
   sunset: DateTime.utc(2023, 11, 14, 18),
   clouds: 0,
@@ -34,8 +34,8 @@ Map<String, dynamic> _apiJson() => {
     'sunset': 1699988400,
     'clouds': 0,
   },
-  'hourly': [],
-  'daily': [],
+  'hourly': <Map<String, dynamic>>[],
+  'daily': <Map<String, dynamic>>[],
   'timezone': 'UTC',
   'timezone_offset': 0,
   'fetched_at': '2023-11-14T12:00:00.000Z',
@@ -64,7 +64,7 @@ void main() {
 
       final api = UvApi(cache: mockCache, proxyBaseUrl: 'http://example.com');
 
-      final result = await api.fetch(lat: 40.7, lon: -74.0, uuid: 'uuid-1');
+      final result = await api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1');
 
       expect(result.currentUvi, cached.currentUvi);
       verifyNever(() => mockCache.store(any()));
@@ -84,7 +84,7 @@ void main() {
         httpClient: _clientReturning(200, _apiJson()),
       );
 
-      final result = await api.fetch(lat: 40.7, lon: -74.0, uuid: 'uuid-1');
+      final result = await api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1');
 
       expect(result.currentUvi, 5.0);
       verify(() => mockCache.store(any())).called(1);
@@ -98,7 +98,7 @@ void main() {
       );
 
       await expectLater(
-        () => api.fetch(lat: 40.7, lon: -74.0, uuid: 'uuid-1'),
+        () => api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1'),
         throwsA(
           isA<UvApiException>().having((e) => e.statusCode, 'statusCode', 500),
         ),
@@ -113,7 +113,7 @@ void main() {
       );
 
       await expectLater(
-        () => api.fetch(lat: 40.7, lon: -74.0, uuid: 'uuid-1'),
+        () => api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1'),
         throwsA(isA<UvApiException>()),
       );
     });
@@ -148,7 +148,7 @@ void main() {
         }),
       );
 
-      await api.fetch(lat: 40.7, lon: -74.0, uuid: 'my-device-uuid');
+      await api.fetch(lat: 40.7, lon: -74, uuid: 'my-device-uuid');
 
       expect(deviceId, 'my-device-uuid');
     });
@@ -162,7 +162,7 @@ void main() {
       );
 
       await expectLater(
-        () => api.fetch(lat: 40.7, lon: -74.0, uuid: 'uuid-1'),
+        () => api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1'),
         throwsA(isA<TimeoutException>()),
       );
     });
@@ -184,15 +184,13 @@ void main() {
     test('does not close the client when UvApi does not own it', () {
       final client = MockHttpClient();
 
-      final api = UvApi(
+      UvApi(
         cache: mockCache,
         proxyBaseUrl: 'http://example.com',
         httpClient: client,
-      );
+      ).dispose();
 
-      api.dispose();
-
-      verifyNever(() => client.close());
+      verifyNever(client.close);
     });
   });
 

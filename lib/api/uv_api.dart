@@ -7,11 +7,6 @@ import 'package:uvalert/storage/cache.dart';
 const _defaultTimeout = Duration(seconds: 10);
 
 class UvApi {
-  final Cache _cache;
-  final String _proxyBaseUrl;
-  final Duration _timeout;
-  final http.Client _httpClient;
-  final bool _ownsClient;
 
   UvApi({
     required Cache cache,
@@ -23,6 +18,11 @@ class UvApi {
        _timeout = timeout,
        _ownsClient = httpClient == null,
        _httpClient = httpClient ?? http.Client();
+  final Cache _cache;
+  final String _proxyBaseUrl;
+  final Duration _timeout;
+  final http.Client _httpClient;
+  final bool _ownsClient;
 
   void dispose() {
     if (_ownsClient) _httpClient.close();
@@ -64,10 +64,10 @@ class UvApi {
 }
 
 class UvApiException implements Exception {
-  final int statusCode;
-  final String body;
 
   UvApiException(this.statusCode, this.body);
+  final int statusCode;
+  final String body;
 
   @override
   String toString() => 'UvApiException($statusCode): $body';
