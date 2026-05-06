@@ -67,6 +67,5 @@ class Preferences {
     _prefs.remove(_keyCachedPayloadAt),
   ]);
 
-  Future<void> clearAll() =>
-      Future.wait(_ownedKeys.map(_prefs.remove));
+  Future<void> clearAll() => Future.wait(_ownedKeys.map(_prefs.remove));
 }
