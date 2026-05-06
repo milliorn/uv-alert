@@ -77,8 +77,7 @@ void main() {
     });
 
     test('is invalid when data is stale', () async {
-      final old = DateTime.now().toUtc().subtract(const Duration(hours: 25));
-      await cache.store(_makeData(fetchedAt: old));
+      await cache.store(_makeData(fetchedAt: _staleTimestamp()));
       expect(cache.isValid, isFalse);
     });
   });
