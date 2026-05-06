@@ -2,14 +2,26 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class Preferences {
   Preferences._(this._prefs);
-  static const _keyFirstLaunch = 'first_launch';
-  static const _keyUuid = 'uuid';
-  static const _keyTheme = 'theme';
-  static const _keyUseGps = 'use_gps';
-  static const _keyManualLocation = 'manual_location';
-  static const _keyNotificationsEnabled = 'notifications_enabled';
-  static const _keyCachedPayload = 'cached_payload';
-  static const _keyCachedPayloadAt = 'cached_payload_at';
+  static const _prefix = 'uvalert_';
+  static const _keyFirstLaunch = '${_prefix}first_launch';
+  static const _keyUuid = '${_prefix}uuid';
+  static const _keyTheme = '${_prefix}theme';
+  static const _keyUseGps = '${_prefix}use_gps';
+  static const _keyManualLocation = '${_prefix}manual_location';
+  static const _keyNotificationsEnabled = '${_prefix}notifications_enabled';
+  static const _keyCachedPayload = '${_prefix}cached_payload';
+  static const _keyCachedPayloadAt = '${_prefix}cached_payload_at';
+
+  static const _ownedKeys = [
+    _keyFirstLaunch,
+    _keyUuid,
+    _keyTheme,
+    _keyUseGps,
+    _keyManualLocation,
+    _keyNotificationsEnabled,
+    _keyCachedPayload,
+    _keyCachedPayloadAt,
+  ];
 
   final SharedPreferences _prefs;
 
@@ -55,5 +67,6 @@ class Preferences {
     _prefs.remove(_keyCachedPayloadAt),
   ]);
 
-  Future<void> clearAll() => _prefs.clear();
+  Future<void> clearAll() =>
+      Future.wait(_ownedKeys.map(_prefs.remove));
 }
