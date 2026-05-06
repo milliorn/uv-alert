@@ -60,7 +60,7 @@ class UvData {
       timezoneOffset: json['timezone_offset'] as int,
       fetchedAt: json['fetched_at'] != null
           ? DateTime.parse(json['fetched_at'] as String)
-          : DateTime.now().toUtc(),
+          : DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
     );
   }
 

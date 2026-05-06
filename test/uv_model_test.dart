@@ -56,16 +56,11 @@ void main() {
       expect(data.daily[0].uvi, 9.1);
     });
 
-    test('fromJson falls back to now when fetched_at is absent', () {
-      final before = DateTime.now().toUtc().subtract(
-        const Duration(seconds: 1),
-      );
+    test('fromJson falls back to epoch when fetched_at is absent', () {
       final json = Map<String, dynamic>.from(sampleJson)..remove('fetched_at');
       final data = UvData.fromJson(json);
-      final after = DateTime.now().toUtc().add(const Duration(seconds: 1));
 
-      expect(data.fetchedAt.isAfter(before), isTrue);
-      expect(data.fetchedAt.isBefore(after), isTrue);
+      expect(data.fetchedAt, DateTime.fromMillisecondsSinceEpoch(0, isUtc: true));
     });
 
     test('fromJson handles missing hourly/daily lists', () {
