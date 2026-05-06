@@ -1,7 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Preferences {
-
   Preferences._(this._prefs);
   static const _keyFirstLaunch = 'first_launch';
   static const _keyUuid = 'uuid';

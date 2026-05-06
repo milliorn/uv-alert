@@ -173,10 +173,7 @@ void main() {
       // httpClient omitted → _ownsClient = true; dispose() calls close() on
       // the internally created client. We can't intercept that client, so we
       // just confirm dispose() does not throw.
-      final api = UvApi(
-        cache: mockCache,
-        proxyBaseUrl: 'http://example.com',
-      );
+      final api = UvApi(cache: mockCache, proxyBaseUrl: 'http://example.com');
 
       expect(api.dispose, returnsNormally);
     });

@@ -8,7 +8,6 @@ import 'package:uvalert/storage/preferences.dart';
 const _cacheMaxAgeHours = 24;
 
 class Cache {
-
   Cache(this._prefs);
   final Preferences _prefs;
 

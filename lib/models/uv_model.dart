@@ -4,7 +4,6 @@ DateTime _fromEpochSeconds(int s) =>
 int _toEpochSeconds(DateTime dt) => dt.millisecondsSinceEpoch ~/ 1000;
 
 class UvForecastEntry {
-
   const UvForecastEntry({required this.time, required this.uvi});
 
   factory UvForecastEntry.fromJson(Map<String, dynamic> json) {
@@ -20,7 +19,6 @@ class UvForecastEntry {
 }
 
 class UvData {
-
   const UvData({
     required this.currentUvi,
     required this.sunrise,

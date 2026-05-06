@@ -7,7 +7,6 @@ import 'package:uvalert/storage/cache.dart';
 const _defaultTimeout = Duration(seconds: 10);
 
 class UvApi {
-
   UvApi({
     required Cache cache,
     required String proxyBaseUrl,
@@ -34,7 +33,7 @@ class UvApi {
     required String uuid,
   }) async {
     final cached = _cache.read();
-    
+
     if (cached != null && _cache.isValid) return cached;
 
     final uri = Uri.parse(
@@ -64,7 +63,6 @@ class UvApi {
 }
 
 class UvApiException implements Exception {
-
   UvApiException(this.statusCode, this.body);
   final int statusCode;
   final String body;
