@@ -56,5 +56,5 @@ class Cache {
 
   bool get isEmpty => _prefs.cachedPayload == null;
 
-  bool get isValid => !isStale;
+  bool get isValid => !isEmpty && !isStale;
 }

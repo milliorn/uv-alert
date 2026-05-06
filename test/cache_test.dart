@@ -79,6 +79,16 @@ void main() {
       await cache.store(_makeData(fetchedAt: _staleTimestamp()));
       expect(cache.isValid, isFalse);
     });
+
+    test(
+      'is invalid when payload is missing but timestamp is recent',
+      () async {
+      // Timestamp written without a payload (e.g. interrupted store, or a
+      // clearCache that only removed the payload key).
+      await prefs.setCachedPayloadAt(DateTime.now().toUtc().toIso8601String());
+      expect(cache.isValid, isFalse);
+      },
+    );
   });
 
   group('Cache read', () {
