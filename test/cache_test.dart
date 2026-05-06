@@ -4,6 +4,9 @@ import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/storage/cache.dart';
 import 'package:uvalert/storage/preferences.dart';
 
+DateTime _staleTimestamp() =>
+    DateTime.now().toUtc().subtract(const Duration(hours: 25));
+
 UvData _makeData({DateTime? fetchedAt}) {
   final now = fetchedAt ?? DateTime.now().toUtc();
   return UvData(
@@ -51,8 +54,7 @@ void main() {
     });
 
     test('is stale when timestamp is 25 hours old', () async {
-      final old = DateTime.now().toUtc().subtract(const Duration(hours: 25));
-      await cache.store(_makeData(fetchedAt: old));
+      await cache.store(_makeData(fetchedAt: _staleTimestamp()));
       expect(cache.isStale, isTrue);
     });
 
