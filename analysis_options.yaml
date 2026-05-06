@@ -28,6 +28,12 @@ analyzer:
     null_check_always_fails: error
     collection_methods_unrelated_type: error
     unrelated_type_equality_checks: error
+    dead_code: error
+    dead_code_catch_following_catch: error
+    dead_code_on_catch_subtype: error
+    body_might_complete_normally_nullable: error
+    await_only_futures: error
+    deprecated_member_use: error
 
 linter:
   rules:
