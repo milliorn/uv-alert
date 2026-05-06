@@ -12,7 +12,7 @@ class Preferences {
   static const _keyCachedPayload = '${_prefix}cached_payload';
   static const _keyCachedPayloadAt = '${_prefix}cached_payload_at';
 
-  static const _ownedKeys = [
+  static const List<String> _ownedKeys = [
     _keyFirstLaunch,
     _keyUuid,
     _keyTheme,
