@@ -120,6 +120,22 @@ void main() {
       );
     });
 
+    test('throws UvApiException when JSON is not an object', () async {
+      for (final body in ['[1,2,3]', '"a string"', '42']) {
+        final api = UvApi(
+          cache: mockCache,
+          proxyBaseUrl: 'http://example.com',
+          httpClient: MockClient((_) async => http.Response(body, 200)),
+        );
+
+        await expectLater(
+          () => api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1'),
+          throwsA(isA<UvApiException>()),
+          reason: 'expected UvApiException for body: $body',
+        );
+      }
+    });
+
     test('sends correct lat/lon query parameters', () async {
       Uri? capturedUri;
 
