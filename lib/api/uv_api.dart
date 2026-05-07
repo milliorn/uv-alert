@@ -58,7 +58,10 @@ class UvApi {
       throw UvApiException(response.statusCode, response.body);
     }
 
-    final data = UvData.fromJson(decoded as Map<String, dynamic>);
+    if (decoded is! Map<String, dynamic>) {
+      throw UvApiException(response.statusCode, response.body);
+    }
+    final data = UvData.fromJson(decoded);
 
     await _cache.store(data);
     return data;
