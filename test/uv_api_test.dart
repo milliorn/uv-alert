@@ -205,7 +205,8 @@ void main() {
         httpClient: client,
       ).dispose();
 
-      verifyNever(client.close);
+      // ignore: unnecessary_lambdas — tear-off would invoke close() for real
+      verifyNever(() => client.close());
     });
   });
 
