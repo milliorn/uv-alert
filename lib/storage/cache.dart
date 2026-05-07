@@ -48,7 +48,13 @@ class Cache {
 
     if (cachedAt == null) return true;
 
-    final fetched = DateTime.parse(cachedAt);
+    final DateTime fetched;
+    
+    try {
+      fetched = DateTime.parse(cachedAt);
+    } on FormatException {
+      return true;
+    }
 
     return DateTime.now().toUtc().difference(fetched).inHours >=
         _cacheMaxAgeHours;
