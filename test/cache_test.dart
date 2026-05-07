@@ -63,6 +63,11 @@ void main() {
       await cache.store(_makeData(fetchedAt: recent));
       expect(cache.isStale, isFalse);
     });
+
+    test('is stale when stored timestamp is corrupt', () async {
+      await prefs.setCachedPayloadAt('not-a-date');
+      expect(cache.isStale, isTrue);
+    });
   });
 
   group('Cache isValid', () {
