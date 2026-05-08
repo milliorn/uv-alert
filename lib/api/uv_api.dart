@@ -34,12 +34,13 @@ class UvApi {
   }) async {
     if (_cache.isValid) {
       final cached = _cache.read();
+
       if (cached != null) return cached;
     }
 
-    final uri = Uri.parse('$_proxyBaseUrl/api/uv').replace(
-      queryParameters: {'lat': lat.toString(), 'lon': lon.toString()},
-    );
+    final uri = Uri.parse(
+      '$_proxyBaseUrl/api/uv',
+    ).replace(queryParameters: {'lat': lat.toString(), 'lon': lon.toString()});
 
     // TODO(retry): add exponential backoff for TimeoutException
     //   and transient errors
@@ -52,15 +53,15 @@ class UvApi {
     }
 
     final UvData data;
-    
+
     try {
       final dynamic decoded = jsonDecode(response.body);
+
       if (decoded is! Map<String, dynamic>) {
         throw UvApiException(response.statusCode, response.body);
       }
+
       data = UvData.fromJson(decoded);
-    } on UvApiException {
-      rethrow;
     } on FormatException {
       throw UvApiException(response.statusCode, response.body);
     }
