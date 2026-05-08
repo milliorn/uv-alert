@@ -37,9 +37,9 @@ class UvApi {
       if (cached != null) return cached;
     }
 
-    final uri = Uri.parse(
-      '$_proxyBaseUrl/api/uv',
-    ).replace(queryParameters: {'lat': lat.toString(), 'lon': lon.toString()});
+    final uri = Uri.parse('$_proxyBaseUrl/api/uv').replace(
+      queryParameters: {'lat': lat.toString(), 'lon': lon.toString()},
+    );
 
     // TODO(retry): add exponential backoff for TimeoutException
     //   and transient errors

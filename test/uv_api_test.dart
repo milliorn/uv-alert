@@ -71,6 +71,24 @@ void main() {
       expect(result.currentUvi, cached.currentUvi);
       verifyNever(() => mockCache.store(any()));
     });
+
+    test('falls through to network when isValid but read() returns null',
+        () async {
+      when(() => mockCache.isValid).thenReturn(true);
+      when(() => mockCache.read()).thenReturn(null);
+      when(() => mockCache.store(any())).thenAnswer((_) async {});
+
+      final api = UvApi(
+        cache: mockCache,
+        proxyBaseUrl: 'http://example.com',
+        httpClient: _clientReturning(200, _apiJson()),
+      );
+
+      final result = await api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1');
+
+      expect(result.currentUvi, 5.0);
+      verify(() => mockCache.store(any())).called(1);
+    });
   });
 
   group('UvApi.fetch — cache miss', () {
