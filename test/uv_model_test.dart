@@ -56,13 +56,12 @@ void main() {
       expect(data.daily[0].uvi, 9.1);
     });
 
-    test('fromJson falls back to epoch when fetched_at is absent', () {
+    test('fromJson throws FormatException when fetched_at is absent', () {
       final json = Map<String, dynamic>.from(sampleJson)..remove('fetched_at');
-      final data = UvData.fromJson(json);
 
       expect(
-        data.fetchedAt,
-        DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+        () => UvData.fromJson(json),
+        throwsA(isA<FormatException>()),
       );
     });
 
