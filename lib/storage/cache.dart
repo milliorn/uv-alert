@@ -56,7 +56,8 @@ class Cache {
       return true;
     }
 
-    return DateTime.now().toUtc().difference(fetched).abs() >=
+    // No abs(): future fetched (clock skew) must appear fresh, not stale.
+    return DateTime.now().toUtc().difference(fetched) >=
         const Duration(hours: _cacheMaxAgeHours);
   }
 
