@@ -31,37 +31,36 @@ class Preferences {
   }
 
   bool get isFirstLaunch => _prefs.getBool(_keyFirstLaunch) ?? true;
-  Future<void> setFirstLaunchDone() async =>
+  Future<void> setFirstLaunchDone() =>
       _prefs.setBool(_keyFirstLaunch, false);
 
   String? get uuid => _prefs.getString(_keyUuid);
-  Future<void> setUuid(String uuid) async => _prefs.setString(_keyUuid, uuid);
+  Future<void> setUuid(String uuid) => _prefs.setString(_keyUuid, uuid);
 
   String get theme => _prefs.getString(_keyTheme) ?? 'system';
-  Future<void> setTheme(String theme) async =>
-      _prefs.setString(_keyTheme, theme);
+  Future<void> setTheme(String theme) => _prefs.setString(_keyTheme, theme);
 
   bool get useGps => _prefs.getBool(_keyUseGps) ?? true;
-  Future<void> setUseGps({required bool value}) async =>
+  Future<void> setUseGps({required bool value}) =>
       _prefs.setBool(_keyUseGps, value);
 
   // TODO(location): stored as a raw string; migrate to a structured type
   // (lat/lon pair or named-place object) when the location feature lands.
   String? get manualLocation => _prefs.getString(_keyManualLocation);
-  Future<void> setManualLocation(String location) async =>
+  Future<void> setManualLocation(String location) =>
       _prefs.setString(_keyManualLocation, location);
 
   bool get notificationsEnabled =>
       _prefs.getBool(_keyNotificationsEnabled) ?? false;
-  Future<void> setNotificationsEnabled({required bool value}) async =>
+  Future<void> setNotificationsEnabled({required bool value}) =>
       _prefs.setBool(_keyNotificationsEnabled, value);
 
   String? get cachedPayload => _prefs.getString(_keyCachedPayload);
-  Future<void> setCachedPayload(String json) async =>
+  Future<void> setCachedPayload(String json) =>
       _prefs.setString(_keyCachedPayload, json);
 
   String? get cachedPayloadAt => _prefs.getString(_keyCachedPayloadAt);
-  Future<void> setCachedPayloadAt(String isoTimestamp) async =>
+  Future<void> setCachedPayloadAt(String isoTimestamp) =>
       _prefs.setString(_keyCachedPayloadAt, isoTimestamp);
 
   Future<void> clearCache() async {
