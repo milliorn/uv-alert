@@ -49,7 +49,7 @@ class Cache {
     if (cachedAt == null) return true;
 
     final DateTime fetched;
-    
+
     try {
       fetched = DateTime.parse(cachedAt);
     } on FormatException {

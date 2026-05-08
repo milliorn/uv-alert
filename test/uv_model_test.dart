@@ -59,10 +59,7 @@ void main() {
     test('fromJson throws FormatException when fetched_at is absent', () {
       final json = Map<String, dynamic>.from(sampleJson)..remove('fetched_at');
 
-      expect(
-        () => UvData.fromJson(json),
-        throwsA(isA<FormatException>()),
-      );
+      expect(() => UvData.fromJson(json), throwsA(isA<FormatException>()));
     });
 
     test('fromJson handles missing hourly/daily lists', () {
