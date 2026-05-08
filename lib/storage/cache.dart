@@ -56,8 +56,8 @@ class Cache {
       return true;
     }
 
-    return DateTime.now().toUtc().difference(fetched).inHours >=
-        _cacheMaxAgeHours;
+    return DateTime.now().toUtc().difference(fetched).abs() >=
+        const Duration(hours: _cacheMaxAgeHours);
   }
 
   bool get isEmpty => _prefs.cachedPayload == null;
