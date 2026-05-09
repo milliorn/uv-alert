@@ -5,6 +5,15 @@ updates:
     schedule:
       interval: "monthly"
 
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+
   - package-ecosystem: "pub"
     directory: "/"
     schedule:
