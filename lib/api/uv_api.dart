@@ -35,7 +35,7 @@ class UvApi {
     required String uuid,
   }) async {
     if (_cache.isValid) {
-      final cached = _cache.read();
+      final cached = await _cache.read();
 
       if (cached != null) return cached;
     }

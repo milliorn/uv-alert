@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -23,22 +22,25 @@ class Cache {
     ]);
   }
 
-  UvData? read() {
+  Future<UvData?> read() async {
     final raw = _prefs.cachedPayload;
 
     if (raw == null) return null;
 
     try {
       final decoded = jsonDecode(raw);
+
       if (decoded is! Map<String, dynamic>) {
         if (kDebugMode) debugPrint('Cache.read: unexpected payload shape');
-        unawaited(_prefs.clearCache());
+        
+        await _prefs.clearCache();
         return null;
       }
       return UvData.fromJson(decoded);
     } on FormatException catch (e) {
       if (kDebugMode) debugPrint('Cache.read: corrupt payload: $e');
-      unawaited(_prefs.clearCache());
+
+      await _prefs.clearCache();
       return null;
     }
   }

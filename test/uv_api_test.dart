@@ -62,7 +62,7 @@ void main() {
     test('returns cached data without making a network request', () async {
       final cached = _makeData();
       when(() => mockCache.isValid).thenReturn(true);
-      when(() => mockCache.read()).thenReturn(cached);
+      when(() => mockCache.read()).thenAnswer((_) async => cached);
 
       final api = UvApi(cache: mockCache, proxyBaseUrl: 'http://example.com');
 
@@ -75,7 +75,7 @@ void main() {
     test('recovers from corrupt cache: falls through to network '
         'when isValid but read() returns null', () async {
       when(() => mockCache.isValid).thenReturn(true);
-      when(() => mockCache.read()).thenReturn(null);
+      when(() => mockCache.read()).thenAnswer((_) async => null);
       when(() => mockCache.store(any())).thenAnswer((_) async {});
 
       final api = UvApi(

@@ -104,14 +104,16 @@ void main() {
   });
 
   group('Cache read', () {
-    test('returns null when empty', () {
-      expect(cache.read(), isNull);
+    test('returns null when empty', () async {
+      expect(await cache.read(), isNull);
     });
 
     test('returns stored data with matching fields', () async {
       final data = _makeData();
+
       await cache.store(data);
-      final result = cache.read();
+      
+      final result = await cache.read();
 
       expect(result, isNotNull);
       expect(result!.currentUvi, data.currentUvi);
@@ -121,7 +123,9 @@ void main() {
 
     test('clears cache and returns null on corrupt payload', () async {
       await prefs.setCachedPayload('not valid json {{{');
-      final result = cache.read();
+
+      final result = await cache.read();
+
       expect(result, isNull);
       expect(cache.isEmpty, isTrue);
     });
@@ -130,7 +134,7 @@ void main() {
       'clears cache and returns null when payload is not a JSON object',
       () async {
         await prefs.setCachedPayload('[1, 2, 3]');
-        final result = cache.read();
+        final result = await cache.read();
         expect(result, isNull);
         expect(cache.isEmpty, isTrue);
       },
@@ -152,7 +156,7 @@ void main() {
       await cache.store(first);
       await cache.store(second);
 
-      final result = cache.read();
+      final result = await cache.read();
       expect(result!.fetchedAt, second.fetchedAt);
     });
   });
