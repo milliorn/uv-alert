@@ -22,8 +22,36 @@ void main() {
   };
 
   group('UvForecastEntry', () {
+    test('equal when time and uvi match', () {
+      final a = UvForecastEntry.fromJson(
+        const {'dt': 1700010000, 'uvi': 5.0},
+      );
+
+      final b = UvForecastEntry.fromJson(
+        const {'dt': 1700010000, 'uvi': 5.0},
+      );
+
+      expect(a, equals(b));
+      expect(a.hashCode, equals(b.hashCode));
+    });
+
+    test('not equal when fields differ', () {
+      final a = UvForecastEntry.fromJson(
+        const {'dt': 1700010000, 'uvi': 5.0},
+      );
+
+      final b = UvForecastEntry.fromJson(
+        const {'dt': 1700010000, 'uvi': 6.0},
+      );
+
+      expect(a, isNot(equals(b)));
+    });
+
     test('fromJson round-trips through toJson', () {
-      final entry = UvForecastEntry.fromJson({'dt': 1700010000, 'uvi': 5.0});
+      final entry = UvForecastEntry.fromJson(
+        const {'dt': 1700010000, 'uvi': 5.0},
+      );
+
       final json = entry.toJson();
       final restored = UvForecastEntry.fromJson(json);
 
@@ -32,12 +60,15 @@ void main() {
     });
 
     test('parses epoch seconds into UTC DateTime', () {
-      final entry = UvForecastEntry.fromJson({'dt': 0, 'uvi': 1.0});
+      final entry = UvForecastEntry.fromJson(const {'dt': 0, 'uvi': 1.0});
       expect(entry.time, DateTime.utc(1970));
     });
 
     test('accepts integer uvi', () {
-      final entry = UvForecastEntry.fromJson({'dt': 1700000000, 'uvi': 3});
+      final entry = UvForecastEntry.fromJson(
+        const {'dt': 1700000000, 'uvi': 3},
+      );
+      
       expect(entry.uvi, 3.0);
     });
   });
@@ -66,10 +97,29 @@ void main() {
       final json = Map<String, dynamic>.from(sampleJson)
         ..remove('hourly')
         ..remove('daily');
+        
       final data = UvData.fromJson(json);
 
       expect(data.hourly, isEmpty);
       expect(data.daily, isEmpty);
+    });
+
+    test('equal when all fields match', () {
+      final a = UvData.fromJson(sampleJson);
+      final b = UvData.fromJson(sampleJson);
+
+      expect(a, equals(b));
+      expect(a.hashCode, equals(b.hashCode));
+    });
+
+    test('not equal when a field differs', () {
+      final a = UvData.fromJson(sampleJson);
+      final b = UvData.fromJson({
+        ...sampleJson,
+        'timezone': 'America/Chicago',
+      });
+      
+      expect(a, isNot(equals(b)));
     });
 
     test('toJson round-trips through fromJson', () {

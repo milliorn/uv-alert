@@ -1,8 +1,11 @@
+import 'package:flutter/foundation.dart';
+
 DateTime _fromEpochSeconds(int s) =>
     DateTime.fromMillisecondsSinceEpoch(s * 1000, isUtc: true);
 
 int _toEpochSeconds(DateTime dt) => dt.millisecondsSinceEpoch ~/ 1000;
 
+@immutable
 class UvForecastEntry {
   const UvForecastEntry({required this.time, required this.uvi});
 
@@ -12,12 +15,21 @@ class UvForecastEntry {
       uvi: (json['uvi'] as num).toDouble(),
     );
   }
+  
   final DateTime time;
   final double uvi;
 
   Map<String, dynamic> toJson() => {'dt': _toEpochSeconds(time), 'uvi': uvi};
+
+  @override
+  bool operator ==(Object other) =>
+      other is UvForecastEntry && other.time == time && other.uvi == uvi;
+
+  @override
+  int get hashCode => Object.hash(time, uvi);
 }
 
+@immutable
 class UvData {
   const UvData({
     required this.currentUvi,
@@ -52,6 +64,7 @@ class UvData {
           : throw const FormatException('missing required field: fetched_at'),
     );
   }
+
   final double currentUvi;
   final DateTime sunrise;
   final DateTime sunset;
@@ -77,4 +90,30 @@ class UvData {
       'fetched_at': fetchedAt.toIso8601String(),
     };
   }
+
+  @override
+  bool operator ==(Object other) =>
+      other is UvData &&
+      other.currentUvi == currentUvi &&
+      other.sunrise == sunrise &&
+      other.sunset == sunset &&
+      other.clouds == clouds &&
+      other.timezone == timezone &&
+      other.timezoneOffset == timezoneOffset &&
+      other.fetchedAt == fetchedAt &&
+      listEquals(other.hourly, hourly) &&
+      listEquals(other.daily, daily);
+
+  @override
+  int get hashCode => Object.hashAll([
+        currentUvi,
+        sunrise,
+        sunset,
+        clouds,
+        timezone,
+        timezoneOffset,
+        fetchedAt,
+        ...hourly,
+        ...daily,
+      ]);
 }
