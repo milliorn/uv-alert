@@ -175,6 +175,23 @@ void main() {
       expect(capturedUri?.queryParameters['lon'], '-0.1');
     });
 
+    test('strips trailing slash from proxyBaseUrl', () async {
+      Uri? capturedUri;
+
+      final api = UvApi(
+        cache: mockCache,
+        proxyBaseUrl: 'http://example.com/',
+        httpClient: MockClient((request) async {
+          capturedUri = request.url;
+          return http.Response(jsonEncode(_apiJson()), 200);
+        }),
+      );
+
+      await api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1');
+
+      expect(capturedUri?.path, '/api/uv');
+    });
+
     test('sends X-Device-ID header with uuid', () async {
       String? deviceId;
 

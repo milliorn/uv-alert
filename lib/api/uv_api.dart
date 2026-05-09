@@ -13,7 +13,9 @@ class UvApi {
     Duration timeout = _defaultTimeout,
     http.Client? httpClient,
   }) : _cache = cache,
-       _proxyBaseUrl = proxyBaseUrl,
+       _proxyBaseUrl = proxyBaseUrl.endsWith('/')
+           ? proxyBaseUrl.substring(0, proxyBaseUrl.length - 1)
+           : proxyBaseUrl,
        _timeout = timeout,
        _ownsClient = httpClient == null,
        _httpClient = httpClient ?? http.Client();

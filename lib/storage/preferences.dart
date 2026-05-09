@@ -12,17 +12,6 @@ class Preferences {
   static const _keyCachedPayload = '${_prefix}cached_payload';
   static const _keyCachedPayloadAt = '${_prefix}cached_payload_at';
 
-  static const List<String> _ownedKeys = [
-    _keyFirstLaunch,
-    _keyUuid,
-    _keyTheme,
-    _keyUseGps,
-    _keyManualLocation,
-    _keyNotificationsEnabled,
-    _keyCachedPayload,
-    _keyCachedPayloadAt,
-  ];
-
   final SharedPreferences _prefs;
 
   static Future<Preferences> load() async {
@@ -72,6 +61,7 @@ class Preferences {
   }
 
   Future<void> clearAll() async {
-    await Future.wait(_ownedKeys.map(_prefs.remove));
+    final keys = _prefs.getKeys().where((k) => k.startsWith(_prefix)).toList();
+    await Future.wait<bool>(keys.map(_prefs.remove));
   }
 }
