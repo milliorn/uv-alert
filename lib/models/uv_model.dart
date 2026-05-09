@@ -62,7 +62,7 @@ class UvData {
       timezone: json['timezone'] as String,
       timezoneOffset: json['timezone_offset'] as int,
       fetchedAt: json['fetched_at'] != null
-          ? DateTime.parse(json['fetched_at'] as String)
+          ? _fromEpochSeconds(json['fetched_at'] as int)
           : throw const FormatException('missing required field: fetched_at'),
     );
   }
