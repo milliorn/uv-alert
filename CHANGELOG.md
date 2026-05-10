@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0](https://github.com/milliorn/uv-alert/compare/v1.0.1...v1.1.0) (2026-05-10)
+
+
+### Features
+
+* implement data layer with models, cache, preferences, API client, CI, and tests ([#40](https://github.com/milliorn/uv-alert/issues/40)) ([2414133](https://github.com/milliorn/uv-alert/commit/2414133a87bcf925adde876274ea6bb8f181dfc0))
+
+
+### Bug Fixes
+
+* **UvApi:** adjust cached data retrieval to await cache read ([2414133](https://github.com/milliorn/uv-alert/commit/2414133a87bcf925adde876274ea6bb8f181dfc0))
+
 ## [1.0.1](https://github.com/milliorn/uv-alert/compare/v1.0.0...v1.0.1) (2026-04-30)
 
 
