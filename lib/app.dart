@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+/// Root widget of the UV Alert application.
 class UvAlertApp extends StatelessWidget {
+  /// Creates the [UvAlertApp].
   const UvAlertApp({super.key});
 
   @override

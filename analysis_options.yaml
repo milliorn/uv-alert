@@ -34,10 +34,21 @@ analyzer:
     body_might_complete_normally_nullable: error
     await_only_futures: error
     deprecated_member_use: error
+    public_member_api_docs: error
+    always_declare_return_types: error
+    avoid_dynamic_calls: error
+    avoid_catches_without_on_clauses: error
+    avoid_catching_errors: error
+    cancel_subscriptions: error
+    close_sinks: error
+    discarded_futures: error
+    unawaited_futures: error
+    parameter_assignments: error
+    only_throw_errors: error
 
 linter:
   rules:
-    public_member_api_docs: false
+    public_member_api_docs: true
     require_trailing_commas: false
     avoid_futureor_void: true
     unnecessary_underscores: true

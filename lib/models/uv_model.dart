@@ -5,10 +5,13 @@ DateTime _fromEpochSeconds(int s) =>
 
 int _toEpochSeconds(DateTime dt) => dt.millisecondsSinceEpoch ~/ 1000;
 
+/// A single UV index reading at a point in time.
 @immutable
 class UvForecastEntry {
+  /// Creates a [UvForecastEntry].
   const UvForecastEntry({required this.time, required this.uvi});
 
+  /// Deserializes a [UvForecastEntry] from a JSON map.
   factory UvForecastEntry.fromJson(Map<String, dynamic> json) {
     return UvForecastEntry(
       time: _fromEpochSeconds(json['dt'] as int),
@@ -16,9 +19,13 @@ class UvForecastEntry {
     );
   }
 
+  /// The UTC timestamp of this reading.
   final DateTime time;
+
+  /// The UV index value.
   final double uvi;
 
+  /// Serializes this entry to a JSON map.
   Map<String, dynamic> toJson() => {'dt': _toEpochSeconds(time), 'uvi': uvi};
 
   @override
@@ -29,8 +36,10 @@ class UvForecastEntry {
   int get hashCode => Object.hash(time, uvi);
 }
 
+/// UV index data for a location, including current conditions and forecast.
 @immutable
 class UvData {
+  /// Creates a [UvData] instance.
   const UvData({
     required this.currentUvi,
     required this.sunrise,
@@ -43,6 +52,9 @@ class UvData {
     required this.fetchedAt,
   });
 
+  /// Deserializes a [UvData] from a JSON map.
+  ///
+  /// Throws [FormatException] if the required `fetched_at` field is absent.
   factory UvData.fromJson(Map<String, dynamic> json) {
     final current = json['current'] as Map<String, dynamic>;
 
@@ -69,16 +81,34 @@ class UvData {
     );
   }
 
+  /// The current UV index.
   final double currentUvi;
+
+  /// Sunrise time in UTC.
   final DateTime sunrise;
+
+  /// Sunset time in UTC.
   final DateTime sunset;
+
+  /// Cloud coverage percentage (0-100).
   final int clouds;
+
+  /// Hourly UV index forecast entries.
   final List<UvForecastEntry> hourly;
+
+  /// Daily UV index forecast entries.
   final List<UvForecastEntry> daily;
+
+  /// IANA timezone name for the location (e.g. `America/New_York`).
   final String timezone;
+
+  /// UTC offset in seconds for the location's timezone.
   final int timezoneOffset;
+
+  /// When this data was fetched from the server, in UTC.
   final DateTime fetchedAt;
 
+  /// Serializes this instance to a JSON map.
   Map<String, dynamic> toJson() {
     return {
       'current': {

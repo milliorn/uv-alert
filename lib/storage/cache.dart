@@ -6,10 +6,14 @@ import 'package:uvalert/storage/preferences.dart';
 
 const _cacheMaxAgeHours = 24;
 
+/// SharedPreferences-backed cache for [UvData] with a 24-hour TTL.
 class Cache {
+  /// Creates a [Cache] backed by the given [Preferences] instance.
   Cache(this._prefs);
   final Preferences _prefs;
 
+  /// Persists [data] to the cache, keying expiry on the server-provided
+  /// [UvData.fetchedAt] timestamp.
   Future<void> store(UvData data) async {
     final json = jsonEncode(data.toJson());
 
@@ -22,6 +26,9 @@ class Cache {
     ]);
   }
 
+  /// Returns the cached [UvData], or `null` if empty or the payload is corrupt.
+  ///
+  /// Clears the cache automatically on a corrupt or malformed payload.
   Future<UvData?> read() async {
     final raw = _prefs.cachedPayload;
 
@@ -37,7 +44,7 @@ class Cache {
         return null;
       }
       return UvData.fromJson(decoded);
-    } on FormatException catch (e) {
+    } on Object catch (e) {
       if (kDebugMode) debugPrint('Cache.read: corrupt payload: $e');
 
       await _prefs.clearCache();
@@ -45,6 +52,9 @@ class Cache {
     }
   }
 
+  /// Whether the cached data has exceeded the 24-hour TTL.
+  ///
+  /// Returns `true` when no timestamp is stored or the timestamp is corrupt.
   bool get isStale {
     final cachedAt = _prefs.cachedPayloadAt;
 
@@ -63,7 +73,9 @@ class Cache {
         const Duration(hours: _cacheMaxAgeHours);
   }
 
+  /// Whether no payload is currently stored.
   bool get isEmpty => _prefs.cachedPayload == null;
 
+  /// Whether the cache has a payload and it is within the TTL.
   bool get isValid => !isEmpty && !isStale;
 }
