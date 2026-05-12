@@ -44,7 +44,7 @@ class Cache {
         return null;
       }
       return UvData.fromJson(decoded);
-    } on FormatException catch (e) {
+    } on Object catch (e) {
       if (kDebugMode) debugPrint('Cache.read: corrupt payload: $e');
 
       await _prefs.clearCache();
