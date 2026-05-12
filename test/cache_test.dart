@@ -4,9 +4,8 @@ import 'package:uvalert/constants.dart';
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/storage/cache.dart';
 import 'package:uvalert/storage/preferences.dart';
-const int _cacheMaxAgeHours = 24;
-const int _staleHours = _cacheMaxAgeHours + 1;
-const int _freshHours = _cacheMaxAgeHours - 1;
+const int _staleHours = cacheMaxAgeHours + 1;
+const int _freshHours = cacheMaxAgeHours - 1;
 
 DateTime _staleTimestamp() =>
     DateTime.now().toUtc().subtract(const Duration(hours: _staleHours));
