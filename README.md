@@ -118,4 +118,4 @@ If this app is useful to you, consider supporting development:
 
 ## License
 
-See [LICENSE](LICENSE) for details.
+This project is licensed under the MIT License.
