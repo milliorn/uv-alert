@@ -25,6 +25,9 @@ jobs:
       - name: Analyze
         run: flutter analyze --fatal-infos
 
+      - name: Validate docs
+        run: dart doc --validate-links
+
       - name: Test with coverage
         run: flutter test --coverage
 
