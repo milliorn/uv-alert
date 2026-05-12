@@ -4,6 +4,7 @@ import 'package:uvalert/constants.dart';
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/storage/cache.dart';
 import 'package:uvalert/storage/preferences.dart';
+
 const int _staleHours = cacheMaxAgeHours + 1;
 const int _freshHours = cacheMaxAgeHours - 1;
 
