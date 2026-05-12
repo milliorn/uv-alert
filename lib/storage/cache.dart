@@ -4,7 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/storage/preferences.dart';
 
-const _cacheMaxAgeHours = 24;
+/// Maximum age of cached UV data in hours before it is considered stale.
+const cacheMaxAgeHours = 24;
 
 /// SharedPreferences-backed cache for [UvData] with a 24-hour TTL.
 class Cache {
@@ -52,7 +53,7 @@ class Cache {
     }
   }
 
-  /// Whether the cached data has exceeded the 24-hour TTL.
+  /// Whether the cached data has exceeded the [cacheMaxAgeHours]-hour TTL.
   ///
   /// Returns `true` when no timestamp is stored or the timestamp is corrupt.
   bool get isStale {
@@ -70,7 +71,7 @@ class Cache {
 
     // No abs(): future fetched (clock skew) must appear fresh, not stale.
     return DateTime.now().toUtc().difference(fetched) >=
-        const Duration(hours: _cacheMaxAgeHours);
+        const Duration(hours: cacheMaxAgeHours);
   }
 
   /// Whether no payload is currently stored.
