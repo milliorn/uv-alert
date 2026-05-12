@@ -1,6 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uvalert/models/uv_model.dart';
 
+const int _secondsPerHour = 3600;
+const int _utcMinus5OffsetSeconds = -5 * _secondsPerHour;
+
 void main() {
   final sampleJson = <String, dynamic>{
     'current': {
@@ -17,7 +20,7 @@ void main() {
       {'dt': 1700000000, 'uvi': 9.1},
     ],
     'timezone': 'America/New_York',
-    'timezone_offset': -18000,
+    'timezone_offset': _utcMinus5OffsetSeconds,
     'fetched_at': 1699963200,
   };
 
@@ -74,7 +77,7 @@ void main() {
       expect(data.currentUvi, 7.5);
       expect(data.clouds, 20);
       expect(data.timezone, 'America/New_York');
-      expect(data.timezoneOffset, -18000);
+      expect(data.timezoneOffset, _utcMinus5OffsetSeconds);
       expect(data.hourly.length, 2);
       expect(data.daily.length, 1);
       expect(data.hourly[1].uvi, 8.2);
