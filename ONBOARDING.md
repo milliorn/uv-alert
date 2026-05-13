@@ -15,9 +15,9 @@ and daily UV forecasts.
 
 **Current state (v1.0.0+1):** Core infrastructure is complete - models, API
 client, cache, preferences, Riverpod scaffold, and a full unit test suite. The
-UI screens (`dashboard_screen`, `settings_screen`, `onboarding_screen`) and
-background service implementations are stubs. The app renders a `Placeholder`
-as its home widget.
+UI screens (`dashboard_screen`, `settings_screen`, `onboarding_screen`),
+Riverpod providers, and background service implementations are not yet
+implemented. The app renders a `Placeholder` as its home widget.
 
 ## Prerequisites
 
@@ -121,7 +121,7 @@ test/
 
 State management is [Riverpod](https://riverpod.dev). The app is wrapped in
 `ProviderScope` in `main.dart`. Widgets that need data extend `ConsumerWidget`
-and read from providers in `lib/providers/` (stubs right now).
+and read from providers in `lib/providers/` (not yet implemented).
 
 ## Key Behaviors to Know
 
@@ -168,7 +168,7 @@ Releases are managed by Release Please and cut automatically on pushes to
 
 ## Open Work
 
-The following are known stubs waiting to be implemented:
+The following are not yet implemented (no files or directories exist yet):
 
 - `lib/screens/` - `dashboard_screen`, `settings_screen`, `onboarding_screen`
 - `lib/providers/` - Riverpod providers wiring API and preferences to UI
