@@ -62,12 +62,12 @@ void main() {
       expect(cache.isStale, isFalse);
     });
 
-    test('is stale when timestamp is 25 hours old', () async {
+    test('is stale when timestamp is TTL + 1 hours old', () async {
       await cache.store(_makeData(fetchedAt: _staleTimestamp()));
       expect(cache.isStale, isTrue);
     });
 
-    test('is not stale when timestamp is 23 hours old', () async {
+    test('is not stale when timestamp is TTL - 1 hours old', () async {
       final recent = DateTime.now().toUtc().subtract(
         const Duration(hours: _freshHours),
       );
