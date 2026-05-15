@@ -1,30 +1,37 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:uvalert/providers/location_provider.dart';
 
 // ---------------------------------------------------------------------------
-// Mocks
+// Fake GeolocatorPlatform
 //
-// GeolocatorPlatform is the abstract class that Geolocator.checkPermission(),
-// requestPermission(), and getCurrentPosition() all delegate to. By swapping
-// GeolocatorPlatform.instance with a Mock we intercept every GPS call without
-// touching real hardware.
+// plugin_platform_interface requires the mock to *extend* GeolocatorPlatform,
+// not merely implement it, so Mocktail cannot be used here. We use a hand-
+// rolled fake instead. Each field can be set per-test before fetchGps() runs.
 // ---------------------------------------------------------------------------
 
-// plugin_platform_interface requires that the mock *extends* GeolocatorPlatform
-// (not merely implements it), so we use `extends ... with Mock` rather than
-// `extends Mock implements ...`.
-class _MockGeolocatorPlatform extends GeolocatorPlatform with Mock {}
+class _FakePlatform extends GeolocatorPlatform {
+  LocationPermission checkResult = LocationPermission.always;
+  LocationPermission requestResult = LocationPermission.always;
+  Position? positionResult;
 
-// A helper that builds an isolated Riverpod container.
-// ProviderContainer is the non-Flutter equivalent of ProviderScope — no
-// widget tree required. We create a fresh one per test so state never leaks.
-ProviderContainer _makeContainer() => ProviderContainer();
+  @override
+  Future<LocationPermission> checkPermission() async => checkResult;
+
+  @override
+  Future<LocationPermission> requestPermission() async => requestResult;
+
+  @override
+  Future<Position> getCurrentPosition({
+    LocationSettings? locationSettings,
+  }) async {
+    return positionResult!;
+  }
+}
 
 // Minimal Position with only the fields our code touches (lat/lon).
-Position _fakePosition({double lat = 1.0, double lon = 2.0}) => Position(
+Position _fakePosition({double lat = 1, double lon = 2}) => Position(
   latitude: lat,
   longitude: lon,
   timestamp: DateTime.utc(2024),
@@ -37,26 +44,25 @@ Position _fakePosition({double lat = 1.0, double lon = 2.0}) => Position(
   speedAccuracy: 0,
 );
 
+// Builds a ProviderContainer with a LocationNotifier wired to the given fake.
+// Using `overrideWith` lets us inject a custom notifier instance while keeping
+// the rest of the Riverpod graph untouched.
+ProviderContainer _makeContainer(_FakePlatform platform) {
+  return ProviderContainer(
+    // ignore: always_specify_types — Override is not in flutter_riverpod's public API
+    overrides: [
+      locationProvider.overrideWith(() => LocationNotifier(platform: platform)),
+    ],
+  );
+}
+
 void main() {
-  late _MockGeolocatorPlatform mock;
-
-  setUp(() {
-    mock = _MockGeolocatorPlatform();
-    // Inject the mock so every Geolocator.* call hits our stub.
-    GeolocatorPlatform.instance = mock;
-  });
-
-  tearDown(() {
-    // Let Riverpod clean up subscriptions.
-    // Containers created in each test are disposed there.
-  });
-
   // -------------------------------------------------------------------------
   // Initial state
   // -------------------------------------------------------------------------
 
   test('initial state is null', () {
-    final ProviderContainer container = _makeContainer();
+    final ProviderContainer container = _makeContainer(_FakePlatform());
     addTearDown(container.dispose);
 
     expect(container.read(locationProvider), isNull);
@@ -67,7 +73,7 @@ void main() {
   // -------------------------------------------------------------------------
 
   test('setManual updates state with supplied coordinates', () {
-    final ProviderContainer container = _makeContainer();
+    final ProviderContainer container = _makeContainer(_FakePlatform());
     addTearDown(container.dispose);
 
     container
@@ -85,25 +91,19 @@ void main() {
   // -------------------------------------------------------------------------
 
   test('fetchGps stores position when permission is already granted', () async {
-    when(
-      () => mock.checkPermission(),
-    ).thenAnswer((_) async => LocationPermission.always);
+    final _FakePlatform platform = _FakePlatform()
+      ..checkResult = LocationPermission.always
+      ..positionResult = _fakePosition(lat: 10, lon: 20);
 
-    when(
-      () => mock.getCurrentPosition(
-        locationSettings: any(named: 'locationSettings'),
-      ),
-    ).thenAnswer((_) async => _fakePosition(lat: 10, lon: 20));
-
-    final ProviderContainer container = _makeContainer();
+    final ProviderContainer container = _makeContainer(platform);
     addTearDown(container.dispose);
 
     await container.read(locationProvider.notifier).fetchGps();
 
     final LocationState state = container.read(locationProvider);
     expect(state, isNotNull);
-    expect(state!.lat, 10.0);
-    expect(state.lon, 20.0);
+    expect(state!.lat, 10);
+    expect(state.lon, 20);
   });
 
   // -------------------------------------------------------------------------
@@ -111,28 +111,19 @@ void main() {
   // -------------------------------------------------------------------------
 
   test('fetchGps requests permission when initially denied', () async {
-    when(
-      () => mock.checkPermission(),
-    ).thenAnswer((_) async => LocationPermission.denied);
+    final _FakePlatform platform = _FakePlatform()
+      ..checkResult = LocationPermission.denied
+      ..requestResult = LocationPermission.whileInUse
+      ..positionResult = _fakePosition(lat: 3, lon: 4);
 
-    when(
-      () => mock.requestPermission(),
-    ).thenAnswer((_) async => LocationPermission.whileInUse);
-
-    when(
-      () => mock.getCurrentPosition(
-        locationSettings: any(named: 'locationSettings'),
-      ),
-    ).thenAnswer((_) async => _fakePosition(lat: 3, lon: 4));
-
-    final ProviderContainer container = _makeContainer();
+    final ProviderContainer container = _makeContainer(platform);
     addTearDown(container.dispose);
 
     await container.read(locationProvider.notifier).fetchGps();
 
     final LocationState state = container.read(locationProvider);
-    expect(state!.lat, 3.0);
-    expect(state.lon, 4.0);
+    expect(state!.lat, 3);
+    expect(state.lon, 4);
   });
 
   // -------------------------------------------------------------------------
@@ -140,11 +131,10 @@ void main() {
   // -------------------------------------------------------------------------
 
   test('fetchGps throws PermissionDeniedException when denied forever', () {
-    when(
-      () => mock.checkPermission(),
-    ).thenAnswer((_) async => LocationPermission.deniedForever);
+    final _FakePlatform platform = _FakePlatform()
+      ..checkResult = LocationPermission.deniedForever;
 
-    final ProviderContainer container = _makeContainer();
+    final ProviderContainer container = _makeContainer(platform);
     addTearDown(container.dispose);
 
     expect(
@@ -158,15 +148,11 @@ void main() {
   // -------------------------------------------------------------------------
 
   test('fetchGps throws PermissionDeniedException when request is denied', () {
-    when(
-      () => mock.checkPermission(),
-    ).thenAnswer((_) async => LocationPermission.denied);
+    final _FakePlatform platform = _FakePlatform()
+      ..checkResult = LocationPermission.denied
+      ..requestResult = LocationPermission.denied;
 
-    when(
-      () => mock.requestPermission(),
-    ).thenAnswer((_) async => LocationPermission.denied);
-
-    final ProviderContainer container = _makeContainer();
+    final ProviderContainer container = _makeContainer(platform);
     addTearDown(container.dispose);
 
     expect(

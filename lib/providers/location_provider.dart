@@ -10,15 +10,22 @@ final NotifierProvider<LocationNotifier, LocationState> locationProvider =
 
 /// Manages location state.
 class LocationNotifier extends Notifier<LocationState> {
+  /// Creates a [LocationNotifier]; [platform] defaults to
+  /// [GeolocatorPlatform.instance] for production use.
+  LocationNotifier({GeolocatorPlatform? platform})
+    : _platform = platform ?? GeolocatorPlatform.instance;
+
+  final GeolocatorPlatform _platform;
+
   @override
   LocationState build() => null;
 
   /// Requests GPS permission then acquires the current position.
   Future<void> fetchGps() async {
-    LocationPermission permission = await Geolocator.checkPermission();
+    LocationPermission permission = await _platform.checkPermission();
 
     if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
+      permission = await _platform.requestPermission();
     }
 
     if (permission == LocationPermission.deniedForever ||
@@ -26,7 +33,7 @@ class LocationNotifier extends Notifier<LocationState> {
       throw const PermissionDeniedException('Location permission denied.');
     }
 
-    final Position position = await Geolocator.getCurrentPosition(
+    final Position position = await _platform.getCurrentPosition(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.medium,
       ),
