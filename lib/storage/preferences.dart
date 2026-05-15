@@ -3,21 +3,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Typed, prefixed wrapper around [SharedPreferences] for app settings.
 class Preferences {
   Preferences._(this._prefs);
-  static const _prefix = 'uvalert_';
-  static const _keyFirstLaunch = '${_prefix}first_launch';
-  static const _keyUuid = '${_prefix}uuid';
-  static const _keyTheme = '${_prefix}theme';
-  static const _keyUseGps = '${_prefix}use_gps';
-  static const _keyManualLocation = '${_prefix}manual_location';
-  static const _keyNotificationsEnabled = '${_prefix}notifications_enabled';
-  static const _keyCachedPayload = '${_prefix}cached_payload';
-  static const _keyCachedPayloadAt = '${_prefix}cached_payload_at';
+  static const String _prefix = 'uvalert_';
+  static const String _keyFirstLaunch = '${_prefix}first_launch';
+  static const String _keyUuid = '${_prefix}uuid';
+  static const String _keyTheme = '${_prefix}theme';
+  static const String _keyUseGps = '${_prefix}use_gps';
+  static const String _keyManualLocation = '${_prefix}manual_location';
+  static const String _keyNotificationsEnabled = '${_prefix}notifications_enabled';
+  static const String _keyCachedPayload = '${_prefix}cached_payload';
+  static const String _keyCachedPayloadAt = '${_prefix}cached_payload_at';
 
   final SharedPreferences _prefs;
 
   /// Loads and returns a [Preferences] instance backed by [SharedPreferences].
   static Future<Preferences> load() async {
-    final prefs = await SharedPreferences.getInstance();
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
     return Preferences._(prefs);
   }
 
@@ -83,7 +83,7 @@ class Preferences {
   ///
   /// Throws [StateError] if either key cannot be removed.
   Future<void> clearCache() async {
-    final results = await Future.wait([
+    final List<bool> results = await Future.wait(<Future<bool>>[
       _prefs.remove(_keyCachedPayload),
       _prefs.remove(_keyCachedPayloadAt),
     ]);
@@ -95,13 +95,13 @@ class Preferences {
   ///
   /// Throws [StateError] if any key cannot be removed.
   Future<void> clearAll() async {
-    final keys = _prefs.getKeys().where((k) => k.startsWith(_prefix)).toList();
-    final results = await Future.wait<bool>(keys.map(_prefs.remove));
+    final List<String> keys = _prefs.getKeys().where((String k) => k.startsWith(_prefix)).toList();
+    final List<bool> results = await Future.wait<bool>(keys.map(_prefs.remove));
     _assertAllRemoved(results, 'clearAll');
   }
 
   void _assertAllRemoved(List<bool> results, String operation) {
-    if (results.any((ok) => !ok)) {
+    if (results.any((bool ok) => !ok)) {
       throw StateError('$operation: one or more keys could not be removed');
     }
   }

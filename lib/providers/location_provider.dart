@@ -11,7 +11,7 @@ class LocationNotifier extends Notifier<LocationState> {
 
   /// Requests GPS permission then acquires the current position.
   Future<void> fetchGps() async {
-    var permission = await Geolocator.checkPermission();
+    LocationPermission permission = await Geolocator.checkPermission();
 
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
@@ -22,7 +22,7 @@ class LocationNotifier extends Notifier<LocationState> {
       throw const PermissionDeniedException('Location permission denied.');
     }
 
-    final position = await Geolocator.getCurrentPosition(
+    final Position position = await Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.medium,
       ),

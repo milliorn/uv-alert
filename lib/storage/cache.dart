@@ -17,9 +17,9 @@ class Cache {
   /// Persists [data] to the cache, keying expiry on the server-provided
   /// [UvData.fetchedAt] timestamp.
   Future<void> store(UvData data) async {
-    final json = jsonEncode(data.toJson());
+    final String json = jsonEncode(data.toJson());
 
-    await Future.wait([
+    await Future.wait(<Future<void>>[
       _prefs.setCachedPayload(json),
       // Intentional: use server-provided fetchedAt, not DateTime.now().
       // If the server timestamp lags real time, the cache expires sooner than
@@ -32,7 +32,7 @@ class Cache {
   ///
   /// Clears the cache automatically on a corrupt or malformed payload.
   Future<UvData?> read() async {
-    final raw = _prefs.cachedPayload;
+    final String? raw = _prefs.cachedPayload;
 
     if (raw == null) return null;
 
@@ -58,7 +58,7 @@ class Cache {
   ///
   /// Returns `true` when no timestamp is stored or the timestamp is corrupt.
   bool get isStale {
-    final cachedAt = _prefs.cachedPayloadAt;
+    final String? cachedAt = _prefs.cachedPayloadAt;
 
     if (cachedAt == null) return true;
 

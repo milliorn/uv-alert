@@ -22,15 +22,15 @@ UvData _makeData() => UvData(
   sunrise: DateTime.utc(2023, 11, 14, 6),
   sunset: DateTime.utc(2023, 11, 14, 18),
   clouds: 0,
-  hourly: const [],
-  daily: const [],
+  hourly: const <UvForecastEntry>[],
+  daily: const <UvForecastEntry>[],
   timezone: 'UTC',
   timezoneOffset: 0,
   fetchedAt: DateTime.utc(2023, 11, 14, 12),
 );
 
-Map<String, dynamic> _apiJson() => {
-  'current': {
+Map<String, dynamic> _apiJson() => <String, dynamic>{
+  'current': <String, num>{
     'uvi': 5.0,
     'sunrise': 1699945200,
     'sunset': 1699988400,
@@ -60,13 +60,13 @@ void main() {
 
   group('UvApi.fetch — cache hit', () {
     test('returns cached data without making a network request', () async {
-      final cached = _makeData();
+      final UvData cached = _makeData();
       when(() => mockCache.isValid).thenReturn(true);
       when(() => mockCache.read()).thenAnswer((_) async => cached);
 
-      final api = UvApi(cache: mockCache, proxyBaseUrl: 'http://example.com');
+      final UvApi api = UvApi(cache: mockCache, proxyBaseUrl: 'http://example.com');
 
-      final result = await api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1');
+      final UvData result = await api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1');
 
       expect(result.currentUvi, cached.currentUvi);
       verifyNever(() => mockCache.store(any()));
@@ -78,13 +78,13 @@ void main() {
       when(() => mockCache.read()).thenAnswer((_) async => null);
       when(() => mockCache.store(any())).thenAnswer((_) async {});
 
-      final api = UvApi(
+      final UvApi api = UvApi(
         cache: mockCache,
         proxyBaseUrl: 'http://example.com',
         httpClient: _clientReturning(200, _apiJson()),
       );
 
-      final result = await api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1');
+      final UvData result = await api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1');
 
       expect(result.currentUvi, 5.0);
       verify(() => mockCache.store(any())).called(1);
@@ -98,35 +98,35 @@ void main() {
     });
 
     test('fetches from network and stores result in cache', () async {
-      final api = UvApi(
+      final UvApi api = UvApi(
         cache: mockCache,
         proxyBaseUrl: 'http://example.com',
         httpClient: _clientReturning(200, _apiJson()),
       );
 
-      final result = await api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1');
+      final UvData result = await api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1');
 
       expect(result.currentUvi, 5.0);
       verify(() => mockCache.store(any())).called(1);
     });
 
     test('throws UvApiException on non-200 response', () async {
-      final api = UvApi(
+      final UvApi api = UvApi(
         cache: mockCache,
         proxyBaseUrl: 'http://example.com',
-        httpClient: _clientReturning(500, {'error': 'server error'}),
+        httpClient: _clientReturning(500, <String, dynamic>{'error': 'server error'}),
       );
 
       await expectLater(
         () => api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1'),
         throwsA(
-          isA<UvApiException>().having((e) => e.statusCode, 'statusCode', 500),
+          isA<UvApiException>().having((UvApiException e) => e.statusCode, 'statusCode', 500),
         ),
       );
     });
 
     test('throws UvApiException on malformed JSON body', () async {
-      final api = UvApi(
+      final UvApi api = UvApi(
         cache: mockCache,
         proxyBaseUrl: 'http://example.com',
         httpClient: MockClient((_) async => http.Response('not json', 200)),
@@ -139,8 +139,8 @@ void main() {
     });
 
     test('throws UvApiException when JSON is not an object', () async {
-      for (final body in ['[1,2,3]', '"a string"', '42']) {
-        final api = UvApi(
+      for (final String body in <String>['[1,2,3]', '"a string"', '42']) {
+        final UvApi api = UvApi(
           cache: mockCache,
           proxyBaseUrl: 'http://example.com',
           httpClient: MockClient((_) async => http.Response(body, 200)),
@@ -157,10 +157,10 @@ void main() {
     test('sends correct lat/lon query parameters', () async {
       Uri? capturedUri;
 
-      final api = UvApi(
+      final UvApi api = UvApi(
         cache: mockCache,
         proxyBaseUrl: 'http://example.com',
-        httpClient: MockClient((request) async {
+        httpClient: MockClient((http.Request request) async {
           capturedUri = request.url;
           return http.Response(jsonEncode(_apiJson()), 200);
         }),
@@ -175,10 +175,10 @@ void main() {
     test('strips trailing slash from proxyBaseUrl', () async {
       Uri? capturedUri;
 
-      final api = UvApi(
+      final UvApi api = UvApi(
         cache: mockCache,
         proxyBaseUrl: 'http://example.com/',
-        httpClient: MockClient((request) async {
+        httpClient: MockClient((http.Request request) async {
           capturedUri = request.url;
           return http.Response(jsonEncode(_apiJson()), 200);
         }),
@@ -192,10 +192,10 @@ void main() {
     test('sends X-Device-ID header with uuid', () async {
       String? deviceId;
 
-      final api = UvApi(
+      final UvApi api = UvApi(
         cache: mockCache,
         proxyBaseUrl: 'http://example.com',
-        httpClient: MockClient((request) async {
+        httpClient: MockClient((http.Request request) async {
           deviceId = request.headers['X-Device-ID'];
           return http.Response(jsonEncode(_apiJson()), 200);
         }),
@@ -207,7 +207,7 @@ void main() {
     });
 
     test('propagates TimeoutException when request exceeds timeout', () async {
-      final api = UvApi(
+      final UvApi api = UvApi(
         cache: mockCache,
         proxyBaseUrl: 'http://example.com',
         timeout: const Duration(milliseconds: 1),
@@ -226,13 +226,13 @@ void main() {
       // httpClient omitted → _ownsClient = true; dispose() calls close() on
       // the internally created client. We can't intercept that client, so we
       // just confirm dispose() does not throw.
-      final api = UvApi(cache: mockCache, proxyBaseUrl: 'http://example.com');
+      final UvApi api = UvApi(cache: mockCache, proxyBaseUrl: 'http://example.com');
 
       expect(api.dispose, returnsNormally);
     });
 
     test('does not close the client when UvApi does not own it', () {
-      final client = MockHttpClient();
+      final MockHttpClient client = MockHttpClient();
 
       UvApi(
         cache: mockCache,
@@ -247,7 +247,7 @@ void main() {
 
   group('UvApiException', () {
     test('toString includes status code and body', () {
-      final e = UvApiException(404, 'not found');
+      final UvApiException e = UvApiException(404, 'not found');
       expect(e.toString(), contains('404'));
       expect(e.toString(), contains('not found'));
     });

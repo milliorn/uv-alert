@@ -12,90 +12,90 @@ class _FailingRemoveStore extends InMemorySharedPreferencesStore {
 
 void main() {
   setUp(() {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
   group('Preferences defaults', () {
     test('isFirstLaunch is true when no value stored', () async {
-      final prefs = await Preferences.load();
+      final Preferences prefs = await Preferences.load();
       expect(prefs.isFirstLaunch, isTrue);
     });
 
     test('theme defaults to system', () async {
-      final prefs = await Preferences.load();
+      final Preferences prefs = await Preferences.load();
       expect(prefs.theme, 'system');
     });
 
     test('useGps defaults to true', () async {
-      final prefs = await Preferences.load();
+      final Preferences prefs = await Preferences.load();
       expect(prefs.useGps, isTrue);
     });
 
     test('notificationsEnabled defaults to false', () async {
-      final prefs = await Preferences.load();
+      final Preferences prefs = await Preferences.load();
       expect(prefs.notificationsEnabled, isFalse);
     });
 
     test('uuid is null when not set', () async {
-      final prefs = await Preferences.load();
+      final Preferences prefs = await Preferences.load();
       expect(prefs.uuid, isNull);
     });
 
     test('cachedPayload is null when not set', () async {
-      final prefs = await Preferences.load();
+      final Preferences prefs = await Preferences.load();
       expect(prefs.cachedPayload, isNull);
     });
 
     test('cachedPayloadAt is null when not set', () async {
-      final prefs = await Preferences.load();
+      final Preferences prefs = await Preferences.load();
       expect(prefs.cachedPayloadAt, isNull);
     });
 
     test('manualLocation is null when not set', () async {
-      final prefs = await Preferences.load();
+      final Preferences prefs = await Preferences.load();
       expect(prefs.manualLocation, isNull);
     });
   });
 
   group('Preferences setters', () {
     test('setFirstLaunchDone sets isFirstLaunch to false', () async {
-      final prefs = await Preferences.load();
+      final Preferences prefs = await Preferences.load();
       await prefs.setFirstLaunchDone();
       expect(prefs.isFirstLaunch, isFalse);
     });
 
     test('setUuid stores and retrieves uuid', () async {
-      final prefs = await Preferences.load();
+      final Preferences prefs = await Preferences.load();
       await prefs.setUuid('abc-123');
       expect(prefs.uuid, 'abc-123');
     });
 
     test('setTheme stores and retrieves theme', () async {
-      final prefs = await Preferences.load();
+      final Preferences prefs = await Preferences.load();
       await prefs.setTheme('dark');
       expect(prefs.theme, 'dark');
     });
 
     test('setUseGps toggles value', () async {
-      final prefs = await Preferences.load();
+      final Preferences prefs = await Preferences.load();
       await prefs.setUseGps(value: false);
       expect(prefs.useGps, isFalse);
     });
 
     test('setManualLocation stores and retrieves location', () async {
-      final prefs = await Preferences.load();
+      final Preferences prefs = await Preferences.load();
       await prefs.setManualLocation('New York, NY');
       expect(prefs.manualLocation, 'New York, NY');
     });
 
     test('setNotificationsEnabled stores and retrieves value', () async {
-      final prefs = await Preferences.load();
+      final Preferences prefs = await Preferences.load();
       await prefs.setNotificationsEnabled(value: true);
       expect(prefs.notificationsEnabled, isTrue);
     });
 
     test('setCachedPayload and setCachedPayloadAt store values', () async {
-      final prefs = await Preferences.load();
+      final Preferences prefs = await Preferences.load();
       await prefs.setCachedPayload('{"foo": 1}');
       await prefs.setCachedPayloadAt('2023-11-14T12:00:00.000Z');
       expect(prefs.cachedPayload, '{"foo": 1}');
@@ -105,7 +105,7 @@ void main() {
 
   group('Preferences clearCache', () {
     test('clearCache removes cached payload and timestamp', () async {
-      final prefs = await Preferences.load();
+      final Preferences prefs = await Preferences.load();
       await prefs.setCachedPayload('data');
       await prefs.setCachedPayloadAt('2023-11-14T12:00:00.000Z');
       await prefs.clearCache();
@@ -114,7 +114,7 @@ void main() {
     });
 
     test('clearCache does not affect other preferences', () async {
-      final prefs = await Preferences.load();
+      final Preferences prefs = await Preferences.load();
       await prefs.setUuid('keep-me');
       await prefs.clearCache();
       expect(prefs.uuid, 'keep-me');
@@ -127,12 +127,12 @@ void main() {
     });
 
     test('clearCache throws StateError when a key cannot be removed', () async {
-      final prefs = await Preferences.load();
+      final Preferences prefs = await Preferences.load();
       expect(prefs.clearCache, throwsStateError);
     });
 
     test('clearAll throws StateError when a key cannot be removed', () async {
-      final prefs = await Preferences.load();
+      final Preferences prefs = await Preferences.load();
       await prefs.setUuid('x');
       expect(prefs.clearAll, throwsStateError);
     });
@@ -140,7 +140,7 @@ void main() {
 
   group('Preferences clearAll', () {
     test('clearAll resets all values to defaults', () async {
-      final prefs = await Preferences.load();
+      final Preferences prefs = await Preferences.load();
       await prefs.setUuid('abc');
       await prefs.setTheme('dark');
       await prefs.setUseGps(value: false);
