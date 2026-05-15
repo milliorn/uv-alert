@@ -9,7 +9,8 @@ class Preferences {
   static const String _keyTheme = '${_prefix}theme';
   static const String _keyUseGps = '${_prefix}use_gps';
   static const String _keyManualLocation = '${_prefix}manual_location';
-  static const String _keyNotificationsEnabled = '${_prefix}notifications_enabled';
+  static const String _keyNotificationsEnabled =
+      '${_prefix}notifications_enabled';
   static const String _keyCachedPayload = '${_prefix}cached_payload';
   static const String _keyCachedPayloadAt = '${_prefix}cached_payload_at';
 
@@ -95,7 +96,10 @@ class Preferences {
   ///
   /// Throws [StateError] if any key cannot be removed.
   Future<void> clearAll() async {
-    final List<String> keys = _prefs.getKeys().where((String k) => k.startsWith(_prefix)).toList();
+    final List<String> keys = _prefs
+        .getKeys()
+        .where((String k) => k.startsWith(_prefix))
+        .toList();
     final List<bool> results = await Future.wait<bool>(keys.map(_prefs.remove));
     _assertAllRemoved(results, 'clearAll');
   }

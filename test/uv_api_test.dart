@@ -64,9 +64,16 @@ void main() {
       when(() => mockCache.isValid).thenReturn(true);
       when(() => mockCache.read()).thenAnswer((_) async => cached);
 
-      final UvApi api = UvApi(cache: mockCache, proxyBaseUrl: 'http://example.com');
+      final UvApi api = UvApi(
+        cache: mockCache,
+        proxyBaseUrl: 'http://example.com',
+      );
 
-      final UvData result = await api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1');
+      final UvData result = await api.fetch(
+        lat: 40.7,
+        lon: -74,
+        uuid: 'uuid-1',
+      );
 
       expect(result.currentUvi, cached.currentUvi);
       verifyNever(() => mockCache.store(any()));
@@ -84,7 +91,11 @@ void main() {
         httpClient: _clientReturning(200, _apiJson()),
       );
 
-      final UvData result = await api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1');
+      final UvData result = await api.fetch(
+        lat: 40.7,
+        lon: -74,
+        uuid: 'uuid-1',
+      );
 
       expect(result.currentUvi, 5.0);
       verify(() => mockCache.store(any())).called(1);
@@ -104,7 +115,11 @@ void main() {
         httpClient: _clientReturning(200, _apiJson()),
       );
 
-      final UvData result = await api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1');
+      final UvData result = await api.fetch(
+        lat: 40.7,
+        lon: -74,
+        uuid: 'uuid-1',
+      );
 
       expect(result.currentUvi, 5.0);
       verify(() => mockCache.store(any())).called(1);
@@ -114,13 +129,19 @@ void main() {
       final UvApi api = UvApi(
         cache: mockCache,
         proxyBaseUrl: 'http://example.com',
-        httpClient: _clientReturning(500, <String, dynamic>{'error': 'server error'}),
+        httpClient: _clientReturning(500, <String, dynamic>{
+          'error': 'server error',
+        }),
       );
 
       await expectLater(
         () => api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1'),
         throwsA(
-          isA<UvApiException>().having((UvApiException e) => e.statusCode, 'statusCode', 500),
+          isA<UvApiException>().having(
+            (UvApiException e) => e.statusCode,
+            'statusCode',
+            500,
+          ),
         ),
       );
     });
@@ -226,7 +247,10 @@ void main() {
       // httpClient omitted → _ownsClient = true; dispose() calls close() on
       // the internally created client. We can't intercept that client, so we
       // just confirm dispose() does not throw.
-      final UvApi api = UvApi(cache: mockCache, proxyBaseUrl: 'http://example.com');
+      final UvApi api = UvApi(
+        cache: mockCache,
+        proxyBaseUrl: 'http://example.com',
+      );
 
       expect(api.dispose, returnsNormally);
     });
