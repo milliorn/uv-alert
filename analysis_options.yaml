@@ -48,7 +48,7 @@ analyzer:
 
 linter:
   rules:
-    omit_local_variable_types: false
+    always_specify_types: true
     public_member_api_docs: true
     require_trailing_commas: false
     avoid_futureor_void: true
