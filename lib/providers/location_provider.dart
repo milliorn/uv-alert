@@ -4,6 +4,10 @@ import 'package:geolocator/geolocator.dart';
 /// Latitude/longitude pair; `null` until a location is acquired.
 typedef LocationState = ({double lat, double lon})?;
 
+/// Riverpod provider for [LocationNotifier].
+final NotifierProvider<LocationNotifier, LocationState> locationProvider =
+    NotifierProvider<LocationNotifier, LocationState>(LocationNotifier.new);
+
 /// Manages location state.
 class LocationNotifier extends Notifier<LocationState> {
   @override
