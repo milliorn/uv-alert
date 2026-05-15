@@ -5,7 +5,7 @@ const int _secondsPerHour = 3600;
 const int _utcMinus5OffsetSeconds = -5 * _secondsPerHour;
 
 void main() {
-  final Map<String, dynamic> sampleJson = <String, dynamic>{
+  final Map<String, Object?> sampleJson = <String, Object?>{
     'current': <String, num>{
       'uvi': 7.5,
       'sunrise': 1700000000,
@@ -27,11 +27,11 @@ void main() {
   group('UvForecastEntry', () {
     test('equal when time and uvi match', () {
       final UvForecastEntry a = UvForecastEntry.fromJson(
-        const <String, dynamic>{'dt': 1700010000, 'uvi': 5.0},
+        const <String, Object?>{'dt': 1700010000, 'uvi': 5.0},
       );
 
       final UvForecastEntry b = UvForecastEntry.fromJson(
-        const <String, dynamic>{'dt': 1700010000, 'uvi': 5.0},
+        const <String, Object?>{'dt': 1700010000, 'uvi': 5.0},
       );
 
       expect(a, equals(b));
@@ -40,11 +40,11 @@ void main() {
 
     test('not equal when fields differ', () {
       final UvForecastEntry a = UvForecastEntry.fromJson(
-        const <String, dynamic>{'dt': 1700010000, 'uvi': 5.0},
+        const <String, Object?>{'dt': 1700010000, 'uvi': 5.0},
       );
 
       final UvForecastEntry b = UvForecastEntry.fromJson(
-        const <String, dynamic>{'dt': 1700010000, 'uvi': 6.0},
+        const <String, Object?>{'dt': 1700010000, 'uvi': 6.0},
       );
 
       expect(a, isNot(equals(b)));
@@ -52,10 +52,10 @@ void main() {
 
     test('fromJson round-trips through toJson', () {
       final UvForecastEntry entry = UvForecastEntry.fromJson(
-        const <String, dynamic>{'dt': 1700010000, 'uvi': 5.0},
+        const <String, Object?>{'dt': 1700010000, 'uvi': 5.0},
       );
 
-      final Map<String, dynamic> json = entry.toJson();
+      final Map<String, Object?> json = entry.toJson();
       final UvForecastEntry restored = UvForecastEntry.fromJson(json);
 
       expect(restored.uvi, entry.uvi);
@@ -64,14 +64,14 @@ void main() {
 
     test('parses epoch seconds into UTC DateTime', () {
       final UvForecastEntry entry = UvForecastEntry.fromJson(
-        const <String, dynamic>{'dt': 0, 'uvi': 1.0},
+        const <String, Object?>{'dt': 0, 'uvi': 1.0},
       );
       expect(entry.time, DateTime.utc(1970));
     });
 
     test('accepts integer uvi', () {
       final UvForecastEntry entry = UvForecastEntry.fromJson(
-        const <String, dynamic>{'dt': 1700000000, 'uvi': 3},
+        const <String, Object?>{'dt': 1700000000, 'uvi': 3},
       );
 
       expect(entry.uvi, 3.0);
@@ -93,14 +93,14 @@ void main() {
     });
 
     test('fromJson throws FormatException when fetched_at is absent', () {
-      final Map<String, dynamic> json = Map<String, dynamic>.from(sampleJson)
+      final Map<String, Object?> json = Map<String, Object?>.from(sampleJson)
         ..remove('fetched_at');
 
       expect(() => UvData.fromJson(json), throwsA(isA<FormatException>()));
     });
 
     test('fromJson handles missing hourly/daily lists', () {
-      final Map<String, dynamic> json = Map<String, dynamic>.from(sampleJson)
+      final Map<String, Object?> json = Map<String, Object?>.from(sampleJson)
         ..remove('hourly')
         ..remove('daily');
 
@@ -113,7 +113,7 @@ void main() {
     test('hourly and daily lists are unmodifiable', () {
       final UvData data = UvData.fromJson(sampleJson);
       final UvForecastEntry extra = UvForecastEntry.fromJson(
-        const <String, dynamic>{'dt': 0, 'uvi': 0.0},
+        const <String, Object?>{'dt': 0, 'uvi': 0.0},
       );
 
       expect(() => data.hourly.add(extra), throwsUnsupportedError);
@@ -130,7 +130,7 @@ void main() {
 
     test('not equal when a field differs', () {
       final UvData a = UvData.fromJson(sampleJson);
-      final UvData b = UvData.fromJson(<String, dynamic>{
+      final UvData b = UvData.fromJson(<String, Object?>{
         ...sampleJson,
         'timezone': 'America/Chicago',
       });
