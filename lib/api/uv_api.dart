@@ -4,8 +4,8 @@ import 'package:http/http.dart' as http;
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/storage/cache.dart';
 
-const _defaultTimeout = Duration(seconds: 10);
-const _httpOk = 200;
+const Duration _defaultTimeout = Duration(seconds: 10);
+const int _httpOk = 200;
 
 /// HTTP client for fetching UV data from the proxy API.
 class UvApi {
@@ -48,19 +48,19 @@ class UvApi {
     required String uuid,
   }) async {
     if (_cache.isValid) {
-      final cached = await _cache.read();
+      final UvData? cached = await _cache.read();
 
       if (cached != null) return cached;
     }
 
-    final uri = Uri.parse(
+    final Uri uri = Uri.parse(
       '$_proxyBaseUrl/api/uv',
-    ).replace(queryParameters: {'lat': lat.toString(), 'lon': lon.toString()});
+    ).replace(queryParameters: <String, dynamic>{'lat': lat.toString(), 'lon': lon.toString()});
 
     // TODO(retry): add exponential backoff for TimeoutException
     //   and transient errors
-    final response = await _httpClient
-        .get(uri, headers: {'X-Device-ID': uuid})
+    final http.Response response = await _httpClient
+        .get(uri, headers: <String, String>{'X-Device-ID': uuid})
         .timeout(_timeout);
 
     if (response.statusCode != _httpOk) {
