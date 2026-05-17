@@ -45,7 +45,6 @@ analyzer:
     unawaited_futures: error
     parameter_assignments: error
     only_throw_errors: error
-    avoid_types_on_closure_parameters: ignore
 
 linter:
   rules:
