@@ -12,9 +12,9 @@ DateTime _staleTimestamp() =>
     DateTime.now().toUtc().subtract(const Duration(hours: _staleHours));
 
 UvData _makeData({DateTime? fetchedAt}) {
-  final raw = fetchedAt ?? DateTime.now().toUtc();
+  final DateTime raw = fetchedAt ?? DateTime.now().toUtc();
   // Truncate to whole seconds: epoch-seconds serialization has 1s precision.
-  final now = DateTime.fromMillisecondsSinceEpoch(
+  final DateTime now = DateTime.fromMillisecondsSinceEpoch(
     raw.millisecondsSinceEpoch - raw.millisecondsSinceEpoch % msPerSecond,
     isUtc: true,
   );
@@ -23,8 +23,8 @@ UvData _makeData({DateTime? fetchedAt}) {
     sunrise: now,
     sunset: now.add(const Duration(hours: 12)),
     clouds: 10,
-    hourly: const [],
-    daily: const [],
+    hourly: const <UvForecastEntry>[],
+    daily: const <UvForecastEntry>[],
     timezone: 'UTC',
     timezoneOffset: 0,
     fetchedAt: now,
@@ -36,7 +36,7 @@ void main() {
   late Cache cache;
 
   setUp(() async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues(<String, Object>{});
     prefs = await Preferences.load();
     cache = Cache(prefs);
   });
@@ -68,7 +68,7 @@ void main() {
     });
 
     test('is not stale when timestamp is TTL - 1 hours old', () async {
-      final recent = DateTime.now().toUtc().subtract(
+      final DateTime recent = DateTime.now().toUtc().subtract(
         const Duration(hours: _freshHours),
       );
       await cache.store(_makeData(fetchedAt: recent));
@@ -115,11 +115,11 @@ void main() {
     });
 
     test('returns stored data with matching fields', () async {
-      final data = _makeData();
+      final UvData data = _makeData();
 
       await cache.store(data);
 
-      final result = await cache.read();
+      final UvData? result = await cache.read();
 
       expect(result, isNotNull);
       expect(result!.currentUvi, data.currentUvi);
@@ -130,7 +130,7 @@ void main() {
     test('clears cache and returns null on corrupt payload', () async {
       await prefs.setCachedPayload('not valid json {{{');
 
-      final result = await cache.read();
+      final UvData? result = await cache.read();
 
       expect(result, isNull);
       expect(cache.isEmpty, isTrue);
@@ -141,7 +141,7 @@ void main() {
       () async {
         await prefs.setCachedPayload('[1, 2, 3]');
 
-        final result = await cache.read();
+        final UvData? result = await cache.read();
 
         expect(result, isNull);
         expect(cache.isEmpty, isTrue);
@@ -151,7 +151,7 @@ void main() {
 
   group('Cache store', () {
     test('stores payload and timestamp', () async {
-      final data = _makeData();
+      final UvData data = _makeData();
 
       await cache.store(data);
 
@@ -160,13 +160,13 @@ void main() {
     });
 
     test('overwrites previously stored data', () async {
-      final first = _makeData(fetchedAt: DateTime.utc(2023));
-      final second = _makeData(fetchedAt: DateTime.utc(2024));
+      final UvData first = _makeData(fetchedAt: DateTime.utc(2023));
+      final UvData second = _makeData(fetchedAt: DateTime.utc(2024));
 
       await cache.store(first);
       await cache.store(second);
 
-      final result = await cache.read();
+      final UvData? result = await cache.read();
 
       expect(result!.fetchedAt, second.fetchedAt);
     });

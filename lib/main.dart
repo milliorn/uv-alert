@@ -9,7 +9,7 @@ Future<void> main() async {
     () async {
       WidgetsFlutterBinding.ensureInitialized();
 
-      FlutterError.onError = (details) {
+      FlutterError.onError = (FlutterErrorDetails details) {
         FlutterError.presentError(details);
         // TODO(crashes): forward to crash reporting
         // (e.g. Sentry, Firebase Crashlytics)
@@ -17,7 +17,7 @@ Future<void> main() async {
 
       runApp(const ProviderScope(child: UvAlertApp()));
     },
-    (error, stack) {
+    (Object error, StackTrace stack) {
       debugPrint('Unhandled async error: $error\n$stack');
       // TODO(crashes): forward to crash reporting
       // (e.g. Sentry, Firebase Crashlytics)

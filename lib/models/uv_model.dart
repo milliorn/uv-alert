@@ -13,10 +13,10 @@ class UvForecastEntry {
   const UvForecastEntry({required this.time, required this.uvi});
 
   /// Deserializes a [UvForecastEntry] from a JSON map.
-  factory UvForecastEntry.fromJson(Map<String, dynamic> json) {
+  factory UvForecastEntry.fromJson(Map<String, Object?> json) {
     return UvForecastEntry(
-      time: _fromEpochSeconds(json['dt'] as int),
-      uvi: (json['uvi'] as num).toDouble(),
+      time: _fromEpochSeconds(json['dt']! as int),
+      uvi: (json['uvi']! as num).toDouble(),
     );
   }
 
@@ -27,7 +27,10 @@ class UvForecastEntry {
   final double uvi;
 
   /// Serializes this entry to a JSON map.
-  Map<String, dynamic> toJson() => {'dt': _toEpochSeconds(time), 'uvi': uvi};
+  Map<String, Object?> toJson() => <String, Object?>{
+    'dt': _toEpochSeconds(time),
+    'uvi': uvi,
+  };
 
   // Override == for value equality: two entries with identical time and uvi
   // are equal regardless of whether they are the same object in memory.
@@ -63,28 +66,29 @@ class UvData {
   /// Deserializes a [UvData] from a JSON map.
   ///
   /// Throws [FormatException] if the required `fetched_at` field is absent.
-  factory UvData.fromJson(Map<String, dynamic> json) {
-    final current = json['current'] as Map<String, dynamic>;
+  factory UvData.fromJson(Map<String, Object?> json) {
+    final Map<String, Object?> current =
+        json['current']! as Map<String, Object?>;
 
     return UvData(
-      currentUvi: (current['uvi'] as num).toDouble(),
-      sunrise: _fromEpochSeconds(current['sunrise'] as int),
-      sunset: _fromEpochSeconds(current['sunset'] as int),
-      clouds: (current['clouds'] as num).toInt(),
-      hourly: List.unmodifiable(
-        (json['hourly'] as List? ?? []).map(
-          (h) => UvForecastEntry.fromJson(h as Map<String, dynamic>),
+      currentUvi: (current['uvi']! as num).toDouble(),
+      sunrise: _fromEpochSeconds(current['sunrise']! as int),
+      sunset: _fromEpochSeconds(current['sunset']! as int),
+      clouds: (current['clouds']! as num).toInt(),
+      hourly: List<UvForecastEntry>.unmodifiable(
+        (json['hourly'] as List<dynamic>? ?? <Object>[]).map<UvForecastEntry>(
+          (dynamic h) => UvForecastEntry.fromJson(h as Map<String, Object?>),
         ),
       ),
-      daily: List.unmodifiable(
-        (json['daily'] as List? ?? []).map(
-          (d) => UvForecastEntry.fromJson(d as Map<String, dynamic>),
+      daily: List<UvForecastEntry>.unmodifiable(
+        (json['daily'] as List<dynamic>? ?? <Object>[]).map<UvForecastEntry>(
+          (dynamic d) => UvForecastEntry.fromJson(d as Map<String, Object?>),
         ),
       ),
-      timezone: json['timezone'] as String,
-      timezoneOffset: json['timezone_offset'] as int,
+      timezone: json['timezone']! as String,
+      timezoneOffset: json['timezone_offset']! as int,
       fetchedAt: json['fetched_at'] != null
-          ? _fromEpochSeconds(json['fetched_at'] as int)
+          ? _fromEpochSeconds(json['fetched_at']! as int)
           : throw const FormatException('missing required field: fetched_at'),
     );
   }
@@ -117,16 +121,16 @@ class UvData {
   final DateTime fetchedAt;
 
   /// Serializes this instance to a JSON map.
-  Map<String, dynamic> toJson() {
-    return {
-      'current': {
+  Map<String, Object?> toJson() {
+    return <String, Object?>{
+      'current': <String, num>{
         'uvi': currentUvi,
         'sunrise': _toEpochSeconds(sunrise),
         'sunset': _toEpochSeconds(sunset),
         'clouds': clouds,
       },
-      'hourly': hourly.map((h) => h.toJson()).toList(),
-      'daily': daily.map((d) => d.toJson()).toList(),
+      'hourly': hourly.map((UvForecastEntry h) => h.toJson()).toList(),
+      'daily': daily.map((UvForecastEntry d) => d.toJson()).toList(),
       'timezone': timezone,
       'timezone_offset': timezoneOffset,
       'fetched_at': _toEpochSeconds(fetchedAt),
@@ -154,7 +158,7 @@ class UvData {
   // Override hashCode whenever == is overridden. Dart requires that objects
   // which are == produce the same hashCode, otherwise Sets and Maps break.
   @override
-  int get hashCode => Object.hashAll([
+  int get hashCode => Object.hashAll(<Object?>[
     currentUvi,
     sunrise,
     sunset,

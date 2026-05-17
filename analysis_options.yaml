@@ -48,6 +48,10 @@ analyzer:
 
 linter:
   rules:
+    avoid_dynamic_calls: true
+    always_specify_types: true # Forces explicit types instead of implicit dynamic
+    omit_local_variable_types: false
+    avoid_types_on_closure_parameters: false
     public_member_api_docs: true
     require_trailing_commas: false
     avoid_futureor_void: true
