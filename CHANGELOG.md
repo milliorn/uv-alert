@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/milliorn/uv-alert/compare/v1.1.0...v1.2.0) (2026-05-17)
+
+
+### Features
+
+* add LocationNotifier with platform abstraction and improve type safety ([#50](https://github.com/milliorn/uv-alert/issues/50)) ([a245b94](https://github.com/milliorn/uv-alert/commit/a245b942b598e4cdcbfcbfd08583a837a96c6db2))
+
 ## [1.1.0](https://github.com/milliorn/uv-alert/compare/v1.0.1...v1.1.0) (2026-05-10)
 
 
