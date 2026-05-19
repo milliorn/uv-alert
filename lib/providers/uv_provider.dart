@@ -18,6 +18,7 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
   /// in tests.
   UvNotifier({UvApi? api}) : _api = api;
 
+  /// The [UvApi] instance used to fetch UV data.
   final UvApi? _api;
 
   @override
