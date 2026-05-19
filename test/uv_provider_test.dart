@@ -27,7 +27,10 @@ ProviderContainer _makeContainer(_MockUvApi api) {
   return ProviderContainer(
     // Override type inference is not exposed publicly in flutter_riverpod.
     // ignore: always_specify_types
-    overrides: [uvProvider.overrideWith(() => UvNotifier(api: api))],
+    overrides: [
+      uvProvider.overrideWith(() => UvNotifier(api: api)),
+      locationProvider.overrideWith(LocationNotifier.new),
+    ],
   );
 }
 
@@ -140,6 +143,7 @@ void main() {
       overrides: [
         uvProvider.overrideWith(() => UvNotifier(api: mockApi)),
         deviceIdProvider.overrideWith((_) async => 'test-uuid'),
+        locationProvider.overrideWith(LocationNotifier.new),
       ],
     );
     addTearDown(container.dispose);
