@@ -56,11 +56,20 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
 
     state = const AsyncValue<UvData>.loading();
 
+    final UvData data;
+
     try {
-      final UvData data = await api.fetch(lat: lat, lon: lon, uuid: '');
-      state = AsyncValue<UvData>.data(data);
+      data = await api.fetch(lat: lat, lon: lon, uuid: '');
     } on Object catch (e, st) {
+      // Guard against writing to a disposed notifier when a location change
+      // causes Riverpod to rebuild (and dispose the old instance) while a
+      // fetch is still in flight.
+      if (!ref.mounted) return;
       state = AsyncValue<UvData>.error(e, st);
+      return;
     }
+
+    if (!ref.mounted) return;
+    state = AsyncValue<UvData>.data(data);
   }
 }
