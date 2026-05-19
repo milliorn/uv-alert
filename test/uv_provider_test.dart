@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:uvalert/api/uv_api.dart';
 import 'package:uvalert/models/uv_model.dart';
+import 'package:uvalert/providers/device_id_provider.dart';
 import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
 
@@ -119,7 +122,7 @@ void main() {
   // Location change triggers auto-fetch
   // ---------------------------------------------------------------------------
 
-  test('setting location then fetching returns data', () async {
+  test('setManual() triggers auto-fetch via build() watcher', () async {
     final UvData data = _makeData();
     when(
       () => mockApi.fetch(
@@ -129,15 +132,37 @@ void main() {
       ),
     ).thenAnswer((_) async => data);
 
-    final ProviderContainer container = _makeContainer(mockApi);
+    // Override deviceIdProvider with a synchronously-resolving future so
+    // build()'s deviceId.whenData fires in the same microtask turn.
+    final ProviderContainer container = ProviderContainer(
+      // Override type inference is not exposed publicly in flutter_riverpod.
+      // ignore: always_specify_types
+      overrides: [
+        uvProvider.overrideWith(() => UvNotifier(api: mockApi)),
+        deviceIdProvider.overrideWith((_) async => 'test-uuid'),
+      ],
+    );
     addTearDown(container.dispose);
+
+    // Initialise the notifier so it starts watching locationProvider.
+    container.read(uvProvider);
+
+    // Wait for deviceIdProvider to resolve so whenData fires on next build().
+    await container.read(deviceIdProvider.future);
+
+    // Set up a completer that resolves when uvProvider transitions to AsyncData.
+    final Completer<UvData> completer = Completer<UvData>();
+    container.listen<AsyncValue<UvData>>(
+      uvProvider,
+      (_, AsyncValue<UvData> next) {
+        next.whenData<void>(completer.complete);
+      },
+    );
 
     container.read(locationProvider.notifier).setManual(lat: 10, lon: 20);
 
-    await container
-        .read(uvProvider.notifier)
-        .fetch(lat: 10, lon: 20, uuid: 'test-uuid');
-
-    expect(container.read(uvProvider).value, data);
+    // Await the data directly instead of counting microtask turns.
+    final UvData result = await completer.future;
+    expect(result, data);
   });
 }
