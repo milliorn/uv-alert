@@ -8,8 +8,6 @@ import 'package:uvalert/providers/uv_provider.dart';
 
 class _MockUvApi extends Mock implements UvApi {}
 
-class _FakeUvData extends Fake implements UvData {}
-
 UvData _makeData() => UvData(
   currentUvi: 3,
   sunrise: DateTime.utc(2024, 6, 1, 6),
@@ -32,10 +30,6 @@ ProviderContainer _makeContainer(_MockUvApi api) {
 
 void main() {
   late _MockUvApi mockApi;
-
-  setUpAll(() {
-    registerFallbackValue(_FakeUvData());
-  });
 
   setUp(() {
     mockApi = _MockUvApi();
