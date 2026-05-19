@@ -131,38 +131,42 @@ void main() {
   // fetchGps — permission denied forever
   // -------------------------------------------------------------------------
 
-  test('fetchGps throws PermissionDeniedException when denied forever',
-      () async {
-    final _FakePlatform platform = _FakePlatform()
-      ..checkResult = LocationPermission.deniedForever;
+  test(
+    'fetchGps throws PermissionDeniedException when denied forever',
+    () async {
+      final _FakePlatform platform = _FakePlatform()
+        ..checkResult = LocationPermission.deniedForever;
 
-    final ProviderContainer container = _makeContainer(platform);
-    addTearDown(container.dispose);
+      final ProviderContainer container = _makeContainer(platform);
+      addTearDown(container.dispose);
 
-    await expectLater(
-      container.read(locationProvider.notifier).fetchGps(),
-      throwsA(isA<PermissionDeniedException>()),
-    );
-  });
+      await expectLater(
+        container.read(locationProvider.notifier).fetchGps(),
+        throwsA(isA<PermissionDeniedException>()),
+      );
+    },
+  );
 
   // -------------------------------------------------------------------------
   // fetchGps — request returns denied
   // -------------------------------------------------------------------------
 
-  test('fetchGps throws PermissionDeniedException when request is denied',
-      () async {
-    final _FakePlatform platform = _FakePlatform()
-      ..checkResult = LocationPermission.denied
-      ..requestResult = LocationPermission.denied;
+  test(
+    'fetchGps throws PermissionDeniedException when request is denied',
+    () async {
+      final _FakePlatform platform = _FakePlatform()
+        ..checkResult = LocationPermission.denied
+        ..requestResult = LocationPermission.denied;
 
-    final ProviderContainer container = _makeContainer(platform);
-    addTearDown(container.dispose);
+      final ProviderContainer container = _makeContainer(platform);
+      addTearDown(container.dispose);
 
-    await expectLater(
-      container.read(locationProvider.notifier).fetchGps(),
-      throwsA(isA<PermissionDeniedException>()),
-    );
-  });
+      await expectLater(
+        container.read(locationProvider.notifier).fetchGps(),
+        throwsA(isA<PermissionDeniedException>()),
+      );
+    },
+  );
 
   // -------------------------------------------------------------------------
   // Default constructor — covers the ?? GeolocatorPlatform.instance fallback
@@ -179,9 +183,7 @@ void main() {
 
     final ProviderContainer container = ProviderContainer(
       // ignore: always_specify_types — Override is not in flutter_riverpod's public API
-      overrides: [
-        locationProvider.overrideWith(LocationNotifier.new),
-      ],
+      overrides: [locationProvider.overrideWith(LocationNotifier.new)],
     );
     addTearDown(container.dispose);
 

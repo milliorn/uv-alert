@@ -26,9 +26,7 @@ ProviderContainer _makeContainer(_MockUvApi api) {
   return ProviderContainer(
     // Override type inference is not exposed publicly in flutter_riverpod.
     // ignore: always_specify_types
-    overrides: [
-      uvProvider.overrideWith(() => UvNotifier(api: api)),
-    ],
+    overrides: [uvProvider.overrideWith(() => UvNotifier(api: api))],
   );
 }
 
@@ -106,9 +104,7 @@ void main() {
     final ProviderContainer container = ProviderContainer(
       // Override type inference is not exposed publicly in flutter_riverpod.
       // ignore: always_specify_types
-      overrides: [
-        uvProvider.overrideWith(UvNotifier.new),
-      ],
+      overrides: [uvProvider.overrideWith(UvNotifier.new)],
     );
     addTearDown(container.dispose);
 
@@ -138,9 +134,7 @@ void main() {
 
     container.read(locationProvider.notifier).setManual(lat: 10, lon: 20);
 
-    await container
-        .read(uvProvider.notifier)
-        .fetch(lat: 10, lon: 20);
+    await container.read(uvProvider.notifier).fetch(lat: 10, lon: 20);
 
     expect(container.read(uvProvider).value, data);
   });
