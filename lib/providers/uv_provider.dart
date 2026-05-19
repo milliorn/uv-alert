@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uvalert/api/uv_api.dart';
 import 'package:uvalert/models/uv_model.dart';
+import 'package:uvalert/providers/device_id_provider.dart';
 import 'package:uvalert/providers/location_provider.dart';
 
 /// Riverpod provider for [UvNotifier].
@@ -27,14 +28,19 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
     // which triggers fetch() automatically.
     final LocationState location = ref.watch(locationProvider);
 
+    // Watch deviceIdProvider; skip the fetch until the UUID is ready.
+    final AsyncValue<String> deviceId = ref.watch(deviceIdProvider);
+
     if (location != null) {
-      // Schedule the fetch after build returns; state mutations are not
-      // allowed synchronously inside build().
-      unawaited(
-        Future<void>.microtask(
-          () => fetch(lat: location.lat, lon: location.lon),
-        ),
-      );
+      deviceId.whenData((String uuid) {
+        // Schedule the fetch after build returns; state mutations are not
+        // allowed synchronously inside build().
+        unawaited(
+          Future<void>.microtask(
+            () => fetch(lat: location.lat, lon: location.lon, uuid: uuid),
+          ),
+        );
+      });
     }
 
     return const AsyncValue<UvData>.loading();
@@ -44,7 +50,11 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
   ///
   /// Updates state to [AsyncValue.loading] while in-flight, then to
   /// [AsyncValue.data] on success or [AsyncValue.error] on failure.
-  Future<void> fetch({required double lat, required double lon}) async {
+  Future<void> fetch({
+    required double lat,
+    required double lon,
+    required String uuid,
+  }) async {
     final UvApi? api = _api;
 
     if (api == null) {
@@ -60,7 +70,7 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
     final UvData data;
 
     try {
-      data = await api.fetch(lat: lat, lon: lon, uuid: '');
+      data = await api.fetch(lat: lat, lon: lon, uuid: uuid);
     } on Object catch (e, st) {
       // Guard against writing to a disposed notifier when a location change
       // causes Riverpod to rebuild (and dispose the old instance) while a

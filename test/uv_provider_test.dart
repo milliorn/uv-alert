@@ -69,7 +69,9 @@ void main() {
     final ProviderContainer container = _makeContainer(mockApi);
     addTearDown(container.dispose);
 
-    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+    await container
+        .read(uvProvider.notifier)
+        .fetch(lat: 51.5, lon: -0.1, uuid: 'test-uuid');
 
     expect(container.read(uvProvider), isA<AsyncData<UvData>>());
     expect(container.read(uvProvider).value, data);
@@ -91,7 +93,9 @@ void main() {
     final ProviderContainer container = _makeContainer(mockApi);
     addTearDown(container.dispose);
 
-    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+    await container
+        .read(uvProvider.notifier)
+        .fetch(lat: 51.5, lon: -0.1, uuid: 'test-uuid');
 
     expect(container.read(uvProvider), isA<AsyncError<UvData>>());
   });
@@ -108,7 +112,9 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    await container.read(uvProvider.notifier).fetch(lat: 0, lon: 0);
+    await container
+        .read(uvProvider.notifier)
+        .fetch(lat: 0, lon: 0, uuid: 'test-uuid');
 
     final AsyncValue<UvData> state = container.read(uvProvider);
     expect(state, isA<AsyncError<UvData>>());
@@ -134,7 +140,9 @@ void main() {
 
     container.read(locationProvider.notifier).setManual(lat: 10, lon: 20);
 
-    await container.read(uvProvider.notifier).fetch(lat: 10, lon: 20);
+    await container
+        .read(uvProvider.notifier)
+        .fetch(lat: 10, lon: 20, uuid: 'test-uuid');
 
     expect(container.read(uvProvider).value, data);
   });
