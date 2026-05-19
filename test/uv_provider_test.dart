@@ -101,24 +101,46 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // No api configured
+  // uvApiProvider fallback — no constructor injection
   // ---------------------------------------------------------------------------
 
-  test('fetch() sets AsyncError(StateError) when api is null', () async {
+  test('fetch() uses uvApiProvider when no api is injected', () async {
+    final UvData data = _makeData();
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+      ),
+    ).thenAnswer((_) async => data);
+
+    // No api passed to UvNotifier; it must fall back to uvApiProvider.
     final ProviderContainer container = ProviderContainer(
       // Override type inference is not exposed publicly in flutter_riverpod.
       // ignore: always_specify_types
-      overrides: [uvProvider.overrideWith(UvNotifier.new)],
+      overrides: [
+        uvProvider.overrideWith(UvNotifier.new),
+        uvApiProvider.overrideWith((_) async => mockApi),
+      ],
     );
     addTearDown(container.dispose);
 
-    await container
-        .read(uvProvider.notifier)
-        .fetch(lat: 0, lon: 0, uuid: 'test-uuid');
+    final Completer<UvData> completer = Completer<UvData>();
+    container.listen<AsyncValue<UvData>>(
+      uvProvider,
+      (_, AsyncValue<UvData> next) {
+        next.whenData<void>(completer.complete);
+      },
+    );
 
-    final AsyncValue<UvData> state = container.read(uvProvider);
-    expect(state, isA<AsyncError<UvData>>());
-    expect(state.error, isA<StateError>());
+    unawaited(
+      container
+          .read(uvProvider.notifier)
+          .fetch(lat: 51.5, lon: -0.1, uuid: 'test-uuid'),
+    );
+
+    final UvData result = await completer.future;
+    expect(result, data);
   });
 
   // ---------------------------------------------------------------------------
@@ -154,7 +176,7 @@ void main() {
     // Wait for deviceIdProvider to resolve so whenData fires on next build().
     await container.read(deviceIdProvider.future);
 
-    // Set up a completer that resolves when uvProvider transitions to AsyncData.
+    // Set up a completer that resolves when uvProvider reaches AsyncData.
     final Completer<UvData> completer = Completer<UvData>();
     container.listen<AsyncValue<UvData>>(
       uvProvider,

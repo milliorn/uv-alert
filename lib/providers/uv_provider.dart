@@ -2,9 +2,28 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uvalert/api/uv_api.dart';
+import 'package:uvalert/constants.dart';
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/providers/device_id_provider.dart';
 import 'package:uvalert/providers/location_provider.dart';
+import 'package:uvalert/storage/cache.dart';
+import 'package:uvalert/storage/preferences.dart';
+
+/// Provides a [Cache] backed by [Preferences].
+final Provider<Future<Cache>> cacheProvider = Provider<Future<Cache>>(
+  (Ref ref) async {
+    final Preferences prefs = await Preferences.load();
+    return Cache(prefs);
+  },
+);
+
+/// Provides the production [UvApi] instance.
+final Provider<Future<UvApi>> uvApiProvider = Provider<Future<UvApi>>(
+  (Ref ref) async {
+    final Cache cache = await ref.watch(cacheProvider);
+    return UvApi(cache: cache, proxyBaseUrl: kProxyBaseUrl);
+  },
+);
 
 /// Riverpod provider for [UvNotifier].
 final NotifierProvider<UvNotifier, AsyncValue<UvData>> uvProvider =
@@ -37,7 +56,15 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
         // allowed synchronously inside build().
         unawaited(
           Future<void>.microtask(
-            () => fetch(lat: location.lat, lon: location.lon, uuid: uuid),
+            () async {
+              final UvApi api = _api ?? await ref.read(uvApiProvider);
+              await _fetchWith(
+                api: api,
+                lat: location.lat,
+                lon: location.lon,
+                uuid: uuid,
+              );
+            },
           ),
         );
       });
@@ -55,16 +82,16 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
     required double lon,
     required String uuid,
   }) async {
-    final UvApi? api = _api;
+    final UvApi api = _api ?? await ref.read(uvApiProvider);
+    await _fetchWith(api: api, lat: lat, lon: lon, uuid: uuid);
+  }
 
-    if (api == null) {
-      state = AsyncValue<UvData>.error(
-        StateError('UvNotifier: UvApi not configured'),
-        StackTrace.current,
-      );
-      return;
-    }
-
+  Future<void> _fetchWith({
+    required UvApi api,
+    required double lat,
+    required double lon,
+    required String uuid,
+  }) async {
     state = const AsyncValue<UvData>.loading();
 
     final UvData data;
