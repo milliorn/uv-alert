@@ -21,11 +21,12 @@ final FutureProvider<Cache> cacheProvider = FutureProvider<Cache>((
 final FutureProvider<UvApi> uvApiProvider = FutureProvider<UvApi>((
   Ref ref,
 ) async {
-  assert(
-    proxyBaseUrl.isNotEmpty,
-    'PROXY_BASE_URL is not set. '
-    'Pass --dart-define=PROXY_BASE_URL=https://your-proxy.com at build time.',
-  );
+  if (proxyBaseUrl.isEmpty) {
+    throw StateError(
+      'PROXY_BASE_URL is not set. '
+      'Pass --dart-define=PROXY_BASE_URL=https://your-proxy.com at build time.',
+    );
+  }
   final Cache cache = await ref.read(cacheProvider.future);
   return UvApi(cache: cache, proxyBaseUrl: proxyBaseUrl);
 });
@@ -82,7 +83,11 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
       );
     }
 
-    return const AsyncValue<UvData>.loading();
+    // On initial build there is no previous state; return loading.
+    // On subsequent builds (location change), preserve the previous value so
+    // the UI keeps showing data while the new fetch is in flight instead of
+    // flashing a spinner.
+    return stateOrNull ?? const AsyncValue<UvData>.loading();
   }
 
   /// Fetches UV data for the given coordinates.
