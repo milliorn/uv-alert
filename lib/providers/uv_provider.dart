@@ -72,20 +72,16 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
     if (location != null) {
       final int generation = ++_fetchGeneration;
 
-      // Schedule the fetch after build returns; state mutations are not
-      // allowed synchronously inside build().
+      // State mutations are not allowed synchronously inside build().
       unawaited(
         Future<void>.microtask(() async {
           try {
-            // Read (not watch) these providers so their resolution does not
-            // trigger another build() and reset state to loading.
-            // Resolve both concurrently; neither depends on the other's result.
+            // ref.read (not watch) so resolution doesn't re-trigger build().
             final (String uuid, UvApi api) = await (
               ref.read(deviceIdProvider.future),
               _resolveApi(),
             ).wait;
 
-            // A newer location change arrived while we were awaiting; discard.
             if (generation != _fetchGeneration) return;
 
             await _fetchWith(
@@ -103,10 +99,9 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
       );
     }
 
-    // On initial build there is no previous state; return loading.
-    // On subsequent builds (location change), preserve the previous value so
-    // the UI keeps showing data while the new fetch is in flight instead of
-    // flashing a spinner.
+    // Preserve previous AsyncData during a refresh so the UI doesn't flash a
+    // spinner. copyWithPrevious is @internal in riverpod, so this is the only
+    // public way to achieve it from a sync Notifier.
     return stateOrNull ?? const AsyncValue<UvData>.loading();
   }
 
@@ -139,9 +134,8 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
 
     if (isStale()) return;
     if (!ref.mounted) return;
-    // build() already returned the previous state as loading (preserving any
-    // prior AsyncData for the UI). Only set loading here for manual fetch()
-    // calls (generation == null), where build() has not run first.
+    // build() already set loading preserving the previous value (see above);
+    // only do it here for manual fetch() calls, where build() hasn't run.
     if (generation == null) state = const AsyncValue<UvData>.loading();
 
     final UvData data;
