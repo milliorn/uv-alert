@@ -5,7 +5,7 @@ import 'package:uvalert/providers/device_id_provider.dart';
 
 // The v4 UUID pattern is inherently longer than 80 chars; kept as a constant
 // so it is defined once and not duplicated across tests.
-final RegExp _kUuidV4 = RegExp(
+final RegExp _uuidV4 = RegExp(
   r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
 );
 
@@ -34,7 +34,7 @@ void main() {
     test('generated UUID is a valid v4 UUID', () async {
       final String id = await _makeContainer().read(deviceIdProvider.future);
 
-      expect(_kUuidV4.hasMatch(id), isTrue);
+      expect(_uuidV4.hasMatch(id), isTrue);
     });
   });
 
@@ -43,18 +43,18 @@ void main() {
   // ---------------------------------------------------------------------------
 
   group('deviceIdProvider — stored UUID', () {
-    const String kStored = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+    const String stored = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
 
     setUp(() {
       SharedPreferences.setMockInitialValues(<String, Object>{
-        'uvalert_uuid': kStored,
+        'uvalert_uuid': stored,
       });
     });
 
     test('returns the stored UUID without generating a new one', () async {
       final String id = await _makeContainer().read(deviceIdProvider.future);
 
-      expect(id, kStored);
+      expect(id, stored);
     });
   });
 
@@ -80,7 +80,7 @@ void main() {
       () async {
         final String id = await _makeContainer().read(deviceIdProvider.future);
 
-        expect(_kUuidV4.hasMatch(id), isTrue);
+        expect(_uuidV4.hasMatch(id), isTrue);
       },
     );
   });
