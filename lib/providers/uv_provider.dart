@@ -115,7 +115,7 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
       ref.read(deviceIdProvider.future),
       _resolveApi(),
     ).wait;
-    
+
     await _fetchWith(api: api, lat: lat, lon: lon, uuid: uuid);
   }
 

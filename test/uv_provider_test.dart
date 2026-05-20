@@ -78,9 +78,7 @@ void main() {
 
     final ProviderContainer container = _makeContainerWith(mockApi);
 
-    await container
-        .read(uvProvider.notifier)
-        .fetch(lat: 51.5, lon: -0.1);
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
 
     expect(container.read(uvProvider), isA<AsyncData<UvData>>());
     expect(container.read(uvProvider).value, data);
@@ -101,9 +99,7 @@ void main() {
 
     final ProviderContainer container = _makeContainerWith(mockApi);
 
-    await container
-        .read(uvProvider.notifier)
-        .fetch(lat: 51.5, lon: -0.1);
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
 
     expect(container.read(uvProvider), isA<AsyncError<UvData>>());
   });
@@ -142,9 +138,7 @@ void main() {
       next.whenData<void>(completer.complete);
     });
 
-    unawaited(
-      container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1),
-    );
+    unawaited(container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1));
 
     final UvData result = await completer.future;
     expect(result, data);
