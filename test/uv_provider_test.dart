@@ -41,6 +41,16 @@ ProviderContainer _makeContainerWith(_MockUvApi api) {
   return container;
 }
 
+/// Returns a container with [uvProvider] and [deviceIdProvider] already
+/// resolved, so microtasks inside build() can reach their `.wait` without
+/// blocking on the first location change.
+Future<ProviderContainer> _makeWarmContainerWith(_MockUvApi api) async {
+  final ProviderContainer container = _makeContainerWith(api)
+    ..read(uvProvider);
+  await container.read(deviceIdProvider.future);
+  return container;
+}
+
 void main() {
   late _MockUvApi mockApi;
 
@@ -255,21 +265,7 @@ void main() {
       return data;
     });
 
-    final ProviderContainer container = ProviderContainer(
-      // Override type inference is not exposed publicly in flutter_riverpod.
-      // ignore: always_specify_types
-      overrides: [
-        uvProvider.overrideWith(() => UvNotifier(api: mockApi)),
-        deviceIdProvider.overrideWith((_) async => 'test-uuid'),
-        locationProvider.overrideWith(LocationNotifier.new),
-      ],
-    );
-    addTearDown(container.dispose);
-
-    // Prime both providers before any location change so the microtasks
-    // that fire inside build() can reach their .wait without blocking.
-    container.read(uvProvider);
-    await container.read(deviceIdProvider.future);
+    final ProviderContainer container = await _makeWarmContainerWith(mockApi);
 
     final Completer<UvData> secondDone = Completer<UvData>();
     container.listen<AsyncValue<UvData>>(uvProvider, (
@@ -346,19 +342,7 @@ void main() {
         return data;
       });
 
-      final ProviderContainer container = ProviderContainer(
-        // Override type inference is not exposed publicly in flutter_riverpod.
-        // ignore: always_specify_types
-        overrides: [
-          uvProvider.overrideWith(() => UvNotifier(api: mockApi)),
-          deviceIdProvider.overrideWith((_) async => 'test-uuid'),
-          locationProvider.overrideWith(LocationNotifier.new),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      container.read(uvProvider);
-      await container.read(deviceIdProvider.future);
+      final ProviderContainer container = await _makeWarmContainerWith(mockApi);
 
       final Completer<UvData> secondDone = Completer<UvData>();
       container.listen<AsyncValue<UvData>>(uvProvider, (
@@ -430,22 +414,7 @@ void main() {
       ),
     ).thenAnswer((_) async => data);
 
-    final ProviderContainer container = ProviderContainer(
-      // Override type inference is not exposed publicly in flutter_riverpod.
-      // ignore: always_specify_types
-      overrides: [
-        uvProvider.overrideWith(() => UvNotifier(api: mockApi)),
-        deviceIdProvider.overrideWith((_) async => 'test-uuid'),
-        locationProvider.overrideWith(LocationNotifier.new),
-      ],
-    );
-    addTearDown(container.dispose);
-
-    // Read uvProvider first so build() starts watching locationProvider.
-    // Await deviceIdProvider so it is resolved before setManual fires build()
-    // again — ensures the microtask's concurrent .wait completes in one turn.
-    container.read(uvProvider);
-    await container.read(deviceIdProvider.future);
+    final ProviderContainer container = await _makeWarmContainerWith(mockApi);
 
     final Completer<UvData> completer = Completer<UvData>();
     container.listen<AsyncValue<UvData>>(uvProvider, (
