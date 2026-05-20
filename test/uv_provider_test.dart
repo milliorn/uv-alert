@@ -137,7 +137,7 @@ void main() {
       _,
       AsyncValue<UvData> next,
     ) {
-      next.whenData<void>(completer.complete);
+      if (!completer.isCompleted) next.whenData<void>(completer.complete);
     });
 
     unawaited(container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1));
