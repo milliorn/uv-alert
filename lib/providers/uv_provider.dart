@@ -28,7 +28,9 @@ final FutureProvider<UvApi> uvApiProvider = FutureProvider<UvApi>((
     );
   }
   final Cache cache = await ref.read(cacheProvider.future);
-  return UvApi(cache: cache, proxyBaseUrl: proxyBaseUrl);
+  final UvApi api = UvApi(cache: cache, proxyBaseUrl: proxyBaseUrl);
+  ref.onDispose(api.dispose);
+  return api;
 });
 
 /// Riverpod provider for [UvNotifier].
