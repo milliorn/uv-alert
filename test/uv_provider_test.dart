@@ -297,6 +297,126 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
+  // fetch() — error resolving dependencies (deviceId / api)
+  // ---------------------------------------------------------------------------
+
+  test(
+    'fetch() transitions to AsyncError when deviceIdProvider throws',
+    () async {
+      final ProviderContainer container = ProviderContainer(
+        // Override type inference is not exposed publicly in flutter_riverpod.
+        // ignore: always_specify_types
+        overrides: [
+          uvProvider.overrideWith(() => UvNotifier(api: mockApi)),
+          deviceIdProvider.overrideWith(
+            (_) async => throw StateError('device id unavailable'),
+          ),
+          locationProvider.overrideWith(LocationNotifier.new),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+
+      expect(container.read(uvProvider), isA<AsyncError<UvData>>());
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // _fetchWith guards — stale generation and unmounted container
+  // ---------------------------------------------------------------------------
+
+  test(
+    '_fetchWith returns immediately when generation is stale at entry',
+    () async {
+      // Arrange: first fetch stalls until released; second resolves instantly.
+      final Completer<void> stallFirst = Completer<void>();
+      final UvData data = _makeData();
+      int callCount = 0;
+
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+        ),
+      ).thenAnswer((_) async {
+        callCount++;
+        if (callCount == 1) await stallFirst.future;
+        return data;
+      });
+
+      final ProviderContainer container = ProviderContainer(
+        // Override type inference is not exposed publicly in flutter_riverpod.
+        // ignore: always_specify_types
+        overrides: [
+          uvProvider.overrideWith(() => UvNotifier(api: mockApi)),
+          deviceIdProvider.overrideWith((_) async => 'test-uuid'),
+          locationProvider.overrideWith(LocationNotifier.new),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(uvProvider);
+      await container.read(deviceIdProvider.future);
+
+      final Completer<UvData> secondDone = Completer<UvData>();
+      container.listen<AsyncValue<UvData>>(uvProvider, (
+        _,
+        AsyncValue<UvData> next,
+      ) {
+        if (!secondDone.isCompleted) next.whenData<void>(secondDone.complete);
+      });
+
+      // First location change starts a stalled microtask.
+      container.read(locationProvider.notifier).setManual(lat: 1, lon: 2);
+
+      // Allow the first microtask to pass its .wait and enter _fetchWith,
+      // then fire a second change to bump the generation before stallFirst
+      // resolves the api.fetch call. The isStale() guard at the top of
+      // _fetchWith will still be false when entered from the first microtask
+      // here; the second change fires _after_ entering api.fetch, so the
+      // isStale() guard inside the catch/finally branch covers that path.
+      // To hit isStale() at _fetchWith *entry*, we need the second change to
+      // fire before _fetchWith is called. We achieve this by firing both
+      // changes synchronously so generation is bumped before the microtask
+      // scheduler runs either build() invocation.
+      container.read(locationProvider.notifier).setManual(lat: 99, lon: 99);
+
+      stallFirst.complete();
+
+      final UvData result = await secondDone.future;
+      expect(result, data);
+
+      // Only the second fetch (lat:99) should have produced data; the first
+      // (lat:1) was stale when _fetchWith ran.
+      verify(
+        () => mockApi.fetch(lat: 99, lon: 99, uuid: 'test-uuid'),
+      ).called(1);
+    },
+  );
+
+  test(
+    'fetch() returns immediately when notifier is no longer mounted',
+    () async {
+      final ProviderContainer container = _makeContainerWith(mockApi);
+
+      final UvNotifier notifier = container.read(uvProvider.notifier);
+      container.dispose();
+
+      await notifier.fetch(lat: 51.5, lon: -0.1);
+
+      verifyNever(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+        ),
+      );
+    },
+  );
+
+  // ---------------------------------------------------------------------------
   // Location change triggers auto-fetch
   // ---------------------------------------------------------------------------
 
