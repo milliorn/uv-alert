@@ -190,5 +190,12 @@ void main() {
     // Await the data directly instead of counting microtask turns.
     final UvData result = await completer.future;
     expect(result, data);
+
+    // Confirm the fetch was triggered by the build() watcher, not a direct
+    // call, and that it received the coordinates from setManual().
+    verify(
+      () => mockApi.fetch(lat: 10, lon: 20, uuid: 'test-uuid'),
+    ).called(1);
+    verifyNoMoreInteractions(mockApi);
   });
 }

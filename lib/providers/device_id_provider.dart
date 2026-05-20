@@ -11,7 +11,9 @@ final FutureProvider<String> deviceIdProvider = FutureProvider<String>(
     final Preferences prefs = await Preferences.load();
     final String? stored = prefs.uuid;
 
-    if (stored != null) return stored;
+    // shared_preferences may return "" instead of null for a missing key on
+    // some platforms, so treat an empty string the same as null.
+    if (stored != null && stored.isNotEmpty) return stored;
 
     final String id = const Uuid().v4();
     await prefs.setUuid(id);
