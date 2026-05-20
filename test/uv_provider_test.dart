@@ -187,9 +187,9 @@ void main() {
     final ProviderContainer container = ProviderContainer();
     addTearDown(container.dispose);
 
-    expect(
-      () => container.read(uvApiProvider.future),
-      throwsStateError,
+    await expectLater(
+      container.read(uvApiProvider.future),
+      throwsA(isA<StateError>()),
     );
   });
 
