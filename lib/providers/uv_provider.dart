@@ -50,24 +50,23 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
     // which triggers fetch() automatically.
     final LocationState location = ref.watch(locationProvider);
 
-    // Watch deviceIdProvider; skip the fetch until the UUID is ready.
-    final AsyncValue<String> deviceId = ref.watch(deviceIdProvider);
-
     if (location != null) {
-      deviceId.whenData((String uuid) {
-        // Schedule the fetch after build returns; state mutations are not
-        // allowed synchronously inside build().
-        unawaited(
-          Future<void>.microtask(() async {
-            await _fetchWith(
-              api: await _resolveApi(),
-              lat: location.lat,
-              lon: location.lon,
-              uuid: uuid,
-            );
-          }),
-        );
-      });
+      // Schedule the fetch after build returns; state mutations are not
+      // allowed synchronously inside build().
+      unawaited(
+        Future<void>.microtask(() async {
+          // Read (not watch) deviceIdProvider so its future resolution does
+          // not trigger another build() and reset state to loading.
+          final String uuid = await ref.read(deviceIdProvider.future);
+          
+          await _fetchWith(
+            api: await _resolveApi(),
+            lat: location.lat,
+            lon: location.lon,
+            uuid: uuid,
+          );
+        }),
+      );
     }
 
     return const AsyncValue<UvData>.loading();
