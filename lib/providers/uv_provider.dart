@@ -112,10 +112,19 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
   Future<void> fetch({required double lat, required double lon}) async {
     if (!ref.mounted) return;
 
-    final (String uuid, UvApi api) = await (
-      ref.read(deviceIdProvider.future),
-      _resolveApi(),
-    ).wait;
+    final String uuid;
+    final UvApi api;
+
+    try {
+      (uuid, api) = await (
+        ref.read(deviceIdProvider.future),
+        _resolveApi(),
+      ).wait;
+    } on Object catch (e, st) {
+      if (!ref.mounted) return;
+      state = AsyncValue<UvData>.error(e, st);
+      return;
+    }
 
     await _fetchWith(api: api, lat: lat, lon: lon, uuid: uuid);
   }
