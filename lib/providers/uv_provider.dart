@@ -55,19 +55,24 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
       // allowed synchronously inside build().
       unawaited(
         Future<void>.microtask(() async {
-          // Read (not watch) deviceIdProvider so its future resolution does
-          // not trigger another build() and reset state to loading.
-          final List<Object> results = await Future.wait(<Future<Object>>[
-            ref.read(deviceIdProvider.future),
-            _resolveApi(),
-          ]);
+          try {
+            // Read (not watch) deviceIdProvider so its future resolution does
+            // not trigger another build() and reset state to loading.
+            final List<Object> results = await Future.wait(<Future<Object>>[
+              ref.read(deviceIdProvider.future),
+              _resolveApi(),
+            ]);
 
-          await _fetchWith(
-            api: results[1] as UvApi,
-            lat: location.lat,
-            lon: location.lon,
-            uuid: results[0] as String,
-          );
+            await _fetchWith(
+              api: results[1] as UvApi,
+              lat: location.lat,
+              lon: location.lon,
+              uuid: results[0] as String,
+            );
+          } on Object catch (e, st) {
+            if (!ref.mounted) return;
+            state = AsyncValue<UvData>.error(e, st);
+          }
         }),
       );
     }
