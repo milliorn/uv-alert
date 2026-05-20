@@ -55,7 +55,9 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
   /// production instance is resolved from [uvApiProvider] at runtime.
   UvNotifier({UvApi? api}) : _api = api;
 
-  /// The [UvApi] instance used to fetch UV data.
+  /// Injected [UvApi] for testing. When `null`, [_resolveApi] reads the
+  /// production instance from [uvApiProvider]. Injected instances are owned
+  /// by the caller and are not disposed by this notifier.
   final UvApi? _api;
 
   // Incremented on each build() invocation; microtasks check this to detect
