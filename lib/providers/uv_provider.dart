@@ -21,6 +21,11 @@ final FutureProvider<Cache> cacheProvider = FutureProvider<Cache>((
 final FutureProvider<UvApi> uvApiProvider = FutureProvider<UvApi>((
   Ref ref,
 ) async {
+  assert(
+    kProxyBaseUrl.isNotEmpty,
+    'PROXY_BASE_URL is not set. '
+    'Pass --dart-define=PROXY_BASE_URL=https://your-proxy.com at build time.',
+  );
   final Cache cache = await ref.read(cacheProvider.future);
   return UvApi(cache: cache, proxyBaseUrl: kProxyBaseUrl);
 });
