@@ -125,12 +125,12 @@ void main() {
     addTearDown(container.dispose);
 
     final Completer<UvData> completer = Completer<UvData>();
-    container.listen<AsyncValue<UvData>>(
-      uvProvider,
-      (_, AsyncValue<UvData> next) {
-        next.whenData<void>(completer.complete);
-      },
-    );
+    container.listen<AsyncValue<UvData>>(uvProvider, (
+      _,
+      AsyncValue<UvData> next,
+    ) {
+      next.whenData<void>(completer.complete);
+    });
 
     unawaited(
       container
@@ -177,12 +177,12 @@ void main() {
 
     // Set up a completer that resolves when uvProvider reaches AsyncData.
     final Completer<UvData> completer = Completer<UvData>();
-    container.listen<AsyncValue<UvData>>(
-      uvProvider,
-      (_, AsyncValue<UvData> next) {
-        next.whenData<void>(completer.complete);
-      },
-    );
+    container.listen<AsyncValue<UvData>>(uvProvider, (
+      _,
+      AsyncValue<UvData> next,
+    ) {
+      next.whenData<void>(completer.complete);
+    });
 
     container.read(locationProvider.notifier).setManual(lat: 10, lon: 20);
 
@@ -192,9 +192,7 @@ void main() {
 
     // Confirm the fetch was triggered by the build() watcher, not a direct
     // call, and that it received the coordinates from setManual().
-    verify(
-      () => mockApi.fetch(lat: 10, lon: 20, uuid: 'test-uuid'),
-    ).called(1);
+    verify(() => mockApi.fetch(lat: 10, lon: 20, uuid: 'test-uuid')).called(1);
     verifyNoMoreInteractions(mockApi);
   });
 }

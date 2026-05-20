@@ -10,20 +10,20 @@ import 'package:uvalert/storage/cache.dart';
 import 'package:uvalert/storage/preferences.dart';
 
 /// Provides a [Cache] backed by [Preferences].
-final Provider<Future<Cache>> cacheProvider = Provider<Future<Cache>>(
-  (Ref ref) async {
-    final Preferences prefs = await Preferences.load();
-    return Cache(prefs);
-  },
-);
+final Provider<Future<Cache>> cacheProvider = Provider<Future<Cache>>((
+  Ref ref,
+) async {
+  final Preferences prefs = await Preferences.load();
+  return Cache(prefs);
+});
 
 /// Provides the production [UvApi] instance.
-final Provider<Future<UvApi>> uvApiProvider = Provider<Future<UvApi>>(
-  (Ref ref) async {
-    final Cache cache = await ref.read(cacheProvider);
-    return UvApi(cache: cache, proxyBaseUrl: kProxyBaseUrl);
-  },
-);
+final Provider<Future<UvApi>> uvApiProvider = Provider<Future<UvApi>>((
+  Ref ref,
+) async {
+  final Cache cache = await ref.read(cacheProvider);
+  return UvApi(cache: cache, proxyBaseUrl: kProxyBaseUrl);
+});
 
 /// Riverpod provider for [UvNotifier].
 final NotifierProvider<UvNotifier, AsyncValue<UvData>> uvProvider =
@@ -55,17 +55,15 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
         // Schedule the fetch after build returns; state mutations are not
         // allowed synchronously inside build().
         unawaited(
-          Future<void>.microtask(
-            () async {
-              final UvApi api = _api ?? await ref.read(uvApiProvider);
-              await _fetchWith(
-                api: api,
-                lat: location.lat,
-                lon: location.lon,
-                uuid: uuid,
-              );
-            },
-          ),
+          Future<void>.microtask(() async {
+            final UvApi api = _api ?? await ref.read(uvApiProvider);
+            await _fetchWith(
+              api: api,
+              lat: location.lat,
+              lon: location.lon,
+              uuid: uuid,
+            );
+          }),
         );
       });
     }
