@@ -23,7 +23,7 @@ UvData _makeData() => UvData(
   fetchedAt: DateTime.utc(2024, 6, 1, 12),
 );
 
-ProviderContainer _makeContainer(_MockUvApi api) {
+ProviderContainer _makeContainerWith(_MockUvApi api) {
   final ProviderContainer container = ProviderContainer(
     // Override type inference is not exposed publicly in flutter_riverpod.
     // ignore: always_specify_types
@@ -48,7 +48,7 @@ void main() {
   // ---------------------------------------------------------------------------
 
   test('initial state is AsyncLoading when location is null', () {
-    final ProviderContainer container = _makeContainer(mockApi);
+    final ProviderContainer container = _makeContainerWith(mockApi);
 
     expect(container.read(uvProvider), isA<AsyncLoading<UvData>>());
   });
@@ -67,7 +67,7 @@ void main() {
       ),
     ).thenAnswer((_) async => data);
 
-    final ProviderContainer container = _makeContainer(mockApi);
+    final ProviderContainer container = _makeContainerWith(mockApi);
 
     await container
         .read(uvProvider.notifier)
@@ -90,7 +90,7 @@ void main() {
       ),
     ).thenThrow(UvApiException(500, 'server error'));
 
-    final ProviderContainer container = _makeContainer(mockApi);
+    final ProviderContainer container = _makeContainerWith(mockApi);
 
     await container
         .read(uvProvider.notifier)

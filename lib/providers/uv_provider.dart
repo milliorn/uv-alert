@@ -64,8 +64,12 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
           try {
             // Read (not watch) deviceIdProvider so its future resolution does
             // not trigger another build() and reset state to loading.
-            final String uuid = await ref.read(deviceIdProvider.future);
-            final UvApi api = await _resolveApi();
+            // Resolve both concurrently — they load SharedPreferences
+            // independently.
+            final (String uuid, UvApi api) = await (
+              ref.read(deviceIdProvider.future),
+              _resolveApi(),
+            ).wait;
 
             await _fetchWith(
               api: api,
