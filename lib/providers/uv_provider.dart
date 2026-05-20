@@ -92,7 +92,7 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
               generation: generation,
             );
           } on Object catch (e, st) {
-            if (!ref.mounted) return;
+            if (!ref.mounted || generation != _fetchGeneration) return;
             state = AsyncValue<UvData>.error(e, st);
           }
         }),
