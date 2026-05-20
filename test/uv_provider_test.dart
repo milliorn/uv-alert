@@ -3,11 +3,13 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uvalert/api/uv_api.dart';
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/providers/device_id_provider.dart';
 import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
+import 'package:uvalert/storage/cache.dart';
 
 class _MockUvApi extends Mock implements UvApi {}
 
@@ -142,6 +144,156 @@ void main() {
 
     final UvData result = await completer.future;
     expect(result, data);
+  });
+
+  // ---------------------------------------------------------------------------
+  // cacheProvider and uvApiProvider — happy path via overrides
+  // ---------------------------------------------------------------------------
+
+  test('cacheProvider resolves to a Cache backed by Preferences', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+
+    final ProviderContainer container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    final Cache cache = await container.read(cacheProvider.future);
+    expect(cache, isA<Cache>());
+  });
+
+  test('uvApiProvider resolves to UvApi when proxyBaseUrl is non-empty',
+      () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+
+    final ProviderContainer container = ProviderContainer(
+      // Override type inference is not exposed publicly in flutter_riverpod.
+      // ignore: always_specify_types
+      overrides: [
+        proxyBaseUrlProvider.overrideWithValue('https://proxy.example.com'),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final UvApi api = await container.read(uvApiProvider.future);
+    expect(api, isA<UvApi>());
+  });
+
+  // ---------------------------------------------------------------------------
+  // uvApiProvider — empty proxyBaseUrl
+  // ---------------------------------------------------------------------------
+
+  test('uvApiProvider throws StateError when proxyBaseUrl is empty', () async {
+    // proxyBaseUrl is '' in tests (no --dart-define), so uvApiProvider must
+    // throw before constructing a UvApi.
+    final ProviderContainer container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    expect(
+      () => container.read(uvApiProvider.future),
+      throwsStateError,
+    );
+  });
+
+  // ---------------------------------------------------------------------------
+  // build() microtask — error path while container is still mounted
+  // ---------------------------------------------------------------------------
+
+  test(
+    'build() microtask sets AsyncError when deviceIdProvider throws',
+    () async {
+      final ProviderContainer container = ProviderContainer(
+        // Override type inference is not exposed publicly in flutter_riverpod.
+        // ignore: always_specify_types
+        overrides: [
+          uvProvider.overrideWith(() => UvNotifier(api: mockApi)),
+          deviceIdProvider.overrideWith(
+            (_) async => throw StateError('device id unavailable'),
+          ),
+          locationProvider.overrideWith(LocationNotifier.new),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final Completer<AsyncValue<UvData>> errorState =
+          Completer<AsyncValue<UvData>>();
+      container.listen<AsyncValue<UvData>>(uvProvider, (
+        _,
+        AsyncValue<UvData> next,
+      ) {
+        if (next is AsyncError<UvData> && !errorState.isCompleted) {
+          errorState.complete(next);
+        }
+      });
+
+      container.read(locationProvider.notifier).setManual(lat: 1, lon: 2);
+
+      final AsyncValue<UvData> result = await errorState.future;
+      expect(result, isA<AsyncError<UvData>>());
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // Generation counter — stale microtask is discarded
+  // ---------------------------------------------------------------------------
+
+  test('rapid location changes discard the first stale fetch', () async {
+    final UvData data = _makeData();
+    final Completer<void> allowFirstFetch = Completer<void>();
+
+    // First call: stall; second call: resolve immediately.
+    int callCount = 0;
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+      ),
+    ).thenAnswer((_) async {
+      callCount++;
+      if (callCount == 1) {
+        await allowFirstFetch.future;
+      }
+      return data;
+    });
+
+    final ProviderContainer container = ProviderContainer(
+      // Override type inference is not exposed publicly in flutter_riverpod.
+      // ignore: always_specify_types
+      overrides: [
+        uvProvider.overrideWith(() => UvNotifier(api: mockApi)),
+        deviceIdProvider.overrideWith((_) async => 'test-uuid'),
+        locationProvider.overrideWith(LocationNotifier.new),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    // Prime both providers before any location change so the microtasks
+    // that fire inside build() can reach their .wait without blocking.
+    container.read(uvProvider);
+    await container.read(deviceIdProvider.future);
+
+    final Completer<UvData> secondDone = Completer<UvData>();
+    container.listen<AsyncValue<UvData>>(uvProvider, (
+      _,
+      AsyncValue<UvData> next,
+    ) {
+      if (!secondDone.isCompleted) next.whenData<void>(secondDone.complete);
+    });
+
+    // Fire both location changes before yielding; the second increments
+    // _fetchGeneration so fetch #1's microtask sees a stale generation.
+    container.read(locationProvider.notifier).setManual(lat: 1, lon: 2);
+    container.read(locationProvider.notifier).setManual(lat: 10, lon: 20);
+
+    // Release fetch #1 (stale — discarded) and let fetch #2 run.
+    allowFirstFetch.complete();
+
+    final UvData result = await secondDone.future;
+    expect(result, data);
+
+    // The second fetch (lat:10, lon:20) must have produced the final data.
+    verify(
+      () => mockApi.fetch(lat: 10, lon: 20, uuid: 'test-uuid'),
+    ).called(1);
   });
 
   // ---------------------------------------------------------------------------

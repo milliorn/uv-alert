@@ -10,6 +10,10 @@ import 'package:uvalert/providers/preferences_provider.dart';
 import 'package:uvalert/storage/cache.dart';
 import 'package:uvalert/storage/preferences.dart';
 
+/// Provides the proxy base URL. Overridable in tests.
+final Provider<String> proxyBaseUrlProvider =
+    Provider<String>((_) => proxyBaseUrl);
+
 /// Provides a [Cache] backed by [Preferences].
 final FutureProvider<Cache> cacheProvider = FutureProvider<Cache>((
   Ref ref,
@@ -22,7 +26,9 @@ final FutureProvider<Cache> cacheProvider = FutureProvider<Cache>((
 final FutureProvider<UvApi> uvApiProvider = FutureProvider<UvApi>((
   Ref ref,
 ) async {
-  if (proxyBaseUrl.isEmpty) {
+  final String url = ref.read(proxyBaseUrlProvider);
+
+  if (url.isEmpty) {
     throw StateError(
       'PROXY_BASE_URL is not set. '
       'Pass --dart-define=PROXY_BASE_URL=https://your-proxy.com at build time.',
@@ -30,7 +36,7 @@ final FutureProvider<UvApi> uvApiProvider = FutureProvider<UvApi>((
   }
 
   final Cache cache = await ref.read(cacheProvider.future);
-  final UvApi api = UvApi(cache: cache, proxyBaseUrl: proxyBaseUrl);
+  final UvApi api = UvApi(cache: cache, proxyBaseUrl: url);
 
   ref.onDispose(api.dispose);
   return api;
