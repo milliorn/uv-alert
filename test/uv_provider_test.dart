@@ -128,6 +128,7 @@ void main() {
       overrides: [
         uvProvider.overrideWith(UvNotifier.new),
         uvApiProvider.overrideWith((_) async => mockApi),
+        deviceIdProvider.overrideWith((_) async => 'test-uuid'),
       ],
     );
     addTearDown(container.dispose);
