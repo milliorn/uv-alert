@@ -46,6 +46,7 @@ void main() {
     const String stored = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
 
     setUp(() {
+      // Preferences._keyUuid is private; the literal must be duplicated here.
       SharedPreferences.setMockInitialValues(<String, Object>{
         'uvalert_uuid': stored,
       });
@@ -64,6 +65,7 @@ void main() {
 
   group('deviceIdProvider — empty stored UUID', () {
     setUp(() {
+      // Preferences._keyUuid is private; the literal must be duplicated here.
       SharedPreferences.setMockInitialValues(<String, Object>{
         'uvalert_uuid': '',
       });
