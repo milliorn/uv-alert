@@ -6,12 +6,9 @@ import 'package:uvalert/constants.dart';
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/providers/device_id_provider.dart';
 import 'package:uvalert/providers/location_provider.dart';
+import 'package:uvalert/providers/preferences_provider.dart';
 import 'package:uvalert/storage/cache.dart';
 import 'package:uvalert/storage/preferences.dart';
-
-/// Provides the shared [Preferences] instance.
-final FutureProvider<Preferences> preferencesProvider =
-    FutureProvider<Preferences>((Ref ref) async => Preferences.load());
 
 /// Provides a [Cache] backed by [Preferences].
 final FutureProvider<Cache> cacheProvider = FutureProvider<Cache>((

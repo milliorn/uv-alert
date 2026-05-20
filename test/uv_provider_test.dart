@@ -31,6 +31,7 @@ ProviderContainer _makeContainerWith(_MockUvApi api) {
     // ignore: always_specify_types
     overrides: [
       uvProvider.overrideWith(() => UvNotifier(api: api)),
+      deviceIdProvider.overrideWith((_) async => 'test-uuid'),
       locationProvider.overrideWith(LocationNotifier.new),
     ],
   );
@@ -79,7 +80,7 @@ void main() {
 
     await container
         .read(uvProvider.notifier)
-        .fetch(lat: 51.5, lon: -0.1, uuid: 'test-uuid');
+        .fetch(lat: 51.5, lon: -0.1);
 
     expect(container.read(uvProvider), isA<AsyncData<UvData>>());
     expect(container.read(uvProvider).value, data);
@@ -102,7 +103,7 @@ void main() {
 
     await container
         .read(uvProvider.notifier)
-        .fetch(lat: 51.5, lon: -0.1, uuid: 'test-uuid');
+        .fetch(lat: 51.5, lon: -0.1);
 
     expect(container.read(uvProvider), isA<AsyncError<UvData>>());
   });
@@ -142,9 +143,7 @@ void main() {
     });
 
     unawaited(
-      container
-          .read(uvProvider.notifier)
-          .fetch(lat: 51.5, lon: -0.1, uuid: 'test-uuid'),
+      container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1),
     );
 
     final UvData result = await completer.future;
@@ -165,8 +164,6 @@ void main() {
       ),
     ).thenAnswer((_) async => data);
 
-    // Override deviceIdProvider with a synchronously-resolving future so
-    // build()'s deviceId.whenData fires in the same microtask turn.
     final ProviderContainer container = ProviderContainer(
       // Override type inference is not exposed publicly in flutter_riverpod.
       // ignore: always_specify_types
@@ -178,13 +175,12 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    // Initialise the notifier so it starts watching locationProvider.
+    // Read uvProvider first so build() starts watching locationProvider.
+    // Await deviceIdProvider so it is resolved before setManual fires build()
+    // again — ensures the microtask's concurrent .wait completes in one turn.
     container.read(uvProvider);
-
-    // Wait for deviceIdProvider to resolve so whenData fires on next build().
     await container.read(deviceIdProvider.future);
 
-    // Set up a completer that resolves when uvProvider reaches AsyncData.
     final Completer<UvData> completer = Completer<UvData>();
     container.listen<AsyncValue<UvData>>(uvProvider, (
       _,
@@ -195,7 +191,6 @@ void main() {
 
     container.read(locationProvider.notifier).setManual(lat: 10, lon: 20);
 
-    // Await the data directly instead of counting microtask turns.
     final UvData result = await completer.future;
     expect(result, data);
 

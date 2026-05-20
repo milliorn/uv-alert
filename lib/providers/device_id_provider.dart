@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
-import 'package:uvalert/providers/uv_provider.dart';
+import 'package:uvalert/providers/preferences_provider.dart';
 import 'package:uvalert/storage/preferences.dart';
 
 /// Returns the persisted device UUID, generating and storing one on first use.
