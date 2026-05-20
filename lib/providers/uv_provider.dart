@@ -10,7 +10,7 @@ import 'package:uvalert/storage/cache.dart';
 import 'package:uvalert/storage/preferences.dart';
 
 /// Provides a [Cache] backed by [Preferences].
-final Provider<Future<Cache>> cacheProvider = Provider<Future<Cache>>((
+final FutureProvider<Cache> cacheProvider = FutureProvider<Cache>((
   Ref ref,
 ) async {
   final Preferences prefs = await Preferences.load();
@@ -18,10 +18,10 @@ final Provider<Future<Cache>> cacheProvider = Provider<Future<Cache>>((
 });
 
 /// Provides the production [UvApi] instance.
-final Provider<Future<UvApi>> uvApiProvider = Provider<Future<UvApi>>((
+final FutureProvider<UvApi> uvApiProvider = FutureProvider<UvApi>((
   Ref ref,
 ) async {
-  final Cache cache = await ref.read(cacheProvider);
+  final Cache cache = await ref.read(cacheProvider.future);
   return UvApi(cache: cache, proxyBaseUrl: kProxyBaseUrl);
 });
 
@@ -56,7 +56,7 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
         // allowed synchronously inside build().
         unawaited(
           Future<void>.microtask(() async {
-            final UvApi api = _api ?? await ref.read(uvApiProvider);
+            final UvApi api = _api ?? await ref.read(uvApiProvider.future);
             await _fetchWith(
               api: api,
               lat: location.lat,
@@ -80,7 +80,7 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
     required double lon,
     required String uuid,
   }) async {
-    final UvApi api = _api ?? await ref.read(uvApiProvider);
+    final UvApi api = _api ?? await ref.read(uvApiProvider.future);
     await _fetchWith(api: api, lat: lat, lon: lon, uuid: uuid);
   }
 
