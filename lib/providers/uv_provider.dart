@@ -93,6 +93,7 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
               lat: location.lat,
               lon: location.lon,
               uuid: uuid,
+              generation: generation,
             );
           } on Object catch (e, st) {
             if (!ref.mounted) return;
@@ -127,7 +128,16 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
     required double lat,
     required double lon,
     required String uuid,
+    int? generation,
   }) async {
+    // generation == null means the call came from fetch() (manual refresh),
+    // which always runs to completion. A non-null value means the call came
+    // from build()'s microtask; re-check before every state write so a newer
+    // build() that incremented _fetchGeneration while api.fetch was in-flight
+    // can't be overwritten by this stale result.
+    bool isStale() => generation != null && generation != _fetchGeneration;
+
+    if (isStale()) return;
     state = const AsyncValue<UvData>.loading();
 
     final UvData data;
@@ -135,15 +145,12 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
     try {
       data = await api.fetch(lat: lat, lon: lon, uuid: uuid);
     } on Object catch (e, st) {
-      // Guard against writing to a disposed notifier when a location change
-      // causes Riverpod to rebuild (and dispose the old instance) while a
-      // fetch is still in flight.
-      if (!ref.mounted) return;
+      if (!ref.mounted || isStale()) return;
       state = AsyncValue<UvData>.error(e, st);
       return;
     }
 
-    if (!ref.mounted) return;
+    if (!ref.mounted || isStale()) return;
     state = AsyncValue<UvData>.data(data);
   }
 }
