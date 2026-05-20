@@ -41,6 +41,9 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
   /// The [UvApi] instance used to fetch UV data.
   final UvApi? _api;
 
+  Future<UvApi> _resolveApi() async =>
+      _api ?? await ref.read(uvApiProvider.future);
+
   @override
   AsyncValue<UvData> build() {
     // Watch locationProvider so this notifier rebuilds when coords change,
@@ -56,9 +59,8 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
         // allowed synchronously inside build().
         unawaited(
           Future<void>.microtask(() async {
-            final UvApi api = _api ?? await ref.read(uvApiProvider.future);
             await _fetchWith(
-              api: api,
+              api: await _resolveApi(),
               lat: location.lat,
               lon: location.lon,
               uuid: uuid,
@@ -80,8 +82,7 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
     required double lon,
     required String uuid,
   }) async {
-    final UvApi api = _api ?? await ref.read(uvApiProvider.future);
-    await _fetchWith(api: api, lat: lat, lon: lon, uuid: uuid);
+    await _fetchWith(api: await _resolveApi(), lat: lat, lon: lon, uuid: uuid);
   }
 
   Future<void> _fetchWith({
