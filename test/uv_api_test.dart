@@ -15,6 +15,8 @@ class MockCache extends Mock implements Cache {}
 // externally-owned clients; MockClient suffices everywhere else.
 class MockHttpClient extends Mock implements http.Client {}
 
+class _FakeUvData extends Fake implements UvData {}
+
 UvData _makeData() => UvData(
   currentUvi: 5,
   sunrise: DateTime.utc(2023, 11, 14, 6),
@@ -49,7 +51,7 @@ void main() {
   late MockCache mockCache;
 
   setUpAll(() {
-    registerFallbackValue(_makeData());
+    registerFallbackValue(_FakeUvData());
   });
 
   setUp(() {
