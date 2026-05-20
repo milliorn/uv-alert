@@ -134,8 +134,8 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
 
     if (isStale()) return;
     if (!ref.mounted) return;
-    // build() already set loading preserving the previous value (see above);
-    // only do it here for manual fetch() calls, where build() hasn't run.
+    // build() returns stateOrNull, preserving prior data without setting state;
+    // only set loading here for manual fetch() calls, where build() hasn't run.
     if (generation == null) state = const AsyncValue<UvData>.loading();
 
     final UvData data;
