@@ -27,8 +27,10 @@ final FutureProvider<UvApi> uvApiProvider = FutureProvider<UvApi>((
       'Pass --dart-define=PROXY_BASE_URL=https://your-proxy.com at build time.',
     );
   }
+  
   final Cache cache = await ref.read(cacheProvider.future);
   final UvApi api = UvApi(cache: cache, proxyBaseUrl: proxyBaseUrl);
+  
   ref.onDispose(api.dispose);
   return api;
 });
