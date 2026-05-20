@@ -110,6 +110,8 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
   /// Updates state to [AsyncValue.loading] while in-flight, then to
   /// [AsyncValue.data] on success or [AsyncValue.error] on failure.
   Future<void> fetch({required double lat, required double lon}) async {
+    if (!ref.mounted) return;
+
     final (String uuid, UvApi api) = await (
       ref.read(deviceIdProvider.future),
       _resolveApi(),
