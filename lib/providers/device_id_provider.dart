@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/storage/preferences.dart';
 
 /// Returns the persisted device UUID, generating and storing one on first use.
@@ -9,7 +10,7 @@ import 'package:uvalert/storage/preferences.dart';
 final FutureProvider<String> deviceIdProvider = FutureProvider<String>((
   Ref ref,
 ) async {
-  final Preferences prefs = await Preferences.load();
+  final Preferences prefs = await ref.read(preferencesProvider.future);
   final String? stored = prefs.uuid;
 
   // shared_preferences may return "" instead of null for a missing key on

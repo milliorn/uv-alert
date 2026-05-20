@@ -9,11 +9,15 @@ import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/storage/cache.dart';
 import 'package:uvalert/storage/preferences.dart';
 
+/// Provides the shared [Preferences] instance.
+final FutureProvider<Preferences> preferencesProvider =
+    FutureProvider<Preferences>((Ref ref) async => Preferences.load());
+
 /// Provides a [Cache] backed by [Preferences].
 final FutureProvider<Cache> cacheProvider = FutureProvider<Cache>((
   Ref ref,
 ) async {
-  final Preferences prefs = await Preferences.load();
+  final Preferences prefs = await ref.read(preferencesProvider.future);
   return Cache(prefs);
 });
 
@@ -27,10 +31,10 @@ final FutureProvider<UvApi> uvApiProvider = FutureProvider<UvApi>((
       'Pass --dart-define=PROXY_BASE_URL=https://your-proxy.com at build time.',
     );
   }
-  
+
   final Cache cache = await ref.read(cacheProvider.future);
   final UvApi api = UvApi(cache: cache, proxyBaseUrl: proxyBaseUrl);
-  
+
   ref.onDispose(api.dispose);
   return api;
 });
@@ -51,29 +55,38 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
   /// The [UvApi] instance used to fetch UV data.
   final UvApi? _api;
 
+  // Incremented on each build() invocation; microtasks check this to detect
+  // superseded fetches caused by rapid location changes.
+  int _fetchGeneration = 0;
+
   Future<UvApi> _resolveApi() async =>
       _api ?? await ref.read(uvApiProvider.future);
 
   @override
   AsyncValue<UvData> build() {
     // Watch locationProvider so this notifier rebuilds when coords change,
-    // which triggers fetch() automatically.
+    // which triggers a re-fetch automatically.
     final LocationState location = ref.watch(locationProvider);
 
     if (location != null) {
+      final int generation = ++_fetchGeneration;
+
       // Schedule the fetch after build returns; state mutations are not
       // allowed synchronously inside build().
       unawaited(
         Future<void>.microtask(() async {
           try {
-            // Read (not watch) deviceIdProvider so its future resolution does
-            // not trigger another build() and reset state to loading.
+            // Read (not watch) these providers so their resolution does not
+            // trigger another build() and reset state to loading.
             // Resolve both concurrently — they load SharedPreferences
             // independently.
             final (String uuid, UvApi api) = await (
               ref.read(deviceIdProvider.future),
               _resolveApi(),
             ).wait;
+
+            // A newer location change arrived while we were awaiting; discard.
+            if (generation != _fetchGeneration) return;
 
             await _fetchWith(
               api: api,
@@ -96,16 +109,17 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
     return stateOrNull ?? const AsyncValue<UvData>.loading();
   }
 
-  /// Fetches UV data for the given coordinates.
+  /// Fetches UV data for the current location.
   ///
   /// Updates state to [AsyncValue.loading] while in-flight, then to
   /// [AsyncValue.data] on success or [AsyncValue.error] on failure.
-  Future<void> fetch({
-    required double lat,
-    required double lon,
-    required String uuid,
-  }) async {
-    await _fetchWith(api: await _resolveApi(), lat: lat, lon: lon, uuid: uuid);
+  Future<void> fetch({required double lat, required double lon}) async {
+    final (String uuid, UvApi api) = await (
+      ref.read(deviceIdProvider.future),
+      _resolveApi(),
+    ).wait;
+    
+    await _fetchWith(api: api, lat: lat, lon: lon, uuid: uuid);
   }
 
   Future<void> _fetchWith({
