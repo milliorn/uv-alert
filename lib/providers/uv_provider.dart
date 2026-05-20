@@ -61,8 +61,6 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
 
   @override
   AsyncValue<UvData> build() {
-    // Watch locationProvider so this notifier rebuilds when coords change,
-    // which triggers a re-fetch automatically.
     final LocationState location = ref.watch(locationProvider);
 
     if (location != null) {
@@ -75,8 +73,7 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
           try {
             // Read (not watch) these providers so their resolution does not
             // trigger another build() and reset state to loading.
-            // Resolve both concurrently — they load SharedPreferences
-            // independently.
+            // Resolve both concurrently; neither depends on the other's result.
             final (String uuid, UvApi api) = await (
               ref.read(deviceIdProvider.future),
               _resolveApi(),
