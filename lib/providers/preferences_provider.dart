@@ -3,4 +3,4 @@ import 'package:uvalert/storage/preferences.dart';
 
 /// Provides the shared [Preferences] instance.
 final FutureProvider<Preferences> preferencesProvider =
-    FutureProvider<Preferences>((Ref ref) async => Preferences.load());
+    FutureProvider<Preferences>((_) => Preferences.load());
