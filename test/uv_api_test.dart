@@ -48,9 +48,15 @@ http.Client _clientReturning(int status, Map<String, Object?> body) {
 void main() {
   late MockCache mockCache;
 
+  setUpAll(() {
+    registerFallbackValue(_makeData());
+  });
+
   setUp(() {
     mockCache = MockCache();
   });
+
+  tearDown(resetMocktailState);
 
   group('UvApi.fetch — cache hit', () {
     test('returns cached data without making a network request', () async {
