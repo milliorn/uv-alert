@@ -20,7 +20,7 @@ final Provider<Future<Cache>> cacheProvider = Provider<Future<Cache>>(
 /// Provides the production [UvApi] instance.
 final Provider<Future<UvApi>> uvApiProvider = Provider<Future<UvApi>>(
   (Ref ref) async {
-    final Cache cache = await ref.watch(cacheProvider);
+    final Cache cache = await ref.read(cacheProvider);
     return UvApi(cache: cache, proxyBaseUrl: kProxyBaseUrl);
   },
 );
