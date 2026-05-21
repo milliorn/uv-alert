@@ -128,6 +128,9 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
       return;
     }
 
+    // Increment after the await so this manual fetch supersedes any concurrent
+    // auto-fetch microtask that incremented the counter while we were awaiting
+    // deviceId/api above.
     final int generation = ++_fetchGeneration;
 
     if (!ref.mounted) return;
