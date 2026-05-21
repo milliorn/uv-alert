@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/milliorn/uv-alert/compare/v1.2.0...v1.3.0) (2026-05-21)
+
+
+### Features
+
+* implement UvNotifier provider with device ID and provider infrastructure ([#52](https://github.com/milliorn/uv-alert/issues/52)) ([e72a85c](https://github.com/milliorn/uv-alert/commit/e72a85c12d6dc203d56d3669c69b42ac0756d299))
+
 ## [1.2.0](https://github.com/milliorn/uv-alert/compare/v1.1.0...v1.2.0) (2026-05-17)
 
 
