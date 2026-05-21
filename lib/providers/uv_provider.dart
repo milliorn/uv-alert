@@ -92,7 +92,6 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
               lon: location.lon,
               uuid: uuid,
               generation: generation,
-              setLoadingState: false,
             );
           } on Object catch (e, st) {
             if (!ref.mounted || generation != _fetchGeneration) return;
@@ -131,13 +130,15 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
 
     final int generation = ++_fetchGeneration;
 
+    if (!ref.mounted) return;
+    state = const AsyncValue<UvData>.loading();
+
     await _fetchWith(
       api: api,
       lat: lat,
       lon: lon,
       uuid: uuid,
       generation: generation,
-      setLoadingState: true,
     );
   }
 
@@ -147,7 +148,6 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
     required double lon,
     required String uuid,
     required int generation,
-    required bool setLoadingState,
   }) async {
     // Re-check generation before every state write so a newer build() that
     // incremented _fetchGeneration while api.fetch was in-flight can't
@@ -156,9 +156,6 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
 
     if (isStale()) return;
     if (!ref.mounted) return;
-    // build() returns stateOrNull, preserving prior data without setting state;
-    // only set loading here for manual fetch() calls, where build() hasn't run.
-    if (setLoadingState) state = const AsyncValue<UvData>.loading();
 
     final UvData data;
 
