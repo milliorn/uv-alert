@@ -58,6 +58,8 @@ void main() {
     mockCache = MockCache();
   });
 
+  tearDown(resetMocktailState);
+
   group('UvApi.fetch — cache hit', () {
     test('returns cached data without making a network request', () async {
       final UvData cached = _makeData();
