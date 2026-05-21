@@ -108,7 +108,7 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
     return stateOrNull ?? const AsyncValue<UvData>.loading();
   }
 
-  /// Fetches UV data for the current location.
+  /// Fetches UV data for the given coordinates.
   ///
   /// Updates state to [AsyncValue.loading] while in-flight, then to
   /// [AsyncValue.data] on success or [AsyncValue.error] on failure.
