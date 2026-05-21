@@ -352,19 +352,11 @@ void main() {
         if (!secondDone.isCompleted) next.whenData<void>(secondDone.complete);
       });
 
-      // First location change starts a stalled microtask.
+      // Fire both changes synchronously so _fetchGeneration is bumped twice
+      // before the microtask scheduler runs either build() invocation. When
+      // the first microtask eventually calls _fetchWith, generation is already
+      // stale and _fetchWith returns immediately without writing state.
       container.read(locationProvider.notifier).setManual(lat: 1, lon: 2);
-
-      // Allow the first microtask to pass its .wait and enter _fetchWith,
-      // then fire a second change to bump the generation before stallFirst
-      // resolves the api.fetch call. The isStale() guard at the top of
-      // _fetchWith will still be false when entered from the first microtask
-      // here; the second change fires _after_ entering api.fetch, so the
-      // isStale() guard inside the catch/finally branch covers that path.
-      // To hit isStale() at _fetchWith *entry*, we need the second change to
-      // fire before _fetchWith is called. We achieve this by firing both
-      // changes synchronously so generation is bumped before the microtask
-      // scheduler runs either build() invocation.
       container.read(locationProvider.notifier).setManual(lat: 99, lon: 99);
 
       stallFirst.complete();
