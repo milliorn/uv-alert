@@ -129,12 +129,14 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
       return;
     }
 
+    final int generation = ++_fetchGeneration;
+
     await _fetchWith(
       api: api,
       lat: lat,
       lon: lon,
       uuid: uuid,
-      generation: _fetchGeneration,
+      generation: generation,
       setLoadingState: true,
     );
   }
