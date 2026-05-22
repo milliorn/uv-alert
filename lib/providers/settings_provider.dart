@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uvalert/providers/preferences_provider.dart';
+import 'package:uvalert/storage/preferences.dart';
 
 /// Holds the user-facing settings state.
 class SettingsState {
@@ -55,6 +59,26 @@ settingsProvider =
 class SettingsNotifier extends Notifier<AsyncValue<SettingsState>> {
   @override
   AsyncValue<SettingsState> build() {
+    unawaited(
+      Future<void>.microtask(() async {
+        try {
+          final Preferences prefs = await ref.read(preferencesProvider.future);
+          if (!ref.mounted) return;
+          state = AsyncValue<SettingsState>.data(
+            SettingsState(
+              theme: prefs.theme,
+              useGps: prefs.useGps,
+              manualLocation: prefs.manualLocation,
+              notificationsEnabled: prefs.notificationsEnabled,
+            ),
+          );
+        } on Object catch (e, st) {
+          if (!ref.mounted) return;
+          state = AsyncValue<SettingsState>.error(e, st);
+        }
+      }),
+    );
+
     return const AsyncValue<SettingsState>.loading();
   }
 }
