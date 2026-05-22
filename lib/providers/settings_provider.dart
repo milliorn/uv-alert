@@ -1,3 +1,5 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 /// Holds the user-facing settings state.
 class SettingsState {
   /// Creates a [SettingsState] with all fields required.
@@ -36,5 +38,23 @@ class SettingsState {
           : (manualLocation ?? this.manualLocation),
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
     );
+  }
+}
+
+/// Riverpod provider for [SettingsNotifier].
+final NotifierProvider<SettingsNotifier, AsyncValue<SettingsState>>
+settingsProvider =
+    NotifierProvider<SettingsNotifier, AsyncValue<SettingsState>>(
+      SettingsNotifier.new,
+    );
+
+/// Manages user settings state.
+///
+/// Reads initial values from preferences on first build and persists each
+/// change back immediately.
+class SettingsNotifier extends Notifier<AsyncValue<SettingsState>> {
+  @override
+  AsyncValue<SettingsState> build() {
+    return const AsyncValue<SettingsState>.loading();
   }
 }
