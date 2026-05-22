@@ -77,4 +77,46 @@ void main() {
 
     expect(container.read(settingsProvider).requireValue.useGps, isFalse);
   });
+
+  // -------------------------------------------------------------------------
+  // setManualLocation
+  // -------------------------------------------------------------------------
+
+  test(
+    'setManualLocation updates manualLocation in state and persists to'
+    ' preferences',
+    () async {
+      final ProviderContainer container = await _makeLoadedContainer();
+
+      await container
+          .read(settingsProvider.notifier)
+          .setManualLocation('New York, NY');
+
+      expect(
+        container.read(settingsProvider).requireValue.manualLocation,
+        'New York, NY',
+      );
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // setNotificationsEnabled
+  // -------------------------------------------------------------------------
+
+  test(
+    'setNotificationsEnabled updates notificationsEnabled in state and'
+    ' persists to preferences',
+    () async {
+      final ProviderContainer container = await _makeLoadedContainer();
+
+      await container
+          .read(settingsProvider.notifier)
+          .setNotificationsEnabled(value: true);
+
+      expect(
+        container.read(settingsProvider).requireValue.notificationsEnabled,
+        isTrue,
+      );
+    },
+  );
 }
