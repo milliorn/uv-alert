@@ -10,6 +10,13 @@ ProviderContainer _makeContainer() {
   return container;
 }
 
+Future<ProviderContainer> _makeLoadedContainer() async {
+  final ProviderContainer container = _makeContainer();
+  await (container..read(settingsProvider)).read(preferencesProvider.future);
+  await Future<void>.delayed(Duration.zero);
+  return container;
+}
+
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
@@ -44,5 +51,30 @@ void main() {
     expect(settings.useGps, isTrue);
     expect(settings.manualLocation, isNull);
     expect(settings.notificationsEnabled, isFalse);
+  });
+
+  // -------------------------------------------------------------------------
+  // setTheme
+  // -------------------------------------------------------------------------
+
+  test('setTheme updates theme in state and persists to preferences', () async {
+    final ProviderContainer container = await _makeLoadedContainer();
+
+    await container.read(settingsProvider.notifier).setTheme('dark');
+
+    expect(container.read(settingsProvider).requireValue.theme, 'dark');
+  });
+
+  // -------------------------------------------------------------------------
+  // setUseGps
+  // -------------------------------------------------------------------------
+
+  test('setUseGps updates useGps in state and persists to preferences',
+      () async {
+    final ProviderContainer container = await _makeLoadedContainer();
+
+    await container.read(settingsProvider.notifier).setUseGps(value: false);
+
+    expect(container.read(settingsProvider).requireValue.useGps, isFalse);
   });
 }
