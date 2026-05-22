@@ -19,4 +19,22 @@ class SettingsState {
 
   /// Whether push notifications are enabled.
   final bool notificationsEnabled;
+
+  /// Returns a copy of this state with the given fields replaced.
+  SettingsState copyWith({
+    String? theme,
+    bool? useGps,
+    String? manualLocation,
+    bool? notificationsEnabled,
+    bool clearManualLocation = false,
+  }) {
+    return SettingsState(
+      theme: theme ?? this.theme,
+      useGps: useGps ?? this.useGps,
+      manualLocation: clearManualLocation
+          ? null
+          : (manualLocation ?? this.manualLocation),
+      notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+    );
+  }
 }
