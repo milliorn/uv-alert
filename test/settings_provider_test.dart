@@ -103,8 +103,7 @@ void main() {
   // setManualLocation
   // -------------------------------------------------------------------------
 
-  test('setManualLocation updates manualLocation in state and persists to'
-      ' preferences', () async {
+  test('setManualLocation updates manualLocation in state', () async {
     final ProviderContainer container = await _makeLoadedContainer();
 
     await container
