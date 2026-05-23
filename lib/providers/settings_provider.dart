@@ -112,8 +112,6 @@ class SettingsNotifier extends Notifier<AsyncValue<SettingsState>> {
     required Future<void> Function(Preferences) persist,
     required SettingsState Function(SettingsState) update,
   }) async {
-    if (state.value == null) return;
-
     final Preferences prefs = await ref.read(preferencesProvider.future);
     await persist(prefs);
 
