@@ -85,59 +85,42 @@ class SettingsNotifier extends Notifier<AsyncValue<SettingsState>> {
   }
 
   /// Sets the active theme and persists it to preferences.
-  Future<void> setTheme(String theme) async {
-    final SettingsState? current = state.value;
-    if (current == null) return;
-
-    final Preferences prefs = await ref.read(preferencesProvider.future);
-    await prefs.setTheme(theme);
-
-    if (!ref.mounted) return;
-
-    state = AsyncValue<SettingsState>.data(current.copyWith(theme: theme));
-  }
+  Future<void> setTheme(String theme) => _update(
+    persist: (prefs) => prefs.setTheme(theme),
+    update: (s) => s.copyWith(theme: theme),
+  );
 
   /// Sets whether GPS location is enabled and persists it to preferences.
-  Future<void> setUseGps({required bool value}) async {
-    final SettingsState? current = state.value;
-    if (current == null) return;
-
-    final Preferences prefs = await ref.read(preferencesProvider.future);
-    await prefs.setUseGps(value: value);
-
-    if (!ref.mounted) return;
-
-    state = AsyncValue<SettingsState>.data(current.copyWith(useGps: value));
-  }
+  Future<void> setUseGps({required bool value}) => _update(
+    persist: (prefs) => prefs.setUseGps(value: value),
+    update: (s) => s.copyWith(useGps: value),
+  );
 
   /// Sets the manual location string and persists it to preferences.
-  Future<void> setManualLocation(String location) async {
-    final SettingsState? current = state.value;
-    if (current == null) return;
-
-    final Preferences prefs = await ref.read(preferencesProvider.future);
-    await prefs.setManualLocation(location);
-
-    if (!ref.mounted) return;
-
-    state = AsyncValue<SettingsState>.data(
-      current.copyWith(manualLocation: location),
-    );
-  }
+  Future<void> setManualLocation(String location) => _update(
+    persist: (prefs) => prefs.setManualLocation(location),
+    update: (s) => s.copyWith(manualLocation: location),
+  );
 
   /// Sets whether push notifications are enabled and persists it to
   /// preferences.
-  Future<void> setNotificationsEnabled({required bool value}) async {
+  Future<void> setNotificationsEnabled({required bool value}) => _update(
+    persist: (prefs) => prefs.setNotificationsEnabled(value: value),
+    update: (s) => s.copyWith(notificationsEnabled: value),
+  );
+
+  Future<void> _update({
+    required Future<void> Function(Preferences) persist,
+    required SettingsState Function(SettingsState) update,
+  }) async {
     final SettingsState? current = state.value;
     if (current == null) return;
 
     final Preferences prefs = await ref.read(preferencesProvider.future);
-    await prefs.setNotificationsEnabled(value: value);
+    await persist(prefs);
 
     if (!ref.mounted) return;
 
-    state = AsyncValue<SettingsState>.data(
-      current.copyWith(notificationsEnabled: value),
-    );
+    state = AsyncValue<SettingsState>.data(update(current));
   }
 }
