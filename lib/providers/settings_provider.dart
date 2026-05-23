@@ -84,26 +84,25 @@ class SettingsNotifier extends Notifier<AsyncValue<SettingsState>> {
     return const AsyncValue<SettingsState>.loading();
   }
 
-  /// Sets the active theme and persists it to preferences.
+  /// Sets the active theme.
   Future<void> setTheme(String theme) => _update(
     persist: (Preferences prefs) => prefs.setTheme(theme),
     update: (SettingsState s) => s.copyWith(theme: theme),
   );
 
-  /// Sets whether GPS location is enabled and persists it to preferences.
+  /// Sets whether GPS location is enabled.
   Future<void> setUseGps({required bool value}) => _update(
     persist: (Preferences prefs) => prefs.setUseGps(value: value),
     update: (SettingsState s) => s.copyWith(useGps: value),
   );
 
-  /// Sets the manual location string and persists it to preferences.
+  /// Sets the manual location string.
   Future<void> setManualLocation(String location) => _update(
     persist: (Preferences prefs) => prefs.setManualLocation(location),
     update: (SettingsState s) => s.copyWith(manualLocation: location),
   );
 
-  /// Sets whether push notifications are enabled and persists it to
-  /// preferences.
+  /// Sets whether push notifications are enabled.
   Future<void> setNotificationsEnabled({required bool value}) => _update(
     persist: (Preferences prefs) => prefs.setNotificationsEnabled(value: value),
     update: (SettingsState s) => s.copyWith(notificationsEnabled: value),
