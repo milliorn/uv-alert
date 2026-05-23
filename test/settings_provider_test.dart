@@ -89,7 +89,7 @@ void main() {
   // -------------------------------------------------------------------------
 
   test(
-    'setUseGps updates useGps in state and persists to preferences',
+    'setUseGps updates useGps in state',
     () async {
       final ProviderContainer container = await _makeLoadedContainer();
 
