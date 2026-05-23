@@ -120,7 +120,9 @@ void main() {
   // setNotificationsEnabled
   // -------------------------------------------------------------------------
 
-  test('setNotificationsEnabled updates notificationsEnabled in state', () async {
+  test(
+    'setNotificationsEnabled updates notificationsEnabled in state',
+    () async {
     final ProviderContainer container = await _makeLoadedContainer();
 
     await container
