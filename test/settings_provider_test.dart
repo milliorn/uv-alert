@@ -76,7 +76,7 @@ void main() {
   // setTheme
   // -------------------------------------------------------------------------
 
-  test('setTheme updates theme in state and persists to preferences', () async {
+  test('setTheme updates theme in state', () async {
     final ProviderContainer container = await _makeLoadedContainer();
 
     await container.read(settingsProvider.notifier).setTheme('dark');
