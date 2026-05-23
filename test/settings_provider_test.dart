@@ -40,10 +40,7 @@ void main() {
   // -------------------------------------------------------------------------
 
   test('build() loads default values from preferences', () async {
-    final ProviderContainer container = _makeContainer();
-
-    await (container..read(settingsProvider)).read(preferencesProvider.future);
-    await Future<void>.delayed(Duration.zero);
+    final ProviderContainer container = await _makeLoadedContainer();
 
     final SettingsState settings = container
         .read(settingsProvider)
