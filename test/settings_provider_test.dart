@@ -132,4 +132,22 @@ void main() {
       );
     },
   );
+
+  // -------------------------------------------------------------------------
+  // concurrent updates
+  // -------------------------------------------------------------------------
+
+  test('concurrent setTheme and setUseGps both apply', () async {
+    final ProviderContainer container = await _makeLoadedContainer();
+    final SettingsNotifier notifier = container.read(settingsProvider.notifier);
+
+    await Future.wait(<Future<void>>[
+      notifier.setTheme('dark'),
+      notifier.setUseGps(value: false),
+    ]);
+
+    final SettingsState result = container.read(settingsProvider).requireValue;
+    expect(result.theme, 'dark');
+    expect(result.useGps, isFalse);
+  });
 }
