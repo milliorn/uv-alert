@@ -45,8 +45,7 @@ ProviderContainer _makeContainerWith(_MockUvApi api) {
 /// resolved, so microtasks inside build() can reach their `.wait` without
 /// blocking on the first location change.
 Future<ProviderContainer> _makeWarmContainerWith(_MockUvApi api) async {
-  final ProviderContainer container = _makeContainerWith(api)
-    ..read(uvProvider);
+  final ProviderContainer container = _makeContainerWith(api)..read(uvProvider);
   await container.read(deviceIdProvider.future);
   return container;
 }
@@ -170,22 +169,24 @@ void main() {
     expect(cache, isA<Cache>());
   });
 
-  test('uvApiProvider resolves to UvApi when proxyBaseUrl is non-empty',
-      () async {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
+  test(
+    'uvApiProvider resolves to UvApi when proxyBaseUrl is non-empty',
+    () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
 
-    final ProviderContainer container = ProviderContainer(
-      // Override type inference is not exposed publicly in flutter_riverpod.
-      // ignore: always_specify_types
-      overrides: [
-        proxyBaseUrlProvider.overrideWithValue('https://proxy.example.com'),
-      ],
-    );
-    addTearDown(container.dispose);
+      final ProviderContainer container = ProviderContainer(
+        // Override type inference is not exposed publicly in flutter_riverpod.
+        // ignore: always_specify_types
+        overrides: [
+          proxyBaseUrlProvider.overrideWithValue('https://proxy.example.com'),
+        ],
+      );
+      addTearDown(container.dispose);
 
-    final UvApi api = await container.read(uvApiProvider.future);
-    expect(api, isA<UvApi>());
-  });
+      final UvApi api = await container.read(uvApiProvider.future);
+      expect(api, isA<UvApi>());
+    },
+  );
 
   // ---------------------------------------------------------------------------
   // uvApiProvider — empty proxyBaseUrl
@@ -287,9 +288,7 @@ void main() {
     expect(result, data);
 
     // The second fetch (lat:10, lon:20) must have produced the final data.
-    verify(
-      () => mockApi.fetch(lat: 10, lon: 20, uuid: 'test-uuid'),
-    ).called(1);
+    verify(() => mockApi.fetch(lat: 10, lon: 20, uuid: 'test-uuid')).called(1);
   });
 
   // ---------------------------------------------------------------------------

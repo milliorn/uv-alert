@@ -11,8 +11,9 @@ import 'package:uvalert/storage/cache.dart';
 import 'package:uvalert/storage/preferences.dart';
 
 /// Provides the proxy base URL. Overridable in tests.
-final Provider<String> proxyBaseUrlProvider =
-    Provider<String>((_) => proxyBaseUrl);
+final Provider<String> proxyBaseUrlProvider = Provider<String>(
+  (_) => proxyBaseUrl,
+);
 
 /// Provides a [Cache] backed by [Preferences].
 final FutureProvider<Cache> cacheProvider = FutureProvider<Cache>((

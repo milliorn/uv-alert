@@ -45,8 +45,9 @@ void main() {
     await (container..read(settingsProvider)).read(preferencesProvider.future);
     await Future<void>.delayed(Duration.zero);
 
-    final SettingsState settings =
-        container.read(settingsProvider).requireValue;
+    final SettingsState settings = container
+        .read(settingsProvider)
+        .requireValue;
     expect(settings.theme, 'system');
     expect(settings.useGps, isTrue);
     expect(settings.manualLocation, isNull);
@@ -69,54 +70,50 @@ void main() {
   // setUseGps
   // -------------------------------------------------------------------------
 
-  test('setUseGps updates useGps in state and persists to preferences',
-      () async {
-    final ProviderContainer container = await _makeLoadedContainer();
+  test(
+    'setUseGps updates useGps in state and persists to preferences',
+    () async {
+      final ProviderContainer container = await _makeLoadedContainer();
 
-    await container.read(settingsProvider.notifier).setUseGps(value: false);
+      await container.read(settingsProvider.notifier).setUseGps(value: false);
 
-    expect(container.read(settingsProvider).requireValue.useGps, isFalse);
-  });
+      expect(container.read(settingsProvider).requireValue.useGps, isFalse);
+    },
+  );
 
   // -------------------------------------------------------------------------
   // setManualLocation
   // -------------------------------------------------------------------------
 
-  test(
-    'setManualLocation updates manualLocation in state and persists to'
-    ' preferences',
-    () async {
-      final ProviderContainer container = await _makeLoadedContainer();
+  test('setManualLocation updates manualLocation in state and persists to'
+      ' preferences', () async {
+    final ProviderContainer container = await _makeLoadedContainer();
 
-      await container
-          .read(settingsProvider.notifier)
-          .setManualLocation('New York, NY');
+    await container
+        .read(settingsProvider.notifier)
+        .setManualLocation('New York, NY');
 
-      expect(
-        container.read(settingsProvider).requireValue.manualLocation,
-        'New York, NY',
-      );
-    },
-  );
+    expect(
+      container.read(settingsProvider).requireValue.manualLocation,
+      'New York, NY',
+    );
+  });
 
   // -------------------------------------------------------------------------
   // setNotificationsEnabled
   // -------------------------------------------------------------------------
 
-  test(
-    'setNotificationsEnabled updates notificationsEnabled in state and'
-    ' persists to preferences',
-    () async {
-      final ProviderContainer container = await _makeLoadedContainer();
+  test('setNotificationsEnabled updates notificationsEnabled in state and'
+      ' persists to preferences', () async {
+    final ProviderContainer container = await _makeLoadedContainer();
 
-      await container
-          .read(settingsProvider.notifier)
-          .setNotificationsEnabled(value: true);
+    await container
+        .read(settingsProvider.notifier)
+        .setNotificationsEnabled(value: true);
 
-      expect(
-        container.read(settingsProvider).requireValue.notificationsEnabled,
-        isTrue,
-      );
-    },
-  );
+    expect(
+      container.read(settingsProvider).requireValue.notificationsEnabled,
+      isTrue,
+    );
+  });
 }

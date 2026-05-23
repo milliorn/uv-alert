@@ -63,9 +63,9 @@ class SettingsNotifier extends Notifier<AsyncValue<SettingsState>> {
       Future<void>.microtask(() async {
         try {
           final Preferences prefs = await ref.read(preferencesProvider.future);
-          
+
           if (!ref.mounted) return;
-          
+
           state = AsyncValue<SettingsState>.data(
             SettingsState(
               theme: prefs.theme,
