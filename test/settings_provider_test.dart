@@ -123,15 +123,16 @@ void main() {
   test(
     'setNotificationsEnabled updates notificationsEnabled in state',
     () async {
-    final ProviderContainer container = await _makeLoadedContainer();
+      final ProviderContainer container = await _makeLoadedContainer();
 
-    await container
-        .read(settingsProvider.notifier)
-        .setNotificationsEnabled(value: true);
+      await container
+          .read(settingsProvider.notifier)
+          .setNotificationsEnabled(value: true);
 
-    expect(
-      container.read(settingsProvider).requireValue.notificationsEnabled,
-      isTrue,
-    );
-  });
+      expect(
+        container.read(settingsProvider).requireValue.notificationsEnabled,
+        isTrue,
+      );
+    },
+  );
 }
