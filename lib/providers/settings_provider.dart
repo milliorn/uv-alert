@@ -135,7 +135,7 @@ class SettingsNotifier extends Notifier<AsyncValue<SettingsState>> {
     await prefs.setNotificationsEnabled(value: value);
 
     if (!ref.mounted) return;
-    
+
     state = AsyncValue<SettingsState>.data(
       current.copyWith(notificationsEnabled: value),
     );
