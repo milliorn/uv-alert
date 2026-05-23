@@ -54,6 +54,24 @@ void main() {
     expect(settings.notificationsEnabled, isFalse);
   });
 
+  test('build() sets AsyncError when preferencesProvider throws', () async {
+    final ProviderContainer container = ProviderContainer(
+      // Override type inference is not exposed publicly in flutter_riverpod.
+      // ignore: always_specify_types
+      overrides: [
+        preferencesProvider.overrideWith(
+          (_) async => throw StateError('prefs unavailable'),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    container.read(settingsProvider);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(container.read(settingsProvider), isA<AsyncError<SettingsState>>());
+  });
+
   // -------------------------------------------------------------------------
   // setTheme
   // -------------------------------------------------------------------------
