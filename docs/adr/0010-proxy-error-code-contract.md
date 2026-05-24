@@ -32,7 +32,8 @@ contract is:
 App UX per code:
 
 - **200** — normal render
-- **400** — silent retry
+- **400** — surface an error to the user; do not retry (an identical bad
+  request will produce another 400)
 - **404** — inline field error: "Location not found. Try a different search."
 - **426** — full-screen block with Play Store link
   (force update behavior defined in ADR 0009)

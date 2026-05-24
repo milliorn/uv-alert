@@ -18,8 +18,9 @@ Between polls, derive a UV estimate using solar position math applied to the
 hourly forecast anchors already present in the cached payload:
 
 1. Use `hourly[].uvi` values from the cached payload as anchors
-2. Calculate solar elevation angle from lat, lon, date, and current time
-   (all angular inputs and outputs in degrees):
+2. Calculate solar elevation angle from lat, lon, date, and current time.
+   Formulas are expressed in degrees; convert to radians before passing to
+   `sin`/`cos` (Dart and most languages expect radians):
    - Declination = 23.45 × sin(360/365 × (dayOfYear - 81))
    - Hour angle = (currentHour - 12) × 15
    - sin(elevation) = sin(lat) × sin(dec) + cos(lat) × cos(dec) × cos(hourAngle)

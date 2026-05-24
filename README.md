@@ -28,7 +28,7 @@ lib/
                 #   SettingsNotifier, deviceIdProvider, preferencesProvider
   storage/      # Cache - 24-hour staleness check; Preferences - SharedPrefs wrapper
   app.dart      # Root widget and Material 3 theme
-  constants.dart# App-wide constants
+  constants.dart  # App-wide constants
   main.dart     # Entry point with Riverpod ProviderScope and zone error hooks
 ```
 

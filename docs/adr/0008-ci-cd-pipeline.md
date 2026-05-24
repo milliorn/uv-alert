@@ -14,9 +14,10 @@ work.
 
 Use GitHub Actions with the following distinct workflows:
 
-- **CI** (`ci.yml`) — runs on every PR to `main`: `flutter analyze
---fatal-infos`, `dart doc --validate-links`, `flutter test --coverage`,
-  and an awk-based 100% line coverage gate against `coverage/lcov.info`
+- **CI** (`ci.yml`) — runs on every PR to `main`:
+  `flutter analyze --fatal-infos`, `dart doc --validate-links`,
+  `flutter test --coverage`, and an awk-based 100% line coverage gate against
+  `coverage/lcov.info`
 - **Release Please** (`release-please.yml`) — runs on push to `main`;
   automatically opens and maintains a release PR that bumps `pubspec.yaml`
   version and generates `CHANGELOG.md` from Conventional Commits
