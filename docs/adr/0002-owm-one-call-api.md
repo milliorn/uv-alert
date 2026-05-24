@@ -6,7 +6,8 @@ Accepted
 
 ## Context
 
-UV Alert requires real-time UV index data, hourly UV forecast, and daily UV forecast from a single API call. A reliable, affordable data source was needed with no fallback.
+UV Alert requires real-time UV index data, hourly UV forecast, and daily UV forecast
+from a single API call. A reliable, affordable data source was needed with no fallback.
 
 ## Decision
 
