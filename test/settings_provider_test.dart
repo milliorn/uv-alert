@@ -131,36 +131,6 @@ void main() {
   );
 
   // -------------------------------------------------------------------------
-  // _update — null current state guard
-  // -------------------------------------------------------------------------
-
-  test('_update is a no-op when state has no value (AsyncError)', () async {
-    // Put the notifier into AsyncError so state.value is null, then call
-    // setTheme - the null-guard should fire and leave state unchanged.
-    final ProviderContainer container = ProviderContainer(
-      // Type inference on the overrides list is not exposed publicly in
-      // flutter_riverpod.
-      // ignore: always_specify_types
-      overrides: [
-        preferencesProvider.overrideWith(
-          (_) async => throw StateError('prefs unavailable'),
-        ),
-      ],
-    );
-    addTearDown(container.dispose);
-
-    container.read(settingsProvider);
-    await Future<void>.delayed(Duration.zero);
-
-    expect(container.read(settingsProvider), isA<AsyncError<SettingsState>>());
-
-    await container.read(settingsProvider.notifier).setTheme('dark');
-
-    // State should remain AsyncError because the null-guard fired.
-    expect(container.read(settingsProvider), isA<AsyncError<SettingsState>>());
-  });
-
-  // -------------------------------------------------------------------------
   // concurrent updates
   // -------------------------------------------------------------------------
 

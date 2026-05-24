@@ -124,9 +124,6 @@ class SettingsNotifier extends Notifier<AsyncValue<SettingsState>> {
 
     if (!ref.mounted) return;
 
-    final SettingsState? current = state.value;
-    if (current == null) return;
-
-    state = AsyncValue<SettingsState>.data(update(current));
+    state = AsyncValue<SettingsState>.data(update(state.requireValue));
   }
 }
