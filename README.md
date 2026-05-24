@@ -5,8 +5,8 @@ exposure risk is high. Targets Android and Linux desktop.
 
 ## Features
 
-- Real-time UV index fetched from a proxy API using your GPS coordinates or a
-  manually entered location
+- Real-time UV index fetched from a Vercel serverless proxy using your GPS
+  coordinates or a manually entered location
 - Local notifications when UV levels reach configurable thresholds
 - Background refresh via WorkManager so data stays current without keeping the
   app open
@@ -16,21 +16,29 @@ exposure risk is high. Targets Android and Linux desktop.
 - Persistent user preferences: theme (light/dark/system), notification toggle,
   and GPS vs. manual location
 - Material 3 design with an orange seed color palette
+- Unique device ID used for per-device request tracking
 
 ## Architecture
 
 ```text
 lib/
   api/          # UvApi - HTTP client with cache-first fetch, timeout, error handling
-  models/       # UvData, UvForecastEntry - immutable, JSON-serializable value types
+  models/       # UvModel - immutable, JSON-serializable value types
+  providers/    # Riverpod notifiers: UvNotifier, LocationNotifier,
+                #   SettingsNotifier, DeviceIdProvider, PreferencesProvider
   storage/      # Cache - 24-hour staleness check; Preferences - SharedPrefs wrapper
   app.dart      # Root widget and Material 3 theme
+  constants.dart# App-wide constants
   main.dart     # Entry point with Riverpod ProviderScope and zone error hooks
 ```
 
 State management uses [Riverpod](https://riverpod.dev). Dependency injection is
 constructor-based so every layer is independently testable without mocks leaking
 across boundaries.
+
+The OWM API key is never bundled in the app. All UV data requests go through a
+Vercel serverless proxy (`uvwatch-proxy`) that protects the key, caches shared
+location data, and enforces per-user rate limiting via Vercel KV.
 
 ## Requirements
 
