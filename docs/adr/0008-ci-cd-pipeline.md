@@ -26,7 +26,7 @@ Use GitHub Actions with the following distinct workflows:
 - **Dependency Review** (`dependency-review.yml`) — scans changed dependency
   manifests against GitHub's advisory database on every PR; fails at `low`
   severity or above
-- **Labeler** (`labeler.yml`) — applies labels to PRs based on changed paths
+- **Labeler** (`label.yml`) — applies labels to PRs based on changed paths
 - **Merge Gatekeeper** (`merge-gatekeeper.yml`) — ensures required status
   checks pass before merge is allowed
 

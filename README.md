@@ -25,7 +25,7 @@ lib/
   api/          # UvApi - HTTP client with cache-first fetch, timeout, error handling
   models/       # UvData, UvForecastEntry - immutable, JSON-serializable value types
   providers/    # Riverpod notifiers: UvNotifier, LocationNotifier,
-                #   SettingsNotifier, DeviceIdProvider, PreferencesProvider
+                #   SettingsNotifier, deviceIdProvider, preferencesProvider
   storage/      # Cache - 24-hour staleness check; Preferences - SharedPrefs wrapper
   app.dart      # Root widget and Material 3 theme
   constants.dart# App-wide constants
@@ -38,7 +38,7 @@ across boundaries.
 
 The OWM API key is never bundled in the app. All UV data requests go through a
 Vercel serverless proxy (`uvwatch-proxy`) that protects the key, caches shared
-location data, and enforces per-user rate limiting via Vercel KV.
+location data, and enforces per-device rate limiting via Vercel KV.
 
 ## Requirements
 
