@@ -32,14 +32,11 @@ class SettingsState {
     bool? useGps,
     String? manualLocation,
     bool? notificationsEnabled,
-    bool clearManualLocation = false,
   }) {
     return SettingsState(
       theme: theme ?? this.theme,
       useGps: useGps ?? this.useGps,
-      manualLocation: clearManualLocation
-          ? null
-          : (manualLocation ?? this.manualLocation),
+      manualLocation: manualLocation ?? this.manualLocation,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
     );
   }
