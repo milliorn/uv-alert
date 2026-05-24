@@ -86,10 +86,16 @@ class SettingsNotifier extends Notifier<AsyncValue<SettingsState>> {
   }
 
   /// Sets the active theme.
-  Future<void> setTheme(String theme) => _update(
-    persist: (Preferences prefs) => prefs.setTheme(theme),
-    update: (SettingsState s) => s.copyWith(theme: theme),
-  );
+  Future<void> setTheme(String theme) {
+    assert(
+      theme == 'system' || theme == 'light' || theme == 'dark',
+      "theme must be 'system', 'light', or 'dark'; got '$theme'",
+    );
+    return _update(
+      persist: (Preferences prefs) => prefs.setTheme(theme),
+      update: (SettingsState s) => s.copyWith(theme: theme),
+    );
+  }
 
   /// Sets whether GPS location is enabled.
   Future<void> setUseGps({required bool value}) => _update(
