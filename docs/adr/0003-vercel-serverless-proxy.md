@@ -7,7 +7,7 @@ Accepted
 ## Context
 
 The OWM API key must not be exposed in the client app. A proxy layer is needed
-to protect the key, cache shared location data, and enforce per-user rate
+to protect the key, cache shared location data, and enforce per-device rate
 limiting.
 
 ## Decision
