@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/milliorn/uv-alert/compare/v1.3.0...v1.4.0) (2026-05-24)
+
+
+### Features
+
+* implement SettingsNotifier provider ([#54](https://github.com/milliorn/uv-alert/issues/54)) ([ba1e684](https://github.com/milliorn/uv-alert/commit/ba1e68492937620b3633e78452d261c87d732b95))
+
 ## [1.3.0](https://github.com/milliorn/uv-alert/compare/v1.2.0...v1.3.0) (2026-05-21)
 
 
