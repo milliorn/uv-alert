@@ -85,16 +85,13 @@ void main() {
   // setUseGps
   // -------------------------------------------------------------------------
 
-  test(
-    'setUseGps updates useGps in state',
-    () async {
-      final ProviderContainer container = await _makeLoadedContainer();
+  test('setUseGps updates useGps in state', () async {
+    final ProviderContainer container = await _makeLoadedContainer();
 
-      await container.read(settingsProvider.notifier).setUseGps(value: false);
+    await container.read(settingsProvider.notifier).setUseGps(value: false);
 
-      expect(container.read(settingsProvider).requireValue.useGps, isFalse);
-    },
-  );
+    expect(container.read(settingsProvider).requireValue.useGps, isFalse);
+  });
 
   // -------------------------------------------------------------------------
   // setManualLocation
