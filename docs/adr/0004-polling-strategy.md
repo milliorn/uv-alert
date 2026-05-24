@@ -24,5 +24,5 @@ If interpolated and actual values diverge significantly, use the conservative
 - No polling overnight — app sleeps until tomorrow's sunrise
 - UV estimate between polls is approximate but corrected every 2 hours
 - Conservative value used on divergence to protect user safety
-- Background scheduling via WorkManager is stubbed in `lib/services/`; sunrise/
+- Background scheduling via WorkManager will live in `lib/services/`; sunrise/
   sunset interpolation logic is not yet implemented
