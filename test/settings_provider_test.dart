@@ -73,6 +73,15 @@ void main() {
   // setTheme
   // -------------------------------------------------------------------------
 
+  test('setTheme rejects invalid theme value', () async {
+    final ProviderContainer container = await _makeLoadedContainer();
+
+    expect(
+      () => container.read(settingsProvider.notifier).setTheme('invalid'),
+      throwsA(isA<AssertionError>()),
+    );
+  });
+
   test('setTheme updates theme in state', () async {
     final ProviderContainer container = await _makeLoadedContainer();
 
