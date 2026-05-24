@@ -53,4 +53,4 @@ App UX per code:
 - The 3-consecutive-failure threshold for escalating from toast to persistent
   banner must be tracked in app state — not yet implemented
 - `UvApiException` in `lib/api/uv_api.dart` is thrown on any non-200 response;
-  it will carry the status code so callers can map to the above UX behaviors
+  it already carries the status code so callers can map to the above UX behaviors
