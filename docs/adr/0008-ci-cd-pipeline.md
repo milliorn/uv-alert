@@ -41,8 +41,6 @@ Use GitHub Actions with the following distinct workflows:
   and changelog entries from commit messages
 - Dependabot runs monthly for pub, Gradle, and GitHub Actions dependencies
 - Release Please PRs require manual merge — GitHub Actions cannot self-approve
-- `ci.yml` and `dependency-review.yml` pin to `ubuntu-24.04` and set
+- All workflows pin to `ubuntu-24.04` and set
   `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true` ahead of the June 2026 Node.js
-  20 end-of-life for GitHub Actions; the remaining workflows
-  (`automerge.yml`, `label.yml`, `merge-gatekeeper.yml`, `release-please.yml`)
-  use `ubuntu-latest`
+  20 end-of-life for GitHub Actions
