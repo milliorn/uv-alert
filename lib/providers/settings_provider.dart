@@ -27,6 +27,10 @@ class SettingsState {
   final bool notificationsEnabled;
 
   /// Returns a copy of this state with the given fields replaced.
+  ///
+  /// [manualLocation] defaults to the current value when omitted. To represent
+  /// "not set", pass `null` only at construction time -- this method cannot
+  /// clear [manualLocation] back to `null` once a value has been stored.
   SettingsState copyWith({
     String? theme,
     bool? useGps,
