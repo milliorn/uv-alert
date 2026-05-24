@@ -17,17 +17,17 @@ The proxy translates all upstream errors to a fixed set of HTTP status codes
 before responding to the app. OWM errors must never be forwarded raw. The
 contract is:
 
-| Code | Meaning | Sentry |
-| ---- | ------- | ------ |
-| `200` | Success | No action |
-| `400` | Invalid params | Alert |
-| `404` | Geocoding no results | Log |
-| `426` | App version too old | Log |
-| `429` | Proxy abuse detection | Alert |
-| `500` | Unhandled proxy error | Alert |
-| `502` | OWM key invalid/expired | Alert — rotate key |
-| `503` | OWM unreachable/rate capped | Log |
-| `504` | OWM timeout | Log |
+| Code  | Meaning                     | Sentry             |
+| ----- | --------------------------- | ------------------ |
+| `200` | Success                     | No action          |
+| `400` | Invalid params              | Alert              |
+| `404` | Geocoding no results        | Log                |
+| `426` | App version too old         | Log                |
+| `429` | Proxy abuse detection       | Alert              |
+| `500` | Unhandled proxy error       | Alert              |
+| `502` | OWM key invalid/expired     | Alert — rotate key |
+| `503` | OWM unreachable/rate capped | Log                |
+| `504` | OWM timeout                 | Log                |
 
 App UX per code:
 
