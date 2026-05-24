@@ -19,10 +19,10 @@ hourly forecast anchors already present in the cached payload:
 
 1. Use `hourly[].uvi` values from the cached payload as anchors
 2. Calculate solar elevation angle from lat, lon, date, and current time:
-   - Declination = 23.45 x sin(360/365 x (dayOfYear - 81))
-   - Hour angle = (currentHour - 12) x 15
-   - sin(elevation) = sin(lat) x sin(dec) + cos(lat) x cos(dec) x cos(hourAngle)
-   - UV estimate = UVmax x sin(elevation)
+   - Declination = 23.45 × sin(360/365 × (dayOfYear - 81))
+   - Hour angle = (currentHour - 12) × 15
+   - sin(elevation) = sin(lat) × sin(dec) + cos(lat) × cos(dec) × cos(hourAngle)
+   - UV estimate = UVmax × sin(elevation)
 3. If the interpolated value and the last-known `current.uvi` diverge
    significantly, use the conservative (higher) value to protect user safety
 4. Every 2-hour refresh corrects the model with fresh `current.uvi` from OWM

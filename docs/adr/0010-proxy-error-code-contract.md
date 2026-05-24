@@ -35,6 +35,7 @@ App UX per code:
 - **400** — silent retry
 - **404** — inline field error: "Location not found. Try a different search."
 - **426** — full-screen block with Play Store link
+  (force update behavior defined in ADR 0009)
 - **429** — banner: "Too many requests. Please try again later."
 - **500/503/504** — 1st occurrence: toast. After 3 consecutive: persistent
   banner "UV data is temporarily unavailable. Showing last known reading."
