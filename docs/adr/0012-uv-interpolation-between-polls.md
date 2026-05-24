@@ -40,5 +40,5 @@ hourly forecast anchors already present in the cached payload:
 - Solar position math runs on-device using only lat, lon, and the system clock
 - The 2-hour refresh corrects accumulated drift from cloud cover or unexpected
   atmospheric conditions
-- This logic lives in `lib/services/` alongside the polling service and is
+- This logic will live in `lib/services/` alongside the polling service and is
   not yet implemented
