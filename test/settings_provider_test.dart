@@ -131,6 +131,25 @@ void main() {
   );
 
   // -------------------------------------------------------------------------
+  // _update — null current state guard
+  // -------------------------------------------------------------------------
+
+  test('_update is a no-op when state has no value (still loading)', () async {
+    // Call setTheme before the build() microtask resolves so state.value
+    // is null.
+    final ProviderContainer container = _makeContainer()
+      ..read(settingsProvider); // triggers build(), still AsyncLoading
+
+    await container.read(settingsProvider.notifier).setTheme('dark');
+
+    // State should remain AsyncLoading because the null-guard fired first.
+    expect(
+      container.read(settingsProvider),
+      isA<AsyncLoading<SettingsState>>(),
+    );
+  });
+
+  // -------------------------------------------------------------------------
   // concurrent updates
   // -------------------------------------------------------------------------
 
