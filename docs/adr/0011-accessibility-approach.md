@@ -8,14 +8,16 @@ Accepted — implementation pending
 
 UV data is safety-critical for people with sun-sensitive conditions including
 melanoma survivors. Accessibility cannot be an afterthought. At the same time,
-the Android OS handles many accessibility concerns natively, so the scope of
-in-app work needed to be clearly defined.
+the host OS handles many accessibility concerns natively, so the scope of
+in-app work needed to be clearly defined. The app targets Android, iOS
+(deferred), and Linux desktop.
 
 ## Decision
 
-Delegate OS-level accessibility entirely to Android/iOS (font scaling, display
+Delegate OS-level accessibility entirely to the host OS (font scaling, display
 size, high contrast, colorblind correction, reduce motion, bold text, invert
-colors, grayscale). Implement the following in-app:
+colors, grayscale). This covers Android and Linux desktop; iOS follows the same
+delegation when enabled. Implement the following in-app:
 
 **Semantic labels (TalkBack/VoiceOver):**
 
