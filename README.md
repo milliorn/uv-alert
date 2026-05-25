@@ -6,7 +6,8 @@ exposure risk is high. Targets Android and Linux desktop.
 ## Features
 
 - Real-time UV index fetched from a Vercel serverless proxy using your GPS
-  coordinates or a manually entered location
+  coordinates (GPS permission not yet wired on Android) or a manually entered
+  location
 - Local notifications when UV levels reach configurable thresholds (planned)
 - Background refresh via WorkManager so data stays current without keeping the
   app open (planned)
@@ -16,7 +17,7 @@ exposure risk is high. Targets Android and Linux desktop.
 - Persistent user preferences: theme (light/dark/system), notification toggle,
   and GPS vs. manual location
 - Material 3 design with an orange seed color palette
-- Unique device ID used for per-device request tracking
+- Anonymous per-install UUID used for per-device request tracking
 
 ## Architecture
 
