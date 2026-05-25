@@ -13,11 +13,11 @@ requiring a Play Store review cycle for every enforcement change.
 
 ## Decision
 
-The app sends its version string as the `X-App-Version` header on every proxy
-request. The proxy checks the version against a minimum allowed version stored
-in Vercel KV. If the version is below the minimum, the proxy returns
-`426 Upgrade Required`. The app detects this response and shows a full-screen
-blocking UI:
+The app will send its version string as the `X-App-Version` header on every
+proxy request. The proxy will check the version against a minimum allowed
+version stored in Vercel KV. If the version is below the minimum, the proxy
+will return `426 Upgrade Required`. The app will detect this response and show
+a full-screen blocking UI:
 
 > "This version of UV Alert is no longer supported. Please update to continue."
 

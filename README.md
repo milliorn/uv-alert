@@ -101,12 +101,14 @@ Gradle, and GitHub Actions.
 
 ## Permissions
 
-The app requests the following Android permissions at runtime:
+The app will request the following Android permissions at runtime (location
+permission is declared but not yet requested; notification permission is
+planned):
 
-| Permission             | Reason              |
-| ---------------------- | ------------------- |
-| Location (fine/coarse) | GPS-based UV lookup |
-| Notifications          | UV threshold alerts |
+| Permission             | Reason              | Status  |
+| ---------------------- | ------------------- | ------- |
+| Location (fine/coarse) | GPS-based UV lookup | Planned |
+| Notifications          | UV threshold alerts | Planned |
 
 Location can be replaced with a manually entered location in Settings if you
 prefer not to grant GPS access.
