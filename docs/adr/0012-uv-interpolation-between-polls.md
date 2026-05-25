@@ -22,9 +22,12 @@ hourly forecast anchors already present in the cached payload:
    Dart's `sin`/`cos` expect radians. The intermediate angle values below are
    in degrees and must be converted before calling `sin`/`cos` — multiply by
    `π / 180`:
-   - Declination = 23.45 × sin((360/365 × (dayOfYear - 81)) × π/180)
-   - Hour angle = (currentHour - 12) × 15
-   - sin(elevation) = sin(lat) × sin(dec) + cos(lat) × cos(dec) × cos(hourAngle)
+   - Declination (degrees) = 23.45 × sin((360/365 × (dayOfYear - 81)) × π/180)
+   - Hour angle (degrees) = (currentHour - 12) × 15
+   - sin(elevation) = sin(lat × π/180) × sin(dec × π/180) +
+     cos(lat × π/180) × cos(dec × π/180) × cos(hourAngle × π/180)
+   - All three variables — lat, dec, and hourAngle — are in degrees and must
+     each be multiplied by π/180 before being passed to sin/cos
    - UVmax = the peak `hourly[].uvi` value in the cached payload for the
      current day; falls back to `current.uvi` if no hourly data is available
    - UV estimate = UVmax × sin(elevation)
