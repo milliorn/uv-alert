@@ -21,7 +21,9 @@ metadata but is not used for identity.
 ## Consequences
 
 - No PII collected or transmitted — UUID is anonymous and not linked to any
-  account or device identifier
+  account or device identifier. Latitude and longitude are transmitted to the
+  proxy as query parameters to forward to the weather API, but are not stored
+  or logged.
 - UUID is stable for the lifetime of the app install; reinstalling generates
   a new UUID. Android Auto Backup (enabled by default) can restore
   SharedPreferences after a reinstall, which would carry over the UUID and
