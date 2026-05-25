@@ -32,5 +32,8 @@ is accessible until the user updates.
   hard blocking
 - The 426 path is one of the defined error codes in the proxy-to-app error
   contract (see ADR 0010)
+- If the app cannot reach the proxy (no network), no 426 response is possible
+  and the force-update gate cannot fire; the app remains usable offline until
+  connectivity is restored and the proxy responds
 - iOS is deferred; force update behavior on iOS (App Store link) will be
   addressed when iOS support resumes

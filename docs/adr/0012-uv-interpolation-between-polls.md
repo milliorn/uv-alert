@@ -41,5 +41,7 @@ hourly forecast anchors already present in the cached payload:
 - Solar position math runs on-device using only lat, lon, and the system clock
 - The 2-hour refresh corrects accumulated drift from cloud cover or unexpected
   atmospheric conditions
+- `sin(elevation)` is negative when the sun is below the horizon; the result
+  must be clamped to `[0, UVmax]` before display — UV is never negative
 - This logic will live in `lib/services/` alongside the polling service and is
   not yet implemented
