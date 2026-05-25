@@ -50,8 +50,9 @@ App UX per code:
 
 - The app never inspects OWM response bodies — all error semantics flow through
   HTTP status codes
-- Sentry captures every error code on both the proxy (Node.js) and app
-  (Flutter) sides; alerts fire on first occurrence of any error
+- Sentry captures every error code on the proxy (Node.js) side today; alerts
+  fire on first occurrence of any error. App-side Sentry integration is pending
+  (see ADR 0005)
 - The 3-consecutive-failure threshold for escalating from toast to persistent
   banner must be tracked in app state — not yet implemented
 - `UvApiException` in `lib/api/uv_api.dart` is thrown on any non-200 response;

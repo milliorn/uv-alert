@@ -6,11 +6,11 @@ Accepted — not yet implemented
 
 ## Context
 
-The app polls OWM every 2 hours. Between polls, the displayed UV index would
-be static if cached data were shown verbatim. OWM `current.uvi` is snapped to
-the current hour value, not interpolated, so it is already stale by the time
-it arrives. A strategy was needed to show accurate, smoothly changing UV
-values between refreshes without additional API calls.
+The app will poll the proxy every 2 hours. Between polls, the displayed UV
+index would be static if cached data were shown verbatim. OWM `current.uvi`
+is snapped to the current hour value, not interpolated, so it is already stale
+by the time it arrives. A strategy was needed to show accurate, smoothly
+changing UV values between refreshes without additional API calls.
 
 ## Decision
 
