@@ -29,7 +29,8 @@ hourly forecast anchors already present in the cached payload:
    - All three variables — lat, dec, and hourAngle — are in degrees and must
      each be multiplied by π/180 before being passed to sin/cos
    - UVmax = the peak `hourly[].uvi` value in the cached payload for the
-     current day; falls back to `current.uvi` if no hourly data is available
+     current day (determined by device local time); falls back to `current.uvi`
+     if no hourly data is available
    - UV estimate = UVmax × sin(elevation)
 3. If the interpolated value and the last-known `current.uvi` diverge
    significantly, use the conservative (higher) value to protect user safety

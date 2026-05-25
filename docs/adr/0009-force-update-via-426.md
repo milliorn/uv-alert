@@ -21,8 +21,8 @@ blocking UI:
 
 > "This version of UV Alert is no longer supported. Please update to continue."
 
-A button links directly to the Play Store listing. No other app functionality
-is accessible until the user updates.
+A button links directly to the Play Store listing (Play Store listing TBD).
+No other app functionality is accessible until the user updates.
 
 ## Consequences
 
