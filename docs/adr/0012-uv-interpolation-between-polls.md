@@ -18,10 +18,11 @@ Between polls, derive a UV estimate using solar position math applied to the
 hourly forecast anchors already present in the cached payload:
 
 1. Use `hourly[].uvi` values from the cached payload as anchors
-2. Calculate solar elevation angle from lat, lon, date, and current time;
-   use the peak `hourly[].uvi` for the current day as UVmax (falls back to
-   `current.uvi` if no hourly data is available); UV estimate = UVmax ×
-   sin(elevation)
+2. Calculate solar elevation angle from lat, lon, date, and current time
+   (all angular inputs — lat, lon, declination, hour angle — in degrees;
+   convert to radians before calling trig functions); use the peak
+   `hourly[].uvi` for the current day as UVmax (falls back to `current.uvi`
+   if no hourly data is available); UV estimate = UVmax × sin(elevation_rad)
 3. If the interpolated value and the last-known `current.uvi` diverge
    significantly, use the conservative (higher) value to protect user safety
 4. Every 2-hour refresh corrects the model with fresh `current.uvi` from OWM
