@@ -7,9 +7,9 @@ exposure risk is high. Targets Android and Linux desktop.
 
 - Real-time UV index fetched from a Vercel serverless proxy using your GPS
   coordinates or a manually entered location
-- Local notifications when UV levels reach configurable thresholds
+- Local notifications when UV levels reach configurable thresholds (planned)
 - Background refresh via WorkManager so data stays current without keeping the
-  app open
+  app open (planned)
 - 24-hour response cache keyed to the server-provided fetch timestamp, reducing
   unnecessary network requests
 - Hourly and daily UV forecast with sunrise/sunset awareness and cloud cover
