@@ -35,4 +35,5 @@ metadata but is not used for identity.
 - Error tracking in Sentry is per-UUID, enabling per-device error history
   without exposing user identity
 - `device_info_plus` data (Android build info, model, SDK version) is
-  available for future diagnostics but is not sent to the proxy today
+  available for future diagnostics but is not sent to the proxy in the
+  current implementation
