@@ -41,8 +41,10 @@ App UX per code:
 - **500/503/504** — 1st occurrence: toast. After 3 consecutive: persistent
   banner "UV data is temporarily unavailable. Showing last known reading."
   Banner clears on next success.
-- **502** — banner: "UV data is temporarily unavailable. Showing last known
-  reading."
+- **502** — persistent banner immediately (no toast-first path): "UV data is
+  temporarily unavailable. Showing last known reading." 502 indicates an
+  invalid or expired OWM key, which requires operator action — there is no
+  point waiting for 3 consecutive failures when the root cause cannot self-heal.
 
 ## Consequences
 

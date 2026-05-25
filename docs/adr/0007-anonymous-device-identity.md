@@ -23,7 +23,11 @@ metadata but is not used for identity.
 - No PII collected or transmitted — UUID is anonymous and not linked to any
   account or device identifier
 - UUID is stable for the lifetime of the app install; reinstalling generates
-  a new UUID
+  a new UUID. Android Auto Backup (enabled by default) can restore
+  SharedPreferences after a reinstall, which would carry over the UUID and
+  make the reinstalled app appear as the same device. If that behavior is
+  undesirable, exclude `uvalert_uuid` from backup via an Android backup rules
+  XML (`android:fullBackupContent` / `android:dataExtractionRules`).
 - Proxy keys rate limiting on UUID — abuse (scripted coord spamming) can be
   detected and blocked per device without identifying the user
 - Error tracking in Sentry is per-UUID, enabling per-device error history
