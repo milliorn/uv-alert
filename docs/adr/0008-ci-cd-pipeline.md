@@ -41,5 +41,6 @@ Use GitHub Actions with the following distinct workflows:
   and changelog entries from commit messages
 - Dependabot runs monthly for pub, Gradle, and GitHub Actions dependencies
 - Release Please PRs require manual merge — GitHub Actions cannot self-approve
-- All workflows pin to `ubuntu-24.04`; `googleapis/release-please-action@v4`
-  runs on Node.js 20 natively, requiring no Node.js compatibility shims
+- All workflows pin to `ubuntu-24.04`; all except `release-please.yml` set
+  `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true` — `release-please-action@v4`
+  runs on Node.js 20 natively and does not require the shim

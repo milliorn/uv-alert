@@ -101,9 +101,8 @@ Gradle, and GitHub Actions.
 
 ## Permissions
 
-The app will request the following Android permissions at runtime (location
-permission is declared but not yet requested; notification permission is
-planned):
+The app will request the following Android permissions at runtime (neither is
+yet declared in the manifest or requested at runtime — both are planned):
 
 | Permission             | Reason              | Status  |
 | ---------------------- | ------------------- | ------- |
