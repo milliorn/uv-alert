@@ -24,7 +24,7 @@ exposure risk is high. Targets Android and Linux desktop.
 ```text
 lib/
   api/          # UvApi - HTTP client with cache-first fetch, timeout, error handling
-  models/       # UvData, UvForecastEntry — immutable, JSON-serializable value types
+  models/       # UvData, UvForecastEntry: immutable, JSON-serializable value types
   providers/    # Riverpod notifiers and providers: UvNotifier, LocationNotifier,
                 #   SettingsNotifier, deviceIdProvider, preferencesProvider
   storage/      # Cache - 24-hour staleness check; Preferences - SharedPrefs wrapper
