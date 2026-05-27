@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uvalert/providers/preferences_provider.dart';
+import 'package:uvalert/screens/dashboard_screen.dart';
 import 'package:uvalert/storage/preferences.dart';
 
 /// Shown on first launch only. Marks first launch done then routes to
@@ -15,10 +16,19 @@ class OnboardingScreen extends ConsumerWidget {
       body: Center(
         child: ElevatedButton(
           onPressed: () async {
-            final Preferences preferences =
-                await ref.read(preferencesProvider.future);
+            final Preferences preferences = await ref.read(
+              preferencesProvider.future,
+            );
             await preferences.setFirstLaunchDone();
-            }, child: null,
+            if (context.mounted) {
+              await Navigator.of(context).pushReplacement(
+                MaterialPageRoute<void>(
+                  builder: (_) => const DashboardScreen(),
+                ),
+              );
+            }
+          },
+          child: const Text('Get Started'),
         ),
       ),
     );
