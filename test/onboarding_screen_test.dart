@@ -14,44 +14,36 @@ void main() {
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(home: OnboardingScreen()),
-      ),
+      const ProviderScope(child: MaterialApp(home: OnboardingScreen())),
     );
 
     expect(find.text('Get Started'), findsOneWidget);
   });
 
-  testWidgets(
-    'tapping Get Started navigates to DashboardScreen',
-    (WidgetTester tester) async {
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(home: OnboardingScreen()),
-        ),
-      );
+  testWidgets('tapping Get Started navigates to DashboardScreen', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: OnboardingScreen())),
+    );
 
-      await tester.tap(find.text('Get Started'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Get Started'));
+    await tester.pumpAndSettle();
 
-      expect(find.byType(DashboardScreen), findsOneWidget);
-    },
-  );
+    expect(find.byType(DashboardScreen), findsOneWidget);
+  });
 
-  testWidgets(
-    'tapping Get Started sets isFirstLaunch to false',
-    (WidgetTester tester) async {
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(home: OnboardingScreen()),
-        ),
-      );
+  testWidgets('tapping Get Started sets isFirstLaunch to false', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: OnboardingScreen())),
+    );
 
-      await tester.tap(find.text('Get Started'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Get Started'));
+    await tester.pumpAndSettle();
 
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      expect(prefs.getBool('uvalert_first_launch'), isFalse);
-    },
-  );
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    expect(prefs.getBool('uvalert_first_launch'), isFalse);
+  });
 }

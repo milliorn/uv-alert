@@ -6,9 +6,7 @@ void main() {
   testWidgets('DashboardScreen renders Dashboard text', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(
-      const MaterialApp(home: DashboardScreen()),
-    );
+    await tester.pumpWidget(const MaterialApp(home: DashboardScreen()));
 
     expect(find.text('Dashboard'), findsOneWidget);
   });
