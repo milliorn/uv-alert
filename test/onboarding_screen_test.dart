@@ -35,9 +35,7 @@ void main() {
     expect(find.byIcon(Icons.check_circle), findsOneWidget);
   });
 
-  testWidgets('tapping a theme card selects it', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('tapping a theme card selects it', (WidgetTester tester) async {
     await tester.pumpWidget(
       const ProviderScope(child: MaterialApp(home: OnboardingScreen())),
     );
