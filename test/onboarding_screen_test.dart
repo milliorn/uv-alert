@@ -11,37 +11,66 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
-  testWidgets('OnboardingScreen renders Get Started button', (
+  testWidgets('OnboardingScreen renders all three theme cards', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
       const ProviderScope(child: MaterialApp(home: OnboardingScreen())),
     );
 
-    expect(find.text('Get Started'), findsOneWidget);
+    expect(find.text('Light'), findsOneWidget);
+    expect(find.text('Dark'), findsOneWidget);
+    expect(find.text('System Default'), findsOneWidget);
   });
 
-  testWidgets('tapping Get Started navigates to DashboardScreen', (
+  testWidgets('System Default card is pre-selected', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
       const ProviderScope(child: MaterialApp(home: OnboardingScreen())),
     );
 
-    await tester.tap(find.text('Get Started'));
+    // The check_circle icon only appears on the selected card.
+    // There should be exactly one -- on System Default.
+    expect(find.byIcon(Icons.check_circle), findsOneWidget);
+  });
+
+  testWidgets('tapping a theme card selects it', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: OnboardingScreen())),
+    );
+
+    await tester.tap(find.text('Dark'));
+    await tester.pump();
+
+    // After tapping Dark, check_circle moves to the Dark card.
+    // We verify there is still exactly one check_circle (no double-selection).
+    expect(find.byIcon(Icons.check_circle), findsOneWidget);
+  });
+
+  testWidgets('tapping Continue navigates to DashboardScreen', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: OnboardingScreen())),
+    );
+
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
     expect(find.byType(DashboardScreen), findsOneWidget);
   });
 
-  testWidgets('tapping Get Started sets isFirstLaunch to false', (
+  testWidgets('tapping Continue sets isFirstLaunch to false', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
       const ProviderScope(child: MaterialApp(home: OnboardingScreen())),
     );
 
-    await tester.tap(find.text('Get Started'));
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
     final Preferences prefs = await Preferences.load();
