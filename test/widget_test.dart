@@ -6,6 +6,7 @@ import 'package:uvalert/app.dart';
 import 'package:uvalert/providers/preferences_provider.dart';
 import 'package:uvalert/screens/dashboard_screen.dart';
 import 'package:uvalert/screens/onboarding_screen.dart';
+import 'package:uvalert/storage/preferences.dart';
 
 void main() {
   testWidgets('UvAlertApp shows OnboardingScreen on first launch', (
@@ -23,7 +24,7 @@ void main() {
     WidgetTester tester,
   ) async {
     SharedPreferences.setMockInitialValues(<String, Object>{
-      'uvalert_first_launch': false,
+      Preferences.keyFirstLaunchForTesting: false,
     });
 
     await tester.pumpWidget(const ProviderScope(child: UvAlertApp()));
