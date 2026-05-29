@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uvalert/providers/preferences_provider.dart';
+import 'package:uvalert/providers/settings_provider.dart';
+import 'package:uvalert/screens/dashboard_screen.dart';
+import 'package:uvalert/storage/preferences.dart';
 
 /// Screen 1 of onboarding: lets the user pick a theme.
 // ConsumerStatefulWidget is the Riverpod version of StatefulWidget.
 // It gives the State class a `ref` to read and write providers.
-
 class OnboardingScreen extends ConsumerStatefulWidget {
   /// Creates an [OnboardingScreen].
   const OnboardingScreen({super.key});
@@ -16,6 +21,25 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   // Tracks which theme card is currently selected.
   String _selectedTheme = 'system';
+
+  Future<void> _onContinue() async {
+    // Persist the chosen theme via the settings provider.
+    await ref.read(settingsProvider.notifier).setTheme(_selectedTheme);
+
+    // Mark first launch done so this screen never shows again.
+    final Preferences prefs = await ref.read(preferencesProvider.future);
+    await prefs.setFirstLaunchDone();
+    ref.invalidate(preferencesProvider);
+
+    if (!mounted) return;
+
+    // TODO(onboarding): replace with location screen when it exists.
+    unawaited(
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => const DashboardScreen()),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,8 +93,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  // Will persist theme and navigate in Step 3.
-                  onPressed: () {},
+                  onPressed: _onContinue,
                   child: const Text('Continue'),
                 ),
               ),
