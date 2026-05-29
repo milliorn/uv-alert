@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Typed, prefixed wrapper around [SharedPreferences] for app settings.
@@ -5,6 +6,10 @@ class Preferences {
   Preferences._(this._prefs);
   static const String _prefix = 'uvalert_';
   static const String _keyFirstLaunch = '${_prefix}first_launch';
+
+  /// The SharedPreferences key for [isFirstLaunch]. Exposed for tests only.
+  @visibleForTesting
+  static const String keyFirstLaunchForTesting = _keyFirstLaunch;
   static const String _keyUuid = '${_prefix}uuid';
   static const String _keyTheme = '${_prefix}theme';
   static const String _keyUseGps = '${_prefix}use_gps';
