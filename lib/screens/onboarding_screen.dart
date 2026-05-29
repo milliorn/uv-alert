@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Screen 1 of onboarding: lets the user pick a theme.
-class OnboardingScreen extends StatefulWidget {
+// ConsumerStatefulWidget is the Riverpod version of StatefulWidget.
+// It gives the State class a `ref` to read and write providers.
+
+class OnboardingScreen extends ConsumerStatefulWidget {
   /// Creates an [OnboardingScreen].
   const OnboardingScreen({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   // Tracks which theme card is currently selected.
   String _selectedTheme = 'system';
 
@@ -111,7 +115,7 @@ class _ThemeCard extends StatelessWidget {
             color: selected ? colors.primary : colors.outlineVariant,
             width: selected ? 2 : 1,
           ),
-          
+
           color: selected
               ? colors.primary.withValues(alpha: 0.08)
               : colors.surface,
@@ -120,7 +124,7 @@ class _ThemeCard extends StatelessWidget {
         child: Row(
           children: <Widget>[
             Icon(icon, color: selected ? colors.primary : colors.onSurface),
-            
+
             const SizedBox(width: 16),
 
             Text(
