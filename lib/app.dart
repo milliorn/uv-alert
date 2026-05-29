@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uvalert/providers/preferences_provider.dart';
+import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/screens/dashboard_screen.dart';
 import 'package:uvalert/screens/onboarding_screen.dart';
 import 'package:uvalert/storage/preferences.dart';
@@ -10,9 +11,23 @@ class UvAlertApp extends ConsumerWidget {
   /// Creates a [UvAlertApp].
   const UvAlertApp({super.key});
 
+  // Converts the stored theme string to a Flutter ThemeMode.
+  // 'light' -> light, 'dark' -> dark, anything else -> system.
+  static ThemeMode _toThemeMode(String theme) => switch (theme) {
+    'light' => ThemeMode.light,
+    'dark' => ThemeMode.dark,
+    _ => ThemeMode.system,
+  };
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<Preferences> prefs = ref.watch(preferencesProvider);
+    final AsyncValue<SettingsState> settings = ref.watch(settingsProvider);
+
+    // Fall back to system theme while settings are loading or on error.
+    final ThemeMode themeMode =
+        settings.whenData((SettingsState s) => _toThemeMode(s.theme)).value ??
+        ThemeMode.system;
 
     return MaterialApp(
       title: 'UV Alert',
@@ -20,6 +35,14 @@ class UvAlertApp extends ConsumerWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
         useMaterial3: true,
       ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.orange,
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
+      themeMode: themeMode,
       home: switch (prefs) {
         AsyncData<Preferences>(:final Preferences value) =>
           value.isFirstLaunch
