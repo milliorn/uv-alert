@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uvalert/screens/dashboard_screen.dart';
 import 'package:uvalert/screens/onboarding_screen.dart';
+import 'package:uvalert/storage/preferences.dart';
 
 void main() {
   setUp(() {
@@ -43,7 +44,7 @@ void main() {
     await tester.tap(find.text('Get Started'));
     await tester.pumpAndSettle();
 
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    expect(prefs.getBool('uvalert_first_launch'), isFalse);
+    final Preferences prefs = await Preferences.load();
+    expect(prefs.isFirstLaunch, isFalse);
   });
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uvalert/providers/preferences_provider.dart';
@@ -20,10 +22,13 @@ class OnboardingScreen extends ConsumerWidget {
               preferencesProvider.future,
             );
             await preferences.setFirstLaunchDone();
+            ref.invalidate(preferencesProvider);
             if (context.mounted) {
-              await Navigator.of(context).pushReplacement(
-                MaterialPageRoute<void>(
-                  builder: (_) => const DashboardScreen(),
+              unawaited(
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const DashboardScreen(),
+                  ),
                 ),
               );
             }
