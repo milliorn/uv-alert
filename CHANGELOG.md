@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/milliorn/uv-alert/compare/v1.4.0...v1.5.0) (2026-05-29)
+
+
+### Features
+
+* implement first-launch routing in app.dart ([#57](https://github.com/milliorn/uv-alert/issues/57)) ([7d4b21b](https://github.com/milliorn/uv-alert/commit/7d4b21bbb01d00a80c56b955834f348430ae4d86))
+
 ## [1.4.0](https://github.com/milliorn/uv-alert/compare/v1.3.0...v1.4.0) (2026-05-24)
 
 
