@@ -110,18 +110,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
               const SizedBox(height: _headingGap),
 
-              for (final (String label, IconData icon, ThemeMode mode)
-                  in _themeOptions) ...<Widget>[
-                _ThemeCard(
-                  label: label,
-                  icon: icon,
-                  selected: _selectedTheme == mode,
-                  onTap: () => _onSelectTheme(mode),
-                ),
-
-                if ((label, icon, mode) != _themeOptions.last)
-                  const SizedBox(height: _cardGap),
-              ],
+              Column(
+                spacing: _cardGap,
+                children: <Widget>[
+                  for (final (String label, IconData icon, ThemeMode mode)
+                      in _themeOptions)
+                    _ThemeCard(
+                      label: label,
+                      icon: icon,
+                      selected: _selectedTheme == mode,
+                      onTap: () => _onSelectTheme(mode),
+                    ),
+                ],
+              ),
 
               const Spacer(),
               const _ProgressDots(current: 0, total: _totalOnboardingSteps),
