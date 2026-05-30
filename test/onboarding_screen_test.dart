@@ -60,9 +60,19 @@ void main() {
     await tester.tap(find.text('Dark'));
     await tester.pump();
 
-    // After tapping Dark, check_circle moves to the Dark card.
-    // We verify there is still exactly one check_circle (no double-selection).
-    expect(find.byIcon(Icons.check_circle), findsOneWidget);
+    // After tapping Dark, check_circle must be inside the Dark card's Row,
+    // not just anywhere on screen (which would pass even if the tap did nothing).
+    final Finder darkCardRow = find.ancestor(
+      of: find.text('Dark'),
+      matching: find.byType(Row),
+    );
+    expect(
+      find.descendant(
+        of: darkCardRow,
+        matching: find.byIcon(Icons.check_circle),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('tapping Continue navigates to DashboardScreen', (
