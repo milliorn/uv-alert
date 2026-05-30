@@ -46,7 +46,7 @@ class Preferences {
 
     if (stored == null) return ThemeMode.system;
 
-    return ThemeMode.values.byName(stored);
+    return ThemeMode.values.asNameMap()[stored] ?? ThemeMode.system;
   }
 
   /// Stores the active [theme].
