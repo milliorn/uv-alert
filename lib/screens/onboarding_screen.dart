@@ -35,15 +35,12 @@ const double _dotMargin = 4;
 const double _dotSize = 8;
 
 // (label, icon, themeMode) for each selectable theme option.
-const List<(String, IconData, ThemeMode)> _themeOptions = <(
-  String,
-  IconData,
-  ThemeMode,
-)>[
-  ('Light', Icons.light_mode, ThemeMode.light),
-  ('Dark', Icons.dark_mode, ThemeMode.dark),
-  ('System Default', Icons.brightness_auto, ThemeMode.system),
-];
+const List<(String, IconData, ThemeMode)> _themeOptions =
+    <(String, IconData, ThemeMode)>[
+      ('Light', Icons.light_mode, ThemeMode.light),
+      ('Dark', Icons.dark_mode, ThemeMode.dark),
+      ('System Default', Icons.brightness_auto, ThemeMode.system),
+    ];
 
 /// Screen 1 of onboarding: lets the user pick a theme.
 // ConsumerStatefulWidget is the Riverpod version of StatefulWidget.
@@ -74,6 +71,23 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             .whenData((SettingsState s) => s.themeMode)
             .value ??
         ThemeMode.system;
+
+    // If settings finish loading after initState, sync the card selection
+    // via setState so Flutter is aware of the state change.
+    ref.listenManual(settingsProvider, (
+      AsyncValue<SettingsState>? _,
+      AsyncValue<SettingsState> next,
+    ) {
+      if (_userHasSelected) return;
+
+      final ThemeMode? stored = next
+          .whenData((SettingsState s) => s.themeMode)
+          .value;
+          
+      if (stored != null && stored != _selectedTheme) {
+        setState(() => _selectedTheme = stored);
+      }
+    });
   }
 
   void _onSelectTheme(ThemeMode mode) {
@@ -104,18 +118,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // If settings loaded after initState and the user hasn't tapped yet,
-    // sync the selection to whatever is stored.
-    if (!_userHasSelected) {
-      final ThemeMode? stored = ref
-          .watch(settingsProvider)
-          .whenData((SettingsState s) => s.themeMode)
-          .value;
-      if (stored != null && stored != _selectedTheme) {
-        _selectedTheme = stored;
-      }
-    }
-
     return Scaffold(
       body: SafeArea(
         child: Padding(
