@@ -54,7 +54,18 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   // Tracks which theme card is currently selected.
-  ThemeMode _selectedTheme = ThemeMode.system;
+  late ThemeMode _selectedTheme;
+
+  @override
+  void initState() {
+    super.initState();
+    // Seed from storage so the correct card is pre-selected on re-entry.
+    _selectedTheme = ref
+            .read(settingsProvider)
+            .whenData((SettingsState s) => s.themeMode)
+            .value ??
+        ThemeMode.system;
+  }
 
   void _onSelectTheme(ThemeMode mode) {
     setState(() => _selectedTheme = mode);
