@@ -6,7 +6,7 @@ import 'package:uvalert/screens/dashboard_screen.dart';
 import 'package:uvalert/screens/onboarding_screen.dart';
 import 'package:uvalert/storage/preferences.dart';
 
-// Built once at startup; ColorScheme.fromSeed is expensive to repeat each build.
+// Built once at startup; ColorScheme.fromSeed is expensive per-build.
 final ThemeData _lightTheme = ThemeData(
   colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
   useMaterial3: true,
