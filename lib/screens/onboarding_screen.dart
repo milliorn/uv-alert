@@ -72,7 +72,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Future<void> _onContinue() async {
-    unawaited(ref.read(settingsProvider.notifier).setTheme(_selectedTheme));
+    await ref.read(settingsProvider.notifier).setTheme(_selectedTheme);
 
     final Preferences prefs = await ref.read(preferencesProvider.future);
 
