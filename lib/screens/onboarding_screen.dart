@@ -83,7 +83,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       final ThemeMode? stored = next
           .whenData((SettingsState s) => s.themeMode)
           .value;
-          
+
       if (stored != null && stored != _selectedTheme) {
         setState(() => _selectedTheme = stored);
       }
