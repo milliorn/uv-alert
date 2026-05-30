@@ -98,15 +98,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
               const SizedBox(height: _headingGap),
 
-              for (final (String label, IconData icon, String key)
-                  in _themeOptions) ...<Widget>[
+              for (int i = 0; i < _themeOptions.length; i++) ...<Widget>[
                 _ThemeCard(
-                  label: label,
-                  icon: icon,
-                  selected: _selectedTheme == key,
-                  onTap: () => _onSelectTheme(key),
+                  label: _themeOptions[i].$1,
+                  icon: _themeOptions[i].$2,
+                  selected: _selectedTheme == _themeOptions[i].$3,
+                  onTap: () => _onSelectTheme(_themeOptions[i].$3),
                 ),
-                if (key != 'system') const SizedBox(height: _cardGap),
+
+                if (i < _themeOptions.length - 1)
+                  const SizedBox(height: _cardGap),
               ],
 
               const Spacer(),
