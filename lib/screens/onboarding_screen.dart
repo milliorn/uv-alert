@@ -7,6 +7,8 @@ import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/screens/dashboard_screen.dart';
 import 'package:uvalert/storage/preferences.dart';
 
+const int _totalOnboardingSteps = 3;
+
 /// Screen 1 of onboarding: lets the user pick a theme.
 // ConsumerStatefulWidget is the Riverpod version of StatefulWidget.
 // It gives the State class a `ref` to read and write providers.
@@ -84,7 +86,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               ),
 
               const Spacer(),
-              const _ProgressDots(current: 0, total: 3),
+              const _ProgressDots(current: 0, total: _totalOnboardingSteps),
               const SizedBox(height: 24),
 
               SizedBox(
