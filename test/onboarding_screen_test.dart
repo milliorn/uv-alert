@@ -61,7 +61,7 @@ void main() {
     await tester.pump();
 
     // After tapping Dark, check_circle must be inside the Dark card's Row,
-    // not just anywhere on screen (which would pass even if the tap did nothing).
+    // not just anywhere on screen (passes even if tap did nothing otherwise).
     final Finder darkCardRow = find.ancestor(
       of: find.text('Dark'),
       matching: find.byType(Row),
