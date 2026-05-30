@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/screens/dashboard_screen.dart';
 import 'package:uvalert/screens/onboarding_screen.dart';
 import 'package:uvalert/storage/preferences.dart';
@@ -73,5 +74,32 @@ void main() {
 
     final Preferences prefs = await Preferences.load();
     expect(prefs.isFirstLaunch, isFalse);
+  });
+
+  testWidgets(
+    'tapping Continue persists the selected theme to settingsProvider',
+    (WidgetTester tester) async {
+    final ProviderContainer container = ProviderContainer();
+
+    try {
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(home: OnboardingScreen()),
+        ),
+      );
+
+      await tester.tap(find.text('Dark'));
+      await tester.pump();
+
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+
+      final AsyncValue<SettingsState> settings =
+          container.read(settingsProvider);
+      expect(settings.requireValue.theme, equals('dark'));
+    } finally {
+      container.dispose();
+    }
   });
 }
