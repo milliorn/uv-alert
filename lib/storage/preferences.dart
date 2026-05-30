@@ -45,7 +45,7 @@ class Preferences {
     final String? stored = _prefs.getString(_keyTheme);
 
     if (stored == null) return ThemeMode.system;
-    
+
     return ThemeMode.values.byName(stored);
   }
 
