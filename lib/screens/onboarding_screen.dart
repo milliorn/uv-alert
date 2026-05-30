@@ -9,6 +9,30 @@ import 'package:uvalert/storage/preferences.dart';
 
 const int _totalOnboardingSteps = 3;
 
+const double _screenPaddingHorizontal = 24;
+const double _screenPaddingVertical = 32;
+
+const double _headingGap = 32;
+const double _cardGap = 16;
+const double _buttonGap = 24;
+
+const Duration _cardAnimationDuration = Duration(milliseconds: 200);
+
+const double _cardPaddingHorizontal = 20;
+const double _cardPaddingVertical = 16;
+
+const double _cardBorderRadius = 12;
+
+const double _selectedBorderWidth = 2;
+const double _unselectedBorderWidth = 1;
+
+const double _selectedCardOpacity = 0.08;
+
+const double _cardIconGap = 16;
+
+const double _dotMargin = 4;
+const double _dotSize = 8;
+
 /// Screen 1 of onboarding: lets the user pick a theme.
 // ConsumerStatefulWidget is the Riverpod version of StatefulWidget.
 // It gives the State class a `ref` to read and write providers.
@@ -48,7 +72,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     return Scaffold(
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          padding: const EdgeInsets.symmetric(
+            horizontal: _screenPaddingHorizontal,
+            vertical: _screenPaddingVertical,
+          ),
           child: Column(
             children: <Widget>[
               const Spacer(),
@@ -58,7 +85,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: _headingGap),
 
               _ThemeCard(
                 label: 'Light',
@@ -67,7 +94,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 onTap: () => setState(() => _selectedTheme = 'light'),
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: _cardGap),
 
               _ThemeCard(
                 label: 'Dark',
@@ -76,7 +103,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 onTap: () => setState(() => _selectedTheme = 'dark'),
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: _cardGap),
 
               _ThemeCard(
                 label: 'System Default',
@@ -87,7 +114,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
               const Spacer(),
               const _ProgressDots(current: 0, total: _totalOnboardingSteps),
-              const SizedBox(height: 24),
+              const SizedBox(height: _buttonGap),
 
               SizedBox(
                 width: double.infinity,
@@ -126,18 +153,21 @@ class _ThemeCard extends StatelessWidget {
       onTap: onTap,
 
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        duration: _cardAnimationDuration,
+        padding: const EdgeInsets.symmetric(
+          horizontal: _cardPaddingHorizontal,
+          vertical: _cardPaddingVertical,
+        ),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(_cardBorderRadius),
 
           border: Border.all(
             color: selected ? colors.primary : colors.outlineVariant,
-            width: selected ? 2 : 1,
+            width: selected ? _selectedBorderWidth : _unselectedBorderWidth,
           ),
 
           color: selected
-              ? colors.primary.withValues(alpha: 0.08)
+              ? colors.primary.withValues(alpha: _selectedCardOpacity)
               : colors.surface,
         ),
 
@@ -145,7 +175,7 @@ class _ThemeCard extends StatelessWidget {
           children: <Widget>[
             Icon(icon, color: selected ? colors.primary : colors.onSurface),
 
-            const SizedBox(width: 16),
+            const SizedBox(width: _cardIconGap),
 
             Text(
               label,
@@ -182,9 +212,9 @@ class _ProgressDots extends StatelessWidget {
 
       children: List<Widget>.generate(total, (int i) {
         return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          width: 8,
-          height: 8,
+          margin: const EdgeInsets.symmetric(horizontal: _dotMargin),
+          width: _dotSize,
+          height: _dotSize,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: i == current ? active : inactive,
