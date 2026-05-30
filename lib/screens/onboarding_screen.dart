@@ -162,10 +162,14 @@ class _ThemeCard extends StatelessWidget {
     final Color contentColor =
         selected ? colors.primary : colors.onSurface;
 
-    return GestureDetector(
-      onTap: onTap,
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
 
-      child: AnimatedContainer(
+        child: AnimatedContainer(
         duration: _cardAnimationDuration,
         padding: const EdgeInsets.symmetric(
           horizontal: _cardPaddingHorizontal,
@@ -202,6 +206,7 @@ class _ThemeCard extends StatelessWidget {
 
             if (selected) Icon(Icons.check_circle, color: colors.primary),
           ],
+        ),
         ),
       ),
     );
