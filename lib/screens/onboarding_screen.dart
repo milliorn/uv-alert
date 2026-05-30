@@ -56,14 +56,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   // Tracks which theme card is currently selected.
   String _selectedTheme = 'system';
 
+  void _onSelectTheme(String key) {
+    setState(() => _selectedTheme = key);
+    unawaited(ref.read(settingsProvider.notifier).setTheme(key));
+  }
+
   Future<void> _onContinue() async {
-    // Fire both persists concurrently -- independent SharedPreferences writes.
     final Preferences prefs = await ref.read(preferencesProvider.future);
 
-    await Future.wait(<Future<void>>[
-      ref.read(settingsProvider.notifier).setTheme(_selectedTheme),
-      prefs.setFirstLaunchDone(),
-    ]);
+    await prefs.setFirstLaunchDone();
 
     ref.invalidate(preferencesProvider);
 
@@ -103,7 +104,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   label: label,
                   icon: icon,
                   selected: _selectedTheme == key,
-                  onTap: () => setState(() => _selectedTheme = key),
+                  onTap: () => _onSelectTheme(key),
                 ),
                 if (key != 'system') const SizedBox(height: _cardGap),
               ],
