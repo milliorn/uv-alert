@@ -18,7 +18,7 @@ void main() {
     // Use a non-const key so the constructor is called at runtime,
     // ensuring the super.key path is traced by the coverage tool.
     final Key key = UniqueKey();
-    
+
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(home: OnboardingScreen(key: key)),
@@ -105,27 +105,29 @@ void main() {
   testWidgets(
     'tapping Continue persists the selected theme to settingsProvider',
     (WidgetTester tester) async {
-    final ProviderContainer container = ProviderContainer();
+      final ProviderContainer container = ProviderContainer();
 
-    try {
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(home: OnboardingScreen()),
-        ),
-      );
+      try {
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(home: OnboardingScreen()),
+          ),
+        );
 
-      await tester.tap(find.text('Dark'));
-      await tester.pump();
+        await tester.tap(find.text('Dark'));
+        await tester.pump();
 
-      await tester.tap(find.text('Continue'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Continue'));
+        await tester.pumpAndSettle();
 
-      final AsyncValue<SettingsState> settings =
-          container.read(settingsProvider);
-      expect(settings.requireValue.theme, equals('dark'));
-    } finally {
-      container.dispose();
-    }
-  });
+        final AsyncValue<SettingsState> settings = container.read(
+          settingsProvider,
+        );
+        expect(settings.requireValue.theme, equals('dark'));
+      } finally {
+        container.dispose();
+      }
+    },
+  );
 }

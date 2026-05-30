@@ -36,10 +36,10 @@ const double _dotSize = 8;
 // (label, icon, key) for each selectable theme option.
 const List<(String, IconData, String)> _themeOptions =
     <(String, IconData, String)>[
-  ('Light', Icons.light_mode, 'light'),
-  ('Dark', Icons.dark_mode, 'dark'),
-  ('System Default', Icons.brightness_auto, 'system'),
-];
+      ('Light', Icons.light_mode, 'light'),
+      ('Dark', Icons.dark_mode, 'dark'),
+      ('System Default', Icons.brightness_auto, 'system'),
+    ];
 
 /// Screen 1 of onboarding: lets the user pick a theme.
 // ConsumerStatefulWidget is the Riverpod version of StatefulWidget.
@@ -155,7 +155,7 @@ class _ThemeCard extends StatelessWidget {
           horizontal: _cardPaddingHorizontal,
           vertical: _cardPaddingVertical,
         ),
-        
+
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(_cardBorderRadius),
 
