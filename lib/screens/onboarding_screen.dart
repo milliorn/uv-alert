@@ -60,7 +60,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   void initState() {
     super.initState();
     // Seed from storage so the correct card is pre-selected on re-entry.
-    _selectedTheme = ref
+    _selectedTheme =
+        ref
             .read(settingsProvider)
             .whenData((SettingsState s) => s.themeMode)
             .value ??
@@ -160,8 +161,7 @@ class _ThemeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
-    final Color contentColor =
-        selected ? colors.primary : colors.onSurface;
+    final Color contentColor = selected ? colors.primary : colors.onSurface;
 
     return Semantics(
       button: true,
@@ -171,43 +171,43 @@ class _ThemeCard extends StatelessWidget {
         onTap: onTap,
 
         child: AnimatedContainer(
-        duration: _cardAnimationDuration,
-        padding: const EdgeInsets.symmetric(
-          horizontal: _cardPaddingHorizontal,
-          vertical: _cardPaddingVertical,
-        ),
-
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(_cardBorderRadius),
-
-          border: Border.all(
-            color: selected ? colors.primary : colors.outlineVariant,
-            width: selected ? _selectedBorderWidth : _unselectedBorderWidth,
+          duration: _cardAnimationDuration,
+          padding: const EdgeInsets.symmetric(
+            horizontal: _cardPaddingHorizontal,
+            vertical: _cardPaddingVertical,
           ),
 
-          color: selected
-              ? colors.primary.withValues(alpha: _selectedCardOpacity)
-              : colors.surface,
-        ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(_cardBorderRadius),
 
-        child: Row(
-          children: <Widget>[
-            Icon(icon, color: contentColor),
-
-            const SizedBox(width: _cardIconGap),
-
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: contentColor,
-                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-              ),
+            border: Border.all(
+              color: selected ? colors.primary : colors.outlineVariant,
+              width: selected ? _selectedBorderWidth : _unselectedBorderWidth,
             ),
-            const Spacer(),
 
-            if (selected) Icon(Icons.check_circle, color: colors.primary),
-          ],
-        ),
+            color: selected
+                ? colors.primary.withValues(alpha: _selectedCardOpacity)
+                : colors.surface,
+          ),
+
+          child: Row(
+            children: <Widget>[
+              Icon(icon, color: contentColor),
+
+              const SizedBox(width: _cardIconGap),
+
+              Text(
+                label,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: contentColor,
+                  fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              const Spacer(),
+
+              if (selected) Icon(Icons.check_circle, color: colors.primary),
+            ],
+          ),
         ),
       ),
     );
