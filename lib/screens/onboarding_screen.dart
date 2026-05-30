@@ -61,7 +61,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               _ThemeCard(
                 label: 'Light',
                 icon: Icons.light_mode,
-                value: 'light',
                 selected: _selectedTheme == 'light',
                 onTap: () => setState(() => _selectedTheme = 'light'),
               ),
@@ -71,7 +70,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               _ThemeCard(
                 label: 'Dark',
                 icon: Icons.dark_mode,
-                value: 'dark',
                 selected: _selectedTheme == 'dark',
                 onTap: () => setState(() => _selectedTheme = 'dark'),
               ),
@@ -81,7 +79,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               _ThemeCard(
                 label: 'System Default',
                 icon: Icons.brightness_auto,
-                value: 'system',
                 selected: _selectedTheme == 'system',
                 onTap: () => setState(() => _selectedTheme = 'system'),
               ),
@@ -110,14 +107,12 @@ class _ThemeCard extends StatelessWidget {
   const _ThemeCard({
     required this.label,
     required this.icon,
-    required this.value,
     required this.selected,
     required this.onTap,
   });
 
   final String label;
   final IconData icon;
-  final String value;
   final bool selected;
   final VoidCallback onTap;
 
