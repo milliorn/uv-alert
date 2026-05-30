@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
@@ -23,7 +24,7 @@ void main() {
 
     test('theme defaults to system', () async {
       final Preferences prefs = await Preferences.load();
-      expect(prefs.theme, 'system');
+      expect(prefs.theme, ThemeMode.system);
     });
 
     test('useGps defaults to true', () async {
@@ -72,8 +73,8 @@ void main() {
 
     test('setTheme stores and retrieves theme', () async {
       final Preferences prefs = await Preferences.load();
-      await prefs.setTheme('dark');
-      expect(prefs.theme, 'dark');
+      await prefs.setTheme(ThemeMode.dark);
+      expect(prefs.theme, ThemeMode.dark);
     });
 
     test('setUseGps toggles value', () async {
@@ -142,7 +143,7 @@ void main() {
     test('clearAll resets all values to defaults', () async {
       final Preferences prefs = await Preferences.load();
       await prefs.setUuid('abc');
-      await prefs.setTheme('dark');
+      await prefs.setTheme(ThemeMode.dark);
       await prefs.setUseGps(value: false);
       await prefs.setManualLocation('Boston');
       await prefs.setNotificationsEnabled(value: true);
@@ -153,7 +154,7 @@ void main() {
       await prefs.clearAll();
 
       expect(prefs.uuid, isNull);
-      expect(prefs.theme, 'system');
+      expect(prefs.theme, ThemeMode.system);
       expect(prefs.useGps, isTrue);
       expect(prefs.manualLocation, isNull);
       expect(prefs.notificationsEnabled, isFalse);

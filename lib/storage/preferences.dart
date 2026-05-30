@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Typed, prefixed wrapper around [SharedPreferences] for app settings.
@@ -40,12 +40,20 @@ class Preferences {
   /// Stores the device [uuid].
   Future<void> setUuid(String uuid) async => _prefs.setString(_keyUuid, uuid);
 
-  /// The active theme name; defaults to `'system'`.
-  String get theme => _prefs.getString(_keyTheme) ?? 'system';
+  /// The active [ThemeMode]; defaults to [ThemeMode.system].
+  ThemeMode get theme => switch (_prefs.getString(_keyTheme)) {
+    'light' => ThemeMode.light,
+    'dark' => ThemeMode.dark,
+    _ => ThemeMode.system,
+  };
 
-  /// Stores the active [theme] name.
-  Future<void> setTheme(String theme) async =>
-      _prefs.setString(_keyTheme, theme);
+  /// Stores the active [theme].
+  Future<void> setTheme(ThemeMode theme) async =>
+      _prefs.setString(_keyTheme, switch (theme) {
+        ThemeMode.light => 'light',
+        ThemeMode.dark => 'dark',
+        ThemeMode.system => 'system',
+      });
 
   /// Whether GPS location is enabled; defaults to `true`.
   bool get useGps => _prefs.getBool(_keyUseGps) ?? true;

@@ -124,7 +124,7 @@ void main() {
         final AsyncValue<SettingsState> settings = container.read(
           settingsProvider,
         );
-        expect(settings.requireValue.theme, equals('dark'));
+        expect(settings.requireValue.themeMode, equals(ThemeMode.dark));
       } finally {
         container.dispose();
       }

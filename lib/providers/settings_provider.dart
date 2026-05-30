@@ -9,21 +9,14 @@ import 'package:uvalert/storage/preferences.dart';
 class SettingsState {
   /// Creates a [SettingsState] with all fields required.
   const SettingsState({
-    required this.theme,
+    required this.themeMode,
     required this.useGps,
     required this.manualLocation,
     required this.notificationsEnabled,
   });
 
-  /// Active theme name; one of `'system'`, `'light'`, or `'dark'`.
-  final String theme;
-
-  /// The Flutter [ThemeMode] corresponding to [theme].
-  ThemeMode get themeMode => switch (theme) {
-    'light' => ThemeMode.light,
-    'dark' => ThemeMode.dark,
-    _ => ThemeMode.system,
-  };
+  /// The active [ThemeMode].
+  final ThemeMode themeMode;
 
   /// Whether GPS location is enabled. When `false`, [manualLocation] is used.
   final bool useGps;
@@ -40,13 +33,13 @@ class SettingsState {
   /// "not set", pass `null` only at construction time -- this method cannot
   /// clear [manualLocation] back to `null` once a value has been stored.
   SettingsState copyWith({
-    String? theme,
+    ThemeMode? themeMode,
     bool? useGps,
     String? manualLocation,
     bool? notificationsEnabled,
   }) {
     return SettingsState(
-      theme: theme ?? this.theme,
+      themeMode: themeMode ?? this.themeMode,
       useGps: useGps ?? this.useGps,
       manualLocation: manualLocation ?? this.manualLocation,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
@@ -77,7 +70,7 @@ class SettingsNotifier extends Notifier<AsyncValue<SettingsState>> {
 
           state = AsyncValue<SettingsState>.data(
             SettingsState(
-              theme: prefs.theme,
+              themeMode: prefs.theme,
               useGps: prefs.useGps,
               manualLocation: prefs.manualLocation,
               notificationsEnabled: prefs.notificationsEnabled,
@@ -94,16 +87,10 @@ class SettingsNotifier extends Notifier<AsyncValue<SettingsState>> {
   }
 
   /// Sets the active theme.
-  Future<void> setTheme(String theme) {
-    assert(
-      theme == 'system' || theme == 'light' || theme == 'dark',
-      "theme must be 'system', 'light', or 'dark'; got '$theme'",
-    );
-    return _update(
-      persist: (Preferences prefs) => prefs.setTheme(theme),
-      update: (SettingsState s) => s.copyWith(theme: theme),
-    );
-  }
+  Future<void> setTheme(ThemeMode themeMode) => _update(
+    persist: (Preferences prefs) => prefs.setTheme(themeMode),
+    update: (SettingsState s) => s.copyWith(themeMode: themeMode),
+  );
 
   /// Sets whether GPS location is enabled.
   Future<void> setUseGps({required bool value}) => _update(

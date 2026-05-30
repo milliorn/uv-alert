@@ -33,12 +33,12 @@ const double _cardIconGap = 16;
 const double _dotMargin = 4;
 const double _dotSize = 8;
 
-// (label, icon, key) for each selectable theme option.
-const List<(String, IconData, String)> _themeOptions =
-    <(String, IconData, String)>[
-      ('Light', Icons.light_mode, 'light'),
-      ('Dark', Icons.dark_mode, 'dark'),
-      ('System Default', Icons.brightness_auto, 'system'),
+// (label, icon, themeMode) for each selectable theme option.
+const List<(String, IconData, ThemeMode)> _themeOptions =
+    <(String, IconData, ThemeMode)>[
+      ('Light', Icons.light_mode, ThemeMode.light),
+      ('Dark', Icons.dark_mode, ThemeMode.dark),
+      ('System Default', Icons.brightness_auto, ThemeMode.system),
     ];
 
 /// Screen 1 of onboarding: lets the user pick a theme.
@@ -54,10 +54,10 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   // Tracks which theme card is currently selected.
-  String _selectedTheme = 'system';
+  ThemeMode _selectedTheme = ThemeMode.system;
 
-  void _onSelectTheme(String key) {
-    setState(() => _selectedTheme = key);
+  void _onSelectTheme(ThemeMode mode) {
+    setState(() => _selectedTheme = mode);
   }
 
   Future<void> _onContinue() async {
@@ -99,16 +99,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
               const SizedBox(height: _headingGap),
 
-              for (final (String label, IconData icon, String key)
+              for (final (String label, IconData icon, ThemeMode mode)
                   in _themeOptions) ...<Widget>[
                 _ThemeCard(
                   label: label,
                   icon: icon,
-                  selected: _selectedTheme == key,
-                  onTap: () => _onSelectTheme(key),
+                  selected: _selectedTheme == mode,
+                  onTap: () => _onSelectTheme(mode),
                 ),
 
-                if ((label, icon, key) != _themeOptions.last)
+                if ((label, icon, mode) != _themeOptions.last)
                   const SizedBox(height: _cardGap),
               ],
 

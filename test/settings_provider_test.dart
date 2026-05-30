@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -45,7 +46,7 @@ void main() {
     final SettingsState settings = container
         .read(settingsProvider)
         .requireValue;
-    expect(settings.theme, 'system');
+    expect(settings.themeMode, ThemeMode.system);
     expect(settings.useGps, isTrue);
     expect(settings.manualLocation, isNull);
     expect(settings.notificationsEnabled, isFalse);
@@ -73,21 +74,15 @@ void main() {
   // setTheme
   // -------------------------------------------------------------------------
 
-  test('setTheme rejects invalid theme value', () async {
+  test('setTheme updates themeMode in state', () async {
     final ProviderContainer container = await _makeLoadedContainer();
+
+    await container.read(settingsProvider.notifier).setTheme(ThemeMode.dark);
 
     expect(
-      () => container.read(settingsProvider.notifier).setTheme('invalid'),
-      throwsA(isA<AssertionError>()),
+      container.read(settingsProvider).requireValue.themeMode,
+      ThemeMode.dark,
     );
-  });
-
-  test('setTheme updates theme in state', () async {
-    final ProviderContainer container = await _makeLoadedContainer();
-
-    await container.read(settingsProvider.notifier).setTheme('dark');
-
-    expect(container.read(settingsProvider).requireValue.theme, 'dark');
   });
 
   // -------------------------------------------------------------------------
@@ -148,12 +143,12 @@ void main() {
     final SettingsNotifier notifier = container.read(settingsProvider.notifier);
 
     await Future.wait(<Future<void>>[
-      notifier.setTheme('dark'),
+      notifier.setTheme(ThemeMode.dark),
       notifier.setUseGps(value: false),
     ]);
 
     final SettingsState result = container.read(settingsProvider).requireValue;
-    expect(result.theme, 'dark');
+    expect(result.themeMode, ThemeMode.dark);
     expect(result.useGps, isFalse);
   });
 }
