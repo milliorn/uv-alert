@@ -33,6 +33,14 @@ const double _cardIconGap = 16;
 const double _dotMargin = 4;
 const double _dotSize = 8;
 
+// (label, icon, key) for each selectable theme option.
+const List<(String, IconData, String)> _themeOptions =
+    <(String, IconData, String)>[
+  ('Light', Icons.light_mode, 'light'),
+  ('Dark', Icons.dark_mode, 'dark'),
+  ('System Default', Icons.brightness_auto, 'system'),
+];
+
 /// Screen 1 of onboarding: lets the user pick a theme.
 // ConsumerStatefulWidget is the Riverpod version of StatefulWidget.
 // It gives the State class a `ref` to read and write providers.
@@ -49,12 +57,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   String _selectedTheme = 'system';
 
   Future<void> _onContinue() async {
-    // Persist the chosen theme via the settings provider.
-    await ref.read(settingsProvider.notifier).setTheme(_selectedTheme);
-
-    // Mark first launch done so this screen never shows again.
+    // Fire both persists concurrently -- independent SharedPreferences writes.
     final Preferences prefs = await ref.read(preferencesProvider.future);
-    await prefs.setFirstLaunchDone();
+
+    await Future.wait(<Future<void>>[
+      ref.read(settingsProvider.notifier).setTheme(_selectedTheme),
+      prefs.setFirstLaunchDone(),
+    ]);
+
     ref.invalidate(preferencesProvider);
 
     if (!mounted) return;
@@ -87,30 +97,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
               const SizedBox(height: _headingGap),
 
-              _ThemeCard(
-                label: 'Light',
-                icon: Icons.light_mode,
-                selected: _selectedTheme == 'light',
-                onTap: () => setState(() => _selectedTheme = 'light'),
-              ),
-
-              const SizedBox(height: _cardGap),
-
-              _ThemeCard(
-                label: 'Dark',
-                icon: Icons.dark_mode,
-                selected: _selectedTheme == 'dark',
-                onTap: () => setState(() => _selectedTheme = 'dark'),
-              ),
-
-              const SizedBox(height: _cardGap),
-
-              _ThemeCard(
-                label: 'System Default',
-                icon: Icons.brightness_auto,
-                selected: _selectedTheme == 'system',
-                onTap: () => setState(() => _selectedTheme = 'system'),
-              ),
+              for (final (String label, IconData icon, String key)
+                  in _themeOptions) ...<Widget>[
+                _ThemeCard(
+                  label: label,
+                  icon: icon,
+                  selected: _selectedTheme == key,
+                  onTap: () => setState(() => _selectedTheme = key),
+                ),
+                if (key != 'system') const SizedBox(height: _cardGap),
+              ],
 
               const Spacer(),
               const _ProgressDots(current: 0, total: _totalOnboardingSteps),
@@ -158,6 +154,7 @@ class _ThemeCard extends StatelessWidget {
           horizontal: _cardPaddingHorizontal,
           vertical: _cardPaddingVertical,
         ),
+        
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(_cardBorderRadius),
 
@@ -204,8 +201,7 @@ class _ProgressDots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color active = Theme.of(context).colorScheme.primary;
-    final Color inactive = Theme.of(context).colorScheme.outlineVariant;
+    final ColorScheme colors = Theme.of(context).colorScheme;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -217,7 +213,7 @@ class _ProgressDots extends StatelessWidget {
           height: _dotSize,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: i == current ? active : inactive,
+            color: i == current ? colors.primary : colors.outlineVariant,
           ),
         );
       }),

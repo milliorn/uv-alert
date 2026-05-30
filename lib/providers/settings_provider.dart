@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uvalert/providers/preferences_provider.dart';
 import 'package:uvalert/storage/preferences.dart';
@@ -16,6 +17,13 @@ class SettingsState {
 
   /// Active theme name; one of `'system'`, `'light'`, or `'dark'`.
   final String theme;
+
+  /// The Flutter [ThemeMode] corresponding to [theme].
+  ThemeMode get themeMode => switch (theme) {
+    'light' => ThemeMode.light,
+    'dark' => ThemeMode.dark,
+    _ => ThemeMode.system,
+  };
 
   /// Whether GPS location is enabled. When `false`, [manualLocation] is used.
   final bool useGps;

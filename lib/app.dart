@@ -11,14 +11,6 @@ class UvAlertApp extends ConsumerWidget {
   /// Creates a [UvAlertApp].
   const UvAlertApp({super.key});
 
-  // Converts the stored theme string to a Flutter ThemeMode.
-  // 'light' -> light, 'dark' -> dark, anything else -> system.
-  static ThemeMode _toThemeMode(String theme) => switch (theme) {
-    'light' => ThemeMode.light,
-    'dark' => ThemeMode.dark,
-    _ => ThemeMode.system,
-  };
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<Preferences> prefs = ref.watch(preferencesProvider);
@@ -26,7 +18,7 @@ class UvAlertApp extends ConsumerWidget {
 
     // Fall back to system theme while settings are loading or on error.
     final ThemeMode themeMode =
-        settings.whenData((SettingsState s) => _toThemeMode(s.theme)).value ??
+        settings.whenData((SettingsState s) => s.themeMode).value ??
         ThemeMode.system;
 
     return MaterialApp(
