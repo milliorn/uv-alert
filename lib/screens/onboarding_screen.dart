@@ -9,12 +9,13 @@ import 'package:uvalert/storage/preferences.dart';
 
 const int _totalOnboardingSteps = 3;
 
+// Zero-based index of this screen in the onboarding flow.
+const int _onboardingThemeScreenIndex = 0;
+
 const double _screenPaddingHorizontal = 24;
 const double _screenPaddingVertical = 32;
 
-const double _headingGap = 32;
 const double _cardGap = 16;
-const double _buttonGap = 24;
 
 const Duration _cardAnimationDuration = Duration(milliseconds: 200);
 
@@ -34,12 +35,15 @@ const double _dotMargin = 4;
 const double _dotSize = 8;
 
 // (label, icon, themeMode) for each selectable theme option.
-const List<(String, IconData, ThemeMode)> _themeOptions =
-    <(String, IconData, ThemeMode)>[
-      ('Light', Icons.light_mode, ThemeMode.light),
-      ('Dark', Icons.dark_mode, ThemeMode.dark),
-      ('System Default', Icons.brightness_auto, ThemeMode.system),
-    ];
+const List<(String, IconData, ThemeMode)> _themeOptions = <(
+  String,
+  IconData,
+  ThemeMode,
+)>[
+  ('Light', Icons.light_mode, ThemeMode.light),
+  ('Dark', Icons.dark_mode, ThemeMode.dark),
+  ('System Default', Icons.brightness_auto, ThemeMode.system),
+];
 
 /// Screen 1 of onboarding: lets the user pick a theme.
 // ConsumerStatefulWidget is the Riverpod version of StatefulWidget.
@@ -56,6 +60,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   // Tracks which theme card is currently selected.
   late ThemeMode _selectedTheme;
 
+  // True once the user has tapped a card; prevents the provider from
+  // overwriting an in-progress choice if settings load arrives late.
+  bool _userHasSelected = false;
+
   @override
   void initState() {
     super.initState();
@@ -69,7 +77,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   void _onSelectTheme(ThemeMode mode) {
-    setState(() => _selectedTheme = mode);
+    setState(() {
+      _selectedTheme = mode;
+      _userHasSelected = true;
+    });
   }
 
   Future<void> _onContinue() async {
@@ -93,6 +104,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // If settings loaded after initState and the user hasn't tapped yet,
+    // sync the selection to whatever is stored.
+    if (!_userHasSelected) {
+      final ThemeMode? stored = ref
+          .watch(settingsProvider)
+          .whenData((SettingsState s) => s.themeMode)
+          .value;
+      if (stored != null && stored != _selectedTheme) {
+        _selectedTheme = stored;
+      }
+    }
+
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -101,6 +124,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             vertical: _screenPaddingVertical,
           ),
           child: Column(
+            spacing: _cardGap,
             children: <Widget>[
               const Spacer(),
 
@@ -109,25 +133,20 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
 
-              const SizedBox(height: _headingGap),
-
-              Column(
-                spacing: _cardGap,
-                children: <Widget>[
-                  for (final (String label, IconData icon, ThemeMode mode)
-                      in _themeOptions)
-                    _ThemeCard(
-                      label: label,
-                      icon: icon,
-                      selected: _selectedTheme == mode,
-                      onTap: () => _onSelectTheme(mode),
-                    ),
-                ],
-              ),
+              for (final (String label, IconData icon, ThemeMode mode)
+                  in _themeOptions)
+                _ThemeCard(
+                  label: label,
+                  icon: icon,
+                  selected: _selectedTheme == mode,
+                  onTap: () => _onSelectTheme(mode),
+                ),
 
               const Spacer(),
-              const _ProgressDots(current: 0, total: _totalOnboardingSteps),
-              const SizedBox(height: _buttonGap),
+              const _ProgressDots(
+                current: _onboardingThemeScreenIndex,
+                total: _totalOnboardingSteps,
+              ),
 
               SizedBox(
                 width: double.infinity,
