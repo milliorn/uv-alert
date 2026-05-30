@@ -102,6 +102,23 @@ void main() {
     expect(prefs.isFirstLaunch, isFalse);
   });
 
+  testWidgets('tapping Continue writes theme to SharedPreferences', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: OnboardingScreen())),
+    );
+
+    await tester.tap(find.text('Dark'));
+    await tester.pump();
+
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    final Preferences prefs = await Preferences.load();
+    expect(prefs.theme, ThemeMode.dark);
+  });
+
   testWidgets(
     'tapping Continue persists the selected theme to settingsProvider',
     (WidgetTester tester) async {
