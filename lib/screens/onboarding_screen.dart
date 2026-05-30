@@ -58,10 +58,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   void _onSelectTheme(String key) {
     setState(() => _selectedTheme = key);
-    unawaited(ref.read(settingsProvider.notifier).setTheme(key));
   }
 
   Future<void> _onContinue() async {
+    unawaited(ref.read(settingsProvider.notifier).setTheme(_selectedTheme));
+
     final Preferences prefs = await ref.read(preferencesProvider.future);
 
     await prefs.setFirstLaunchDone();
@@ -98,15 +99,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
               const SizedBox(height: _headingGap),
 
-              for (int i = 0; i < _themeOptions.length; i++) ...<Widget>[
+              for (final (String label, IconData icon, String key)
+                  in _themeOptions) ...<Widget>[
                 _ThemeCard(
-                  label: _themeOptions[i].$1,
-                  icon: _themeOptions[i].$2,
-                  selected: _selectedTheme == _themeOptions[i].$3,
-                  onTap: () => _onSelectTheme(_themeOptions[i].$3),
+                  label: label,
+                  icon: icon,
+                  selected: _selectedTheme == key,
+                  onTap: () => _onSelectTheme(key),
                 ),
 
-                if (i < _themeOptions.length - 1)
+                if ((label, icon, key) != _themeOptions.last)
                   const SizedBox(height: _cardGap),
               ],
 
@@ -146,6 +148,8 @@ class _ThemeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
+    final Color contentColor =
+        selected ? colors.primary : colors.onSurface;
 
     return GestureDetector(
       onTap: onTap,
@@ -172,14 +176,14 @@ class _ThemeCard extends StatelessWidget {
 
         child: Row(
           children: <Widget>[
-            Icon(icon, color: selected ? colors.primary : colors.onSurface),
+            Icon(icon, color: contentColor),
 
             const SizedBox(width: _cardIconGap),
 
             Text(
               label,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: selected ? colors.primary : colors.onSurface,
+                color: contentColor,
                 fontWeight: selected ? FontWeight.bold : FontWeight.normal,
               ),
             ),

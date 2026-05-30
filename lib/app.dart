@@ -6,6 +6,14 @@ import 'package:uvalert/screens/dashboard_screen.dart';
 import 'package:uvalert/screens/onboarding_screen.dart';
 import 'package:uvalert/storage/preferences.dart';
 
+ThemeData _appTheme(Brightness brightness) => ThemeData(
+  colorScheme: ColorScheme.fromSeed(
+    seedColor: Colors.orange,
+    brightness: brightness,
+  ),
+  useMaterial3: true,
+);
+
 /// Root widget of the UV Alert application.
 class UvAlertApp extends ConsumerWidget {
   /// Creates a [UvAlertApp].
@@ -23,17 +31,8 @@ class UvAlertApp extends ConsumerWidget {
 
     return MaterialApp(
       title: 'UV Alert',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.orange,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
+      theme: _appTheme(Brightness.light),
+      darkTheme: _appTheme(Brightness.dark),
       themeMode: themeMode,
       home: switch (prefs) {
         AsyncData<Preferences>(:final Preferences value) =>
