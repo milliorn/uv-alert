@@ -41,19 +41,17 @@ class Preferences {
   Future<void> setUuid(String uuid) async => _prefs.setString(_keyUuid, uuid);
 
   /// The active [ThemeMode]; defaults to [ThemeMode.system].
-  ThemeMode get theme => switch (_prefs.getString(_keyTheme)) {
-    'light' => ThemeMode.light,
-    'dark' => ThemeMode.dark,
-    _ => ThemeMode.system,
-  };
+  ThemeMode get theme {
+    final String? stored = _prefs.getString(_keyTheme);
+
+    if (stored == null) return ThemeMode.system;
+    
+    return ThemeMode.values.byName(stored);
+  }
 
   /// Stores the active [theme].
   Future<void> setTheme(ThemeMode theme) async =>
-      _prefs.setString(_keyTheme, switch (theme) {
-        ThemeMode.light => 'light',
-        ThemeMode.dark => 'dark',
-        ThemeMode.system => 'system',
-      });
+      _prefs.setString(_keyTheme, theme.name);
 
   /// Whether GPS location is enabled; defaults to `true`.
   bool get useGps => _prefs.getBool(_keyUseGps) ?? true;
