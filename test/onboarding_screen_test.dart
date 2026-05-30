@@ -12,6 +12,22 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
+  testWidgets('OnboardingScreen constructs with an explicit key', (
+    WidgetTester tester,
+  ) async {
+    // Use a non-const key so the constructor is called at runtime,
+    // ensuring the super.key path is traced by the coverage tool.
+    final Key key = UniqueKey();
+    
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(home: OnboardingScreen(key: key)),
+      ),
+    );
+
+    expect(find.byKey(key), findsOneWidget);
+  });
+
   testWidgets('OnboardingScreen renders all three theme cards', (
     WidgetTester tester,
   ) async {
