@@ -120,6 +120,36 @@ void main() {
   });
 
   testWidgets(
+    'listenManual syncs card when settings load with a stored non-default'
+    ' theme',
+    (WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'uvalert_theme': 'light',
+      });
+
+      await tester.pumpWidget(
+        const ProviderScope(child: MaterialApp(home: OnboardingScreen())),
+      );
+
+      // Let settingsProvider finish loading so listenManual fires.
+      await tester.pumpAndSettle();
+
+      // The Light card should now be selected (check_circle inside its Row).
+      final Finder lightCardRow = find.ancestor(
+        of: find.text('Light'),
+        matching: find.byType(Row),
+      );
+      expect(
+        find.descendant(
+          of: lightCardRow,
+          matching: find.byIcon(Icons.check_circle),
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
     'tapping Continue persists the selected theme to settingsProvider',
     (WidgetTester tester) async {
       final ProviderContainer container = ProviderContainer();
