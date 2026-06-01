@@ -108,9 +108,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       prefs.setFirstLaunchDone(),
     ]);
 
-    ref.invalidate(preferencesProvider);
-
     if (!mounted) return;
+
+    ref.invalidate(preferencesProvider);
 
     // TODO(onboarding): replace with location screen when it exists.
     unawaited(
