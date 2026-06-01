@@ -148,6 +148,7 @@ void main() {
     'tapping Continue persists the selected theme to settingsProvider',
     (WidgetTester tester) async {
       final ProviderContainer container = ProviderContainer();
+      addTearDown(container.dispose);
 
       try {
         await tester.pumpWidget(
