@@ -53,13 +53,12 @@ class OnboardingScreen extends ConsumerStatefulWidget {
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
+ThemeMode? _themeModeFrom(AsyncValue<SettingsState> s) =>
+    s.whenData((SettingsState st) => st.themeMode).value;
+
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   // Tracks which theme card is currently selected.
   late ThemeMode _selectedTheme;
-
-  // True once the user has tapped a card; prevents the provider from
-  // overwriting an in-progress choice if settings load arrives late.
-  bool _userHasSelected = false;
 
   ProviderSubscription<AsyncValue<SettingsState>>? _settingsSub;
 
@@ -68,11 +67,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     super.initState();
     // Seed from storage so the correct card is pre-selected on re-entry.
     _selectedTheme =
-        ref
-            .read(settingsProvider)
-            .whenData((SettingsState s) => s.themeMode)
-            .value ??
-        ThemeMode.system;
+        _themeModeFrom(ref.read(settingsProvider)) ?? ThemeMode.system;
 
     // If settings finish loading after initState, sync the card selection
     // via setState so Flutter is aware of the state change.
@@ -80,11 +75,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       AsyncValue<SettingsState>? _,
       AsyncValue<SettingsState> next,
     ) {
-      if (_userHasSelected) return;
-
-      final ThemeMode? stored = next
-          .whenData((SettingsState s) => s.themeMode)
-          .value;
+      final ThemeMode? stored = _themeModeFrom(next);
 
       if (stored != null && stored != _selectedTheme) {
         setState(() => _selectedTheme = stored);
@@ -99,10 +90,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   void _onSelectTheme(ThemeMode mode) {
-    setState(() {
-      _selectedTheme = mode;
-      _userHasSelected = true;
-    });
+    // Close the subscription so a late-arriving provider value cannot
+    // overwrite the user's explicit choice.
+    _settingsSub?.close();
+    _settingsSub = null;
+    setState(() => _selectedTheme = mode);
   }
 
   Future<void> _onContinue() async {
@@ -193,6 +185,7 @@ class _ThemeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
     final Color contentColor = selected ? colors.primary : colors.onSurface;
+    final BorderRadius cardRadius = BorderRadius.circular(_cardBorderRadius);
 
     return Semantics(
       button: true,
@@ -200,7 +193,7 @@ class _ThemeCard extends StatelessWidget {
       label: label,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(_cardBorderRadius),
+        borderRadius: cardRadius,
 
         child: AnimatedContainer(
           duration: _cardAnimationDuration,
@@ -210,7 +203,7 @@ class _ThemeCard extends StatelessWidget {
           ),
 
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(_cardBorderRadius),
+            borderRadius: cardRadius,
 
             border: Border.all(
               color: selected ? colors.primary : colors.outlineVariant,

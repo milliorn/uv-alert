@@ -58,6 +58,13 @@ settingsProvider =
 ///
 /// Reads initial values from preferences on first build and persists each
 /// change back immediately.
+///
+/// Uses `Notifier<AsyncValue<SettingsState>>` rather than
+/// `AsyncNotifier<SettingsState>` intentionally. `AsyncNotifier.update()`
+/// puts the provider back into a loading state on every mutation, which
+/// causes UI flicker on each settings change. The manual `AsyncValue`
+/// wrapping here enables optimistic writes: state is updated synchronously
+/// while persistence happens in the background, keeping the UI responsive.
 class SettingsNotifier extends Notifier<AsyncValue<SettingsState>> {
   @override
   AsyncValue<SettingsState> build() {
