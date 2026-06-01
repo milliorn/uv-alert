@@ -60,15 +60,10 @@ void main() {
     await tester.tap(find.text('Dark'));
     await tester.pump();
 
-    // After tapping Dark, check_circle must be inside the Dark card's Row,
-    // not just anywhere on screen (passes even if tap did nothing otherwise).
-    final Finder darkCardRow = find.ancestor(
-      of: find.text('Dark'),
-      matching: find.byType(Row),
-    );
+    // After tapping Dark, check_circle must be inside the Dark card only.
     expect(
       find.descendant(
-        of: darkCardRow,
+        of: find.byKey(const ValueKey<ThemeMode>(ThemeMode.dark)),
         matching: find.byIcon(Icons.check_circle),
       ),
       findsOneWidget,
@@ -138,14 +133,10 @@ void main() {
       // Let settingsProvider finish loading so listenManual fires.
       await tester.pumpAndSettle();
 
-      // The Light card should now be selected (check_circle inside its Row).
-      final Finder lightCardRow = find.ancestor(
-        of: find.text('Light'),
-        matching: find.byType(Row),
-      );
+      // The Light card should now be selected (check_circle inside it only).
       expect(
         find.descendant(
-          of: lightCardRow,
+          of: find.byKey(const ValueKey<ThemeMode>(ThemeMode.light)),
           matching: find.byIcon(Icons.check_circle),
         ),
         findsOneWidget,

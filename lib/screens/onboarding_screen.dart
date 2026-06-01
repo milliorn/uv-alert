@@ -98,11 +98,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Future<void> _onContinue() async {
-    await ref.read(settingsProvider.notifier).setTheme(_selectedTheme);
-
     final Preferences prefs = await ref.read(preferencesProvider.future);
 
-    await prefs.setFirstLaunchDone();
+    await Future.wait(<Future<void>>[
+      ref.read(settingsProvider.notifier).setTheme(_selectedTheme),
+      prefs.setFirstLaunchDone(),
+    ]);
 
     ref.invalidate(preferencesProvider);
 
@@ -140,6 +141,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               for (final (String label, IconData icon, ThemeMode mode)
                   in _themeOptions)
                 _ThemeCard(
+                  key: ValueKey<ThemeMode>(mode),
                   label: label,
                   icon: icon,
                   selected: _selectedTheme == mode,
@@ -174,6 +176,7 @@ class _ThemeCard extends StatelessWidget {
     required this.icon,
     required this.selected,
     required this.onTap,
+    super.key,
   });
 
   final String label;
@@ -251,6 +254,8 @@ class _ProgressDots extends StatelessWidget {
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
 
+    // TODO(milliorn): animate the active dot transition (AnimatedContainer or
+    // AnimatedSwitcher) once a second onboarding screen exists - issue #13.
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
 
