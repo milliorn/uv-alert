@@ -9,7 +9,6 @@ import 'package:uvalert/storage/preferences.dart';
 
 const int _totalOnboardingSteps = 3;
 
-// Zero-based index of this screen in the onboarding flow.
 const int _onboardingThemeScreenIndex = 0;
 
 const double _screenPaddingHorizontal = 24;
