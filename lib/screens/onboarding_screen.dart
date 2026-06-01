@@ -198,8 +198,9 @@ class _ThemeCard extends StatelessWidget {
       button: true,
       selected: selected,
       label: label,
-      child: GestureDetector(
+      child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(_cardBorderRadius),
 
         child: AnimatedContainer(
           duration: _cardAnimationDuration,
