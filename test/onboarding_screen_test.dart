@@ -82,6 +82,8 @@ void main() {
       const ProviderScope(child: MaterialApp(home: OnboardingScreen())),
     );
 
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
@@ -94,6 +96,8 @@ void main() {
     await tester.pumpWidget(
       const ProviderScope(child: MaterialApp(home: OnboardingScreen())),
     );
+
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
