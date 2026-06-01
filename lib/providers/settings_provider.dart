@@ -63,8 +63,8 @@ settingsProvider =
 /// `AsyncNotifier<SettingsState>` intentionally. `AsyncNotifier.update()`
 /// puts the provider back into a loading state on every mutation, which
 /// causes UI flicker on each settings change. The manual `AsyncValue`
-/// wrapping here enables optimistic writes: state is updated synchronously
-/// while persistence happens in the background, keeping the UI responsive.
+/// wrapping here lets `_update` persist first, then update state atomically,
+/// avoiding the loading-state flicker without sacrificing write correctness.
 class SettingsNotifier extends Notifier<AsyncValue<SettingsState>> {
   @override
   AsyncValue<SettingsState> build() {

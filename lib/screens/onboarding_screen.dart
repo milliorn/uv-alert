@@ -94,6 +94,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     // overwrite the user's explicit choice.
     _settingsSub?.close();
     _settingsSub = null;
+    // Theme is applied to settingsProvider (and therefore UvAlertApp) only
+    // when Continue is tapped. Card taps update local selection state only;
+    // no live preview is required and persisting on every tap is unnecessary.
     setState(() => _selectedTheme = mode);
   }
 
