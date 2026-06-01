@@ -61,6 +61,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   // overwriting an in-progress choice if settings load arrives late.
   bool _userHasSelected = false;
 
+  ProviderSubscription<AsyncValue<SettingsState>>? _settingsSub;
+
   @override
   void initState() {
     super.initState();
@@ -74,7 +76,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     // If settings finish loading after initState, sync the card selection
     // via setState so Flutter is aware of the state change.
-    ref.listenManual(settingsProvider, (
+    _settingsSub = ref.listenManual(settingsProvider, (
       AsyncValue<SettingsState>? _,
       AsyncValue<SettingsState> next,
     ) {
@@ -88,6 +90,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         setState(() => _selectedTheme = stored);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _settingsSub?.close();
+    super.dispose();
   }
 
   void _onSelectTheme(ThemeMode mode) {
