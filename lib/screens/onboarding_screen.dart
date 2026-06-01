@@ -126,6 +126,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool settingsReady = ref.watch(settingsProvider).hasValue;
+
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -161,7 +163,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: _onContinue,
+                  onPressed: settingsReady ? _onContinue : null,
                   child: const Text('Continue'),
                 ),
               ),
