@@ -151,7 +151,7 @@ class _ThemeCard extends StatelessWidget {
   final String label;
   final IconData icon;
   final bool selected;
-  final Future<void> Function() onTap;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
