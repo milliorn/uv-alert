@@ -55,6 +55,7 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   // Optimistic override: set on tap, cleared once the provider round-trips.
   ThemeMode? _pendingTheme;
+  bool _continuing = false;
 
   Future<void> _onSelectTheme(ThemeMode mode) async {
     setState(() => _pendingTheme = mode);
@@ -64,6 +65,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Future<void> _onContinue() async {
+    if (_continuing) return;
+    
+    setState(() => _continuing = true);
     // Theme was already persisted by _onSelectTheme on tap; only first-launch
     // flag needs writing here.
     final Preferences prefs = await ref.read(preferencesProvider.future);
