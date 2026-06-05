@@ -65,8 +65,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Future<void> _onContinue() async {
-    if (_continuing) return;
-    
     setState(() => _continuing = true);
     // Theme was already persisted by _onSelectTheme on tap; only first-launch
     // flag needs writing here.
@@ -130,7 +128,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: settingsReady ? _onContinue : null,
+                  onPressed:
+                      (settingsReady && !_continuing) ? _onContinue : null,
                   child: const Text('Continue'),
                 ),
               ),
