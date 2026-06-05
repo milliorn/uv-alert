@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+// Computed once; ThemeMode.values never changes at runtime.
+final Map<String, ThemeMode> _themeModeByName = ThemeMode.values.asNameMap();
+
 /// Typed, prefixed wrapper around [SharedPreferences] for app settings.
 class Preferences {
   Preferences._(this._prefs);
@@ -46,7 +49,7 @@ class Preferences {
 
     if (stored == null) return ThemeMode.system;
 
-    return ThemeMode.values.asNameMap()[stored] ?? ThemeMode.system;
+    return _themeModeByName[stored] ?? ThemeMode.system;
   }
 
   /// Stores the active [theme].
