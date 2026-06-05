@@ -88,14 +88,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     super.dispose();
   }
 
-  void _onSelectTheme(ThemeMode mode) {
+  Future<void> _onSelectTheme(ThemeMode mode) async {
     // Close the subscription so a late-arriving provider value cannot
     // overwrite the user's explicit choice.
     _settingsSub?.close();
     _settingsSub = null;
     setState(() => _selectedTheme = mode);
     // Apply immediately so the user sees the effect before continuing.
-    unawaited(ref.read(settingsProvider.notifier).setTheme(mode));
+    await ref.read(settingsProvider.notifier).setTheme(mode);
   }
 
   Future<void> _onContinue() async {
@@ -181,7 +181,7 @@ class _ThemeCard extends StatelessWidget {
   final String label;
   final IconData icon;
   final bool selected;
-  final VoidCallback onTap;
+  final Future<void> Function() onTap;
 
   @override
   Widget build(BuildContext context) {
