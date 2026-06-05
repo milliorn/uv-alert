@@ -59,7 +59,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Future<void> _onSelectTheme(ThemeMode mode) async {
     setState(() => _pendingTheme = mode);
     await ref.read(settingsProvider.notifier).setTheme(mode);
-    if (mounted) setState(() => _pendingTheme = null);
+    // Only clear the optimistic override if no newer tap has superseded it.
+    if (mounted && _pendingTheme == mode) setState(() => _pendingTheme = null);
   }
 
   Future<void> _onContinue() async {
