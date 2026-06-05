@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uvalert/providers/preferences_provider.dart';
 import 'package:uvalert/storage/preferences.dart';
@@ -8,14 +9,14 @@ import 'package:uvalert/storage/preferences.dart';
 class SettingsState {
   /// Creates a [SettingsState] with all fields required.
   const SettingsState({
-    required this.theme,
+    required this.themeMode,
     required this.useGps,
     required this.manualLocation,
     required this.notificationsEnabled,
   });
 
-  /// Active theme name; one of `'system'`, `'light'`, or `'dark'`.
-  final String theme;
+  /// The active [ThemeMode].
+  final ThemeMode themeMode;
 
   /// Whether GPS location is enabled. When `false`, [manualLocation] is used.
   final bool useGps;
@@ -32,13 +33,13 @@ class SettingsState {
   /// "not set", pass `null` only at construction time -- this method cannot
   /// clear [manualLocation] back to `null` once a value has been stored.
   SettingsState copyWith({
-    String? theme,
+    ThemeMode? themeMode,
     bool? useGps,
     String? manualLocation,
     bool? notificationsEnabled,
   }) {
     return SettingsState(
-      theme: theme ?? this.theme,
+      themeMode: themeMode ?? this.themeMode,
       useGps: useGps ?? this.useGps,
       manualLocation: manualLocation ?? this.manualLocation,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
@@ -57,6 +58,13 @@ settingsProvider =
 ///
 /// Reads initial values from preferences on first build and persists each
 /// change back immediately.
+///
+/// Uses `Notifier<AsyncValue<SettingsState>>` rather than
+/// `AsyncNotifier<SettingsState>` intentionally. `AsyncNotifier.update()`
+/// puts the provider back into a loading state on every mutation, which
+/// causes UI flicker on each settings change. The manual `AsyncValue`
+/// wrapping here lets `_update` persist first, then update state atomically,
+/// avoiding the loading-state flicker without sacrificing write correctness.
 class SettingsNotifier extends Notifier<AsyncValue<SettingsState>> {
   @override
   AsyncValue<SettingsState> build() {
@@ -69,7 +77,7 @@ class SettingsNotifier extends Notifier<AsyncValue<SettingsState>> {
 
           state = AsyncValue<SettingsState>.data(
             SettingsState(
-              theme: prefs.theme,
+              themeMode: prefs.theme,
               useGps: prefs.useGps,
               manualLocation: prefs.manualLocation,
               notificationsEnabled: prefs.notificationsEnabled,
@@ -86,16 +94,10 @@ class SettingsNotifier extends Notifier<AsyncValue<SettingsState>> {
   }
 
   /// Sets the active theme.
-  Future<void> setTheme(String theme) {
-    assert(
-      theme == 'system' || theme == 'light' || theme == 'dark',
-      "theme must be 'system', 'light', or 'dark'; got '$theme'",
-    );
-    return _update(
-      persist: (Preferences prefs) => prefs.setTheme(theme),
-      update: (SettingsState s) => s.copyWith(theme: theme),
-    );
-  }
+  Future<void> setTheme(ThemeMode themeMode) => _update(
+    persist: (Preferences prefs) => prefs.setTheme(themeMode),
+    update: (SettingsState s) => s.copyWith(themeMode: themeMode),
+  );
 
   /// Sets whether GPS location is enabled.
   Future<void> setUseGps({required bool value}) => _update(

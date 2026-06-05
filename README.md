@@ -1,7 +1,7 @@
 # UV Alert
 
 A Flutter app that monitors the UV index at your location and alerts you when
-exposure risk is high. Targets Android and Linux desktop.
+exposure risk is high. Targets Android.
 
 ## Features
 
@@ -28,7 +28,7 @@ lib/
   providers/    # Riverpod notifiers and providers: UvNotifier, LocationNotifier,
                 #   SettingsNotifier, deviceIdProvider, preferencesProvider
   storage/      # Cache - 24-hour staleness check; Preferences - SharedPrefs wrapper
-  app.dart      # Root widget and Material 3 theme
+  app.dart      # Root widget; Material 3 theme with light/dark/system ThemeMode
   constants.dart # App-wide constants
   main.dart     # Entry point with Riverpod ProviderScope and zone error hooks
 ```
@@ -57,9 +57,6 @@ flutter pub get
 
 # Run on a connected device or emulator
 flutter run
-
-# Run on Linux desktop
-flutter run -d linux
 ```
 
 ## Running Tests

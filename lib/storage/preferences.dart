@@ -1,5 +1,8 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+// Computed once; ThemeMode.values never changes at runtime.
+final Map<String, ThemeMode> _themeModeByName = ThemeMode.values.asNameMap();
 
 /// Typed, prefixed wrapper around [SharedPreferences] for app settings.
 class Preferences {
@@ -40,12 +43,18 @@ class Preferences {
   /// Stores the device [uuid].
   Future<void> setUuid(String uuid) async => _prefs.setString(_keyUuid, uuid);
 
-  /// The active theme name; defaults to `'system'`.
-  String get theme => _prefs.getString(_keyTheme) ?? 'system';
+  /// The active [ThemeMode]; defaults to [ThemeMode.system].
+  ThemeMode get theme {
+    final String? stored = _prefs.getString(_keyTheme);
 
-  /// Stores the active [theme] name.
-  Future<void> setTheme(String theme) async =>
-      _prefs.setString(_keyTheme, theme);
+    if (stored == null) return ThemeMode.system;
+
+    return _themeModeByName[stored] ?? ThemeMode.system;
+  }
+
+  /// Stores the active [theme].
+  Future<void> setTheme(ThemeMode theme) async =>
+      _prefs.setString(_keyTheme, theme.name);
 
   /// Whether GPS location is enabled; defaults to `true`.
   bool get useGps => _prefs.getBool(_keyUseGps) ?? true;
