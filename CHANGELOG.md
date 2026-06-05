@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/milliorn/uv-alert/compare/v1.5.0...v1.6.0) (2026-06-05)
+
+
+### Features
+
+* implement onboarding theme selection screen ([#59](https://github.com/milliorn/uv-alert/issues/59)) ([b82cc04](https://github.com/milliorn/uv-alert/commit/b82cc0471f097580e6e7876692273b414b02aaac))
+
 ## [1.5.0](https://github.com/milliorn/uv-alert/compare/v1.4.0...v1.5.0) (2026-05-29)
 
 
