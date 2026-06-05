@@ -53,7 +53,7 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 }
 
 ThemeMode? _themeModeFrom(AsyncValue<SettingsState> s) =>
-    s.whenData((SettingsState st) => st.themeMode).value;
+    s.value?.themeMode;
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   // Tracks which theme card is currently selected.
@@ -103,9 +103,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     await prefs.setFirstLaunchDone();
 
-    if (!mounted) return;
-
     ref.invalidate(preferencesProvider);
+
+    if (!mounted) return;
 
     // TODO(onboarding): replace with location screen (issue #14).
     // Full flow: Theme → Location → Notifications → Dashboard.
@@ -118,7 +118,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool settingsReady = ref.watch(settingsProvider).hasValue;
+    final bool settingsReady = ref.watch(
+      settingsProvider.select((AsyncValue<SettingsState> s) => s.hasValue),
+    );
 
     return Scaffold(
       body: SafeArea(
