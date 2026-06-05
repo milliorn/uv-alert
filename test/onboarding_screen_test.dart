@@ -165,30 +165,26 @@ void main() {
     },
   );
 
-  testWidgets(
-    'selected theme is in settingsProvider when Continue is tapped',
-    (WidgetTester tester) async {
-      final ProviderContainer container = ProviderContainer();
-      addTearDown(container.dispose);
+  testWidgets('selected theme is in settingsProvider when Continue is tapped', (
+    WidgetTester tester,
+  ) async {
+    final ProviderContainer container = ProviderContainer();
+    addTearDown(container.dispose);
 
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(home: OnboardingScreen()),
-        ),
-      );
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: OnboardingScreen()),
+      ),
+    );
 
-      await tester.tap(find.text('Dark'));
-      await tester.pump();
+    await tester.tap(find.text('Dark'));
+    await tester.pump();
 
-      await tester.tap(find.text('Continue'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
 
-      final AsyncValue<SettingsState> settings = container.read(
-        settingsProvider,
-      );
-      expect(settings.requireValue.themeMode, equals(ThemeMode.dark));
-    },
-  );
-
+    final AsyncValue<SettingsState> settings = container.read(settingsProvider);
+    expect(settings.requireValue.themeMode, equals(ThemeMode.dark));
+  });
 }

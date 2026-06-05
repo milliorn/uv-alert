@@ -32,8 +32,7 @@ class UvAlertApp extends ConsumerWidget {
     // Fall back to system theme while settings are loading or on error.
     final ThemeMode themeMode = ref.watch(
       settingsProvider.select(
-        (AsyncValue<SettingsState> s) =>
-            s.value?.themeMode ?? ThemeMode.system,
+        (AsyncValue<SettingsState> s) => s.value?.themeMode ?? ThemeMode.system,
       ),
     );
 
