@@ -223,10 +223,7 @@ class _ProgressDots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    assert(
-      current >= 0 && current < total,
-      'current ($current) must be in [0, $total)',
-    );
+    assert(current >= 0 && current < total, 'current must be in [0, total)');
     final ColorScheme colors = Theme.of(context).colorScheme;
 
     // TODO(milliorn): animate the active dot transition (AnimatedContainer or
