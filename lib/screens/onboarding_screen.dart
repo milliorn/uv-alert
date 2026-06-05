@@ -107,7 +107,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     ref.invalidate(preferencesProvider);
 
-    // TODO(onboarding): replace with location screen when it exists.
+    // TODO(onboarding): replace with location screen (issue #14).
+    // Full flow: Theme → Location → Notifications → Dashboard.
     unawaited(
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(builder: (_) => const DashboardScreen()),
