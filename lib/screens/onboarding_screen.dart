@@ -99,6 +99,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Future<void> _onContinue() async {
+    // Theme was already persisted by _onSelectTheme on tap; only first-launch
+    // flag needs writing here.
     final Preferences prefs = await ref.read(preferencesProvider.future);
 
     await prefs.setFirstLaunchDone();
@@ -150,7 +152,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 ),
 
               const Spacer(),
-              const ProgressDots(
+              const _ProgressDots(
                 current: _onboardingThemeScreenIndex,
                 total: _totalOnboardingSteps,
               ),
@@ -244,9 +246,9 @@ class _ThemeCard extends StatelessWidget {
 }
 
 /// Three dots indicating progress through onboarding screens.
-class ProgressDots extends StatelessWidget {
-  /// Creates a [ProgressDots] widget.
-  const ProgressDots({required this.current, required this.total, super.key});
+class _ProgressDots extends StatelessWidget {
+  /// Creates a [_ProgressDots] widget.
+  const _ProgressDots({required this.current, required this.total});
 
   /// Zero-based index of the current screen.
   final int current;
