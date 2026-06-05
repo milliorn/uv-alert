@@ -93,19 +93,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     // overwrite the user's explicit choice.
     _settingsSub?.close();
     _settingsSub = null;
-    // Theme is applied to settingsProvider (and therefore UvAlertApp) only
-    // when Continue is tapped. Card taps update local selection state only;
-    // no live preview is required and persisting on every tap is unnecessary.
     setState(() => _selectedTheme = mode);
+    // Apply immediately so the user sees the effect before continuing.
+    unawaited(ref.read(settingsProvider.notifier).setTheme(mode));
   }
 
   Future<void> _onContinue() async {
     final Preferences prefs = await ref.read(preferencesProvider.future);
 
-    await Future.wait(<Future<void>>[
-      ref.read(settingsProvider.notifier).setTheme(_selectedTheme),
-      prefs.setFirstLaunchDone(),
-    ]);
+    await prefs.setFirstLaunchDone();
 
     if (!mounted) return;
 
