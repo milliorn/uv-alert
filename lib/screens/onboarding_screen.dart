@@ -70,9 +70,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     await prefs.setFirstLaunchDone();
 
-    ref.invalidate(preferencesProvider);
-
     if (!mounted) return;
+
+    ref.invalidate(preferencesProvider);
 
     // TODO(onboarding): replace with location screen (issue #14).
     // Full flow: Theme → Location → Notifications → Dashboard.
