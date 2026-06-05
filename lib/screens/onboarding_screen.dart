@@ -86,7 +86,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final AsyncValue<SettingsState> settings = ref.watch(settingsProvider);
-    final bool settingsReady = settings.hasValue;
+    final bool settingsReady = settings.hasValue || settings.hasError;
     final ThemeMode selectedTheme =
         _pendingTheme ?? settings.value?.themeMode ?? ThemeMode.system;
 
