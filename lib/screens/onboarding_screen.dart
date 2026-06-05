@@ -52,50 +52,14 @@ class OnboardingScreen extends ConsumerStatefulWidget {
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-ThemeMode? _themeModeFrom(AsyncValue<SettingsState> s) =>
-    s.value?.themeMode;
-
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
-  // Tracks which theme card is currently selected.
-  late ThemeMode _selectedTheme;
-
-  ProviderSubscription<AsyncValue<SettingsState>>? _settingsSub;
-
-  @override
-  void initState() {
-    super.initState();
-    // Seed from storage so the correct card is pre-selected on re-entry.
-    _selectedTheme =
-        _themeModeFrom(ref.read(settingsProvider)) ?? ThemeMode.system;
-
-    // If settings finish loading after initState, sync the card selection
-    // via setState so Flutter is aware of the state change.
-    _settingsSub = ref.listenManual(settingsProvider, (
-      AsyncValue<SettingsState>? _,
-      AsyncValue<SettingsState> next,
-    ) {
-      final ThemeMode? stored = _themeModeFrom(next);
-
-      if (stored != null && stored != _selectedTheme) {
-        setState(() => _selectedTheme = stored);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _settingsSub?.close();
-    super.dispose();
-  }
+  // Optimistic override: set on tap, cleared once the provider round-trips.
+  ThemeMode? _pendingTheme;
 
   Future<void> _onSelectTheme(ThemeMode mode) async {
-    // Close the subscription so a late-arriving provider value cannot
-    // overwrite the user's explicit choice.
-    _settingsSub?.close();
-    _settingsSub = null;
-    setState(() => _selectedTheme = mode);
-    // Apply immediately so the user sees the effect before continuing.
+    setState(() => _pendingTheme = mode);
     await ref.read(settingsProvider.notifier).setTheme(mode);
+    if (mounted) setState(() => _pendingTheme = null);
   }
 
   Future<void> _onContinue() async {
@@ -120,9 +84,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool settingsReady = ref.watch(
-      settingsProvider.select((AsyncValue<SettingsState> s) => s.hasValue),
-    );
+    final AsyncValue<SettingsState> settings = ref.watch(settingsProvider);
+    final bool settingsReady = settings.hasValue;
+    final ThemeMode selectedTheme =
+        _pendingTheme ?? settings.value?.themeMode ?? ThemeMode.system;
 
     return Scaffold(
       body: SafeArea(
@@ -147,7 +112,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   key: ValueKey<ThemeMode>(mode),
                   label: label,
                   icon: icon,
-                  selected: _selectedTheme == mode,
+                  selected: selectedTheme == mode,
                   onTap: () => _onSelectTheme(mode),
                 ),
 
