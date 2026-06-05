@@ -151,7 +151,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 ),
 
               const Spacer(),
-              const _ProgressDots(
+              const ProgressDots(
                 current: _onboardingThemeScreenIndex,
                 total: _totalOnboardingSteps,
               ),
@@ -245,11 +245,14 @@ class _ThemeCard extends StatelessWidget {
 }
 
 /// Three dots indicating progress through onboarding screens.
-class _ProgressDots extends StatelessWidget {
-  const _ProgressDots({required this.current, required this.total});
+class ProgressDots extends StatelessWidget {
+  /// Creates a [ProgressDots] widget.
+  const ProgressDots({required this.current, required this.total, super.key});
 
-  // Zero-based index of the current screen.
+  /// Zero-based index of the current screen.
   final int current;
+
+  /// Total number of onboarding screens.
   final int total;
 
   @override

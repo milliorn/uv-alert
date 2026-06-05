@@ -173,4 +173,16 @@ void main() {
       }
     },
   );
+
+  testWidgets('ProgressDots asserts when current is out of range', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: ProgressDots(current: 3, total: 3)),
+      ),
+    );
+
+    expect(tester.takeException(), isA<AssertionError>());
+  });
 }
