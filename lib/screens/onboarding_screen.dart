@@ -227,7 +227,7 @@ class _ProgressDots extends StatelessWidget {
     final ColorScheme colors = Theme.of(context).colorScheme;
 
     // TODO(milliorn): animate the active dot transition (AnimatedContainer or
-    // AnimatedSwitcher) once a second onboarding screen exists - issue #13.
+    // AnimatedSwitcher) once a second onboarding screen exists - issue #14.
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
 
