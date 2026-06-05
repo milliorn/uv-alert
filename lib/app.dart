@@ -33,8 +33,7 @@ class UvAlertApp extends ConsumerWidget {
     final ThemeMode themeMode = ref.watch(
       settingsProvider.select(
         (AsyncValue<SettingsState> s) =>
-            s.whenData((SettingsState st) => st.themeMode).value ??
-            ThemeMode.system,
+            s.value?.themeMode ?? ThemeMode.system,
       ),
     );
 
