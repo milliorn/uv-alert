@@ -140,8 +140,7 @@ void main() {
   });
 
   testWidgets(
-    'listenManual syncs card when settings load with a stored non-default'
-    ' theme',
+    'card reflects stored non-default theme once settingsProvider loads',
     (WidgetTester tester) async {
       SharedPreferences.setMockInitialValues(<String, Object>{
         'uvalert_theme': 'light',
@@ -151,7 +150,7 @@ void main() {
         const ProviderScope(child: MaterialApp(home: OnboardingScreen())),
       );
 
-      // Let settingsProvider finish loading so listenManual fires.
+      // Let settingsProvider finish loading so the card reflects stored theme.
       await tester.pumpAndSettle();
 
       // The Light card should now be selected (check_circle inside it only).
