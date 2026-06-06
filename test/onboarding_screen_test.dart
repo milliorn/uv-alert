@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uvalert/providers/settings_provider.dart';
-import 'package:uvalert/screens/dashboard_screen.dart';
+import 'package:uvalert/screens/location_onboarding_screen.dart';
 import 'package:uvalert/screens/onboarding_screen.dart';
 import 'package:uvalert/storage/preferences.dart';
 
@@ -70,7 +70,7 @@ void main() {
     );
   });
 
-  testWidgets('tapping Continue navigates to DashboardScreen', (
+  testWidgets('tapping Continue navigates to LocationOnboardingScreen', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
@@ -82,10 +82,10 @@ void main() {
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(DashboardScreen), findsOneWidget);
+    expect(find.byType(LocationOnboardingScreen), findsOneWidget);
   });
 
-  testWidgets('tapping Continue sets isFirstLaunch to false', (
+  testWidgets('tapping Continue does not clear isFirstLaunch', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
@@ -98,7 +98,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final Preferences prefs = await Preferences.load();
-    expect(prefs.isFirstLaunch, isFalse);
+    expect(prefs.isFirstLaunch, isTrue);
   });
 
   testWidgets('tapping a card immediately writes theme to settingsProvider', (
