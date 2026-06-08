@@ -15,7 +15,7 @@ requiring a Play Store review cycle for every enforcement change.
 
 The app will send its version string as the `X-App-Version` header on every
 proxy request. The proxy will check the version against a minimum allowed
-version stored in Vercel KV. If the version is below the minimum, the proxy
+version stored in Upstash Redis. If the version is below the minimum, the proxy
 will return `426 Upgrade Required`. The app will detect this response and show
 a full-screen blocking UI:
 
@@ -26,7 +26,7 @@ No other app functionality is accessible until the user updates.
 
 ## Consequences
 
-- Minimum version threshold is updated in Vercel KV without a proxy
+- Minimum version threshold is updated in Upstash Redis without a proxy
   deployment — enforcement is near-instant
 - Force update is a last resort; normal deprecation should use warnings before
   hard blocking
