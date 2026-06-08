@@ -1,0 +1,549 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:uvalert/api/geocoding_api.dart';
+import 'package:uvalert/constants.dart';
+import 'package:uvalert/providers/location_provider.dart';
+import 'package:uvalert/providers/preferences_provider.dart';
+import 'package:uvalert/providers/settings_provider.dart';
+import 'package:uvalert/providers/uv_provider.dart';
+import 'package:uvalert/screens/dashboard_screen.dart';
+import 'package:uvalert/storage/preferences.dart';
+
+// ---------------------------------------------------------------------------
+// Layout constants
+// ---------------------------------------------------------------------------
+const int _locationScreenIndex = 1;
+
+const double _screenPaddingHorizontal = 24;
+const double _screenPaddingVertical = 32;
+
+const double _sectionGap = 24;
+const double _itemGap = 12;
+
+const double _cardBorderRadius = 12;
+const double _cardPaddingHorizontal = 20;
+const double _cardPaddingVertical = 16;
+
+const double _selectedBorderWidth = 2;
+const double _selectedCardOpacity = 0.08;
+
+const double _dotMargin = 4;
+const double _dotSize = 8;
+
+// ---------------------------------------------------------------------------
+// Internal state machine
+// ---------------------------------------------------------------------------
+
+/// The UI phase this screen is in.
+enum _Phase {
+  /// Initial view — two option buttons, no result yet.
+  idle,
+
+  /// GPS or geocoding request in-flight.
+  loading,
+
+  /// A location has been resolved and is shown for user confirmation.
+  confirm,
+
+  /// The user chose manual entry; text field is active.
+  manual,
+
+  /// Geocoding the manual-entry string.
+  geocoding,
+
+  /// Something went wrong; error message is shown.
+  error,
+}
+
+// ---------------------------------------------------------------------------
+// Screen
+// ---------------------------------------------------------------------------
+
+/// Screen 2 of onboarding: lets the user set their location via GPS or
+/// manual entry.
+class LocationOnboardingScreen extends ConsumerStatefulWidget {
+  /// Creates a [LocationOnboardingScreen].
+  ///
+  /// [geocodingApi] is injected for testing; defaults to a real instance
+  /// constructed from the stored proxy URL when omitted.
+  const LocationOnboardingScreen({super.key, GeocodingApi? geocodingApi})
+    : _geocodingApi = geocodingApi;
+
+  final GeocodingApi? _geocodingApi;
+
+  @override
+  ConsumerState<LocationOnboardingScreen> createState() =>
+      _LocationOnboardingScreenState();
+}
+
+class _LocationOnboardingScreenState
+    extends ConsumerState<LocationOnboardingScreen> {
+  _Phase _phase = _Phase.idle;
+  bool _continuing = false;
+  GeocodingResult? _resolvedLocation;
+  String _errorMessage = '';
+
+  final TextEditingController _manualController = TextEditingController();
+  final FocusNode _manualFocus = FocusNode();
+
+  GeocodingApi? _ownedApi;
+
+  GeocodingApi _geocodingApi(String proxyBaseUrl) {
+    if (widget._geocodingApi != null) return widget._geocodingApi!;
+    return _ownedApi ??= GeocodingApi(proxyBaseUrl: proxyBaseUrl);
+  }
+
+  @override
+  void dispose() {
+    _manualController.dispose();
+    _manualFocus.dispose();
+    _ownedApi?.dispose();
+    super.dispose();
+  }
+
+  // -------------------------------------------------------------------------
+  // GPS flow
+  // -------------------------------------------------------------------------
+
+  Future<void> _onUseMyLocation(String proxyBaseUrl) async {
+    setState(() {
+      _phase = _Phase.loading;
+      _errorMessage = '';
+    });
+
+    try {
+      await ref.read(locationProvider.notifier).fetchGps();
+
+      final LocationState loc = ref.read(locationProvider);
+
+      if (loc == null) {
+        _setError('Could not read GPS coordinates.');
+        return;
+      }
+
+      final GeocodingResult result = await _geocodingApi(
+        proxyBaseUrl,
+      ).reverseGeocode(lat: loc.lat, lon: loc.lon);
+
+      if (!mounted) return;
+
+      setState(() {
+        _resolvedLocation = result;
+        _phase = _Phase.confirm;
+      });
+    } on PermissionDeniedException {
+      if (!mounted) return;
+      // Permission denied — fall through to manual entry.
+      setState(() => _phase = _Phase.manual);
+      _manualFocus.requestFocus();
+    } on GeocodingNotFoundException {
+      if (!mounted) return;
+      _setError('Could not determine your city. Try entering it manually.');
+    } on Object {
+      if (!mounted) return;
+      _setError('Something went wrong. Please try again.');
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Manual entry flow
+  // -------------------------------------------------------------------------
+
+  void _onEnterManually() {
+    setState(() {
+      _phase = _Phase.manual;
+      _errorMessage = '';
+    });
+    _manualFocus.requestFocus();
+  }
+
+  Future<void> _onGeocodeManual(String proxyBaseUrl) async {
+    final String query = _manualController.text.trim();
+
+    if (query.isEmpty) return;
+
+    setState(() {
+      _phase = _Phase.geocoding;
+      _errorMessage = '';
+    });
+
+    try {
+      final GeocodingResult result = await _geocodingApi(
+        proxyBaseUrl,
+      ).geocode(query);
+
+      if (!mounted) return;
+
+      setState(() {
+        _resolvedLocation = result;
+        _phase = _Phase.confirm;
+      });
+    } on GeocodingNotFoundException {
+      if (!mounted) return;
+      setState(() {
+        _phase = _Phase.manual;
+        _errorMessage = 'Location not found. Try a different search.';
+      });
+    } on Object {
+      if (!mounted) return;
+      setState(() {
+        _phase = _Phase.manual;
+        _errorMessage = 'Something went wrong. Please try again.';
+      });
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Confirm / continue
+  // -------------------------------------------------------------------------
+
+  Future<void> _onConfirm() async {
+    setState(() => _continuing = true);
+
+    assert(
+      _resolvedLocation != null,
+      '_onConfirm called outside confirm phase',
+    );
+
+    final GeocodingResult loc = _resolvedLocation!;
+
+    try {
+      ref.read(locationProvider.notifier).setManual(lat: loc.lat, lon: loc.lon);
+
+      await ref
+          .read(settingsProvider.notifier)
+          .setManualLocation(loc.displayName);
+    
+      await ref.read(settingsProvider.notifier).setUseGps(value: false);
+
+      if (!mounted) return;
+
+      final Preferences prefs = await ref.read(preferencesProvider.future);
+      // Mark onboarding complete only after all data is written; this is the
+      // last onboarding step until the notifications screen (issue #15) is
+      // added, at which point setFirstLaunchDone() moves there.
+      await prefs.setFirstLaunchDone();
+
+      if (!mounted) return;
+
+      ref.invalidate(preferencesProvider);
+
+      // TODO(onboarding): navigate to notifications screen (issue #15).
+      unawaited(
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute<void>(builder: (_) => const DashboardScreen()),
+        ),
+      );
+    } on Object {
+      if (!mounted) return;
+      setState(() {
+        _continuing = false;
+        _errorMessage = 'Something went wrong. Please try again.';
+      });
+    }
+  }
+
+  void _onChangeLocation() {
+    setState(() {
+      _phase = _Phase.manual;
+      _resolvedLocation = null;
+      _errorMessage = '';
+    });
+    _manualFocus.requestFocus();
+  }
+
+  // -------------------------------------------------------------------------
+  // Helpers
+  // -------------------------------------------------------------------------
+
+  void _setError(String message) {
+    setState(() {
+      _phase = _Phase.error;
+      _errorMessage = message;
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // Build
+  // -------------------------------------------------------------------------
+
+  @override
+  Widget build(BuildContext context) {
+    final String proxyBaseUrl = ref.watch(proxyBaseUrlProvider);
+
+    final bool isLoading =
+        _phase == _Phase.loading || _phase == _Phase.geocoding;
+
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: _screenPaddingHorizontal,
+            vertical: _screenPaddingVertical,
+          ),
+          child: Column(
+            spacing: _sectionGap,
+            children: <Widget>[
+              const Spacer(),
+
+              const _Header(),
+
+              if (_phase == _Phase.idle || _phase == _Phase.error) ...<Widget>[
+                _GpsButton(onPressed: () => _onUseMyLocation(proxyBaseUrl)),
+                _ManualButton(onPressed: _onEnterManually),
+              ],
+
+              if (_phase == _Phase.loading)
+                const CircularProgressIndicator.adaptive(),
+
+              if (_phase == _Phase.manual || _phase == _Phase.geocoding)
+                _ManualEntryField(
+                  controller: _manualController,
+                  focusNode: _manualFocus,
+                  loading: _phase == _Phase.geocoding,
+                  onSubmitted: (_) => _onGeocodeManual(proxyBaseUrl),
+                  onSearch: () => _onGeocodeManual(proxyBaseUrl),
+                ),
+
+              if (_phase == _Phase.confirm && _resolvedLocation != null)
+                _ConfirmCard(
+                  displayName: _resolvedLocation!.displayName,
+                  onChange: _onChangeLocation,
+                ),
+
+              if (_errorMessage.isNotEmpty) _ErrorText(message: _errorMessage),
+
+              const Spacer(),
+
+              const _ProgressDots(
+                current: _locationScreenIndex,
+                total: totalOnboardingSteps,
+              ),
+
+              // Continue is only shown/enabled in confirm phase.
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed:
+                      (_phase == _Phase.confirm && !isLoading && !_continuing)
+                      ? _onConfirm
+                      : null,
+                  child: const Text('Continue'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Sub-widgets (private)
+// ---------------------------------------------------------------------------
+
+class _Header extends StatelessWidget {
+  const _Header();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      spacing: _itemGap,
+      children: <Widget>[
+        Text(
+          'Your Location',
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
+        Text(
+          'UV Alert uses your location to provide accurate UV readings '
+          'for your area.',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      ],
+    );
+  }
+}
+
+class _GpsButton extends StatelessWidget {
+  const _GpsButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton.icon(
+        onPressed: onPressed,
+        icon: const Icon(Icons.my_location),
+        label: const Text('Use My Location'),
+      ),
+    );
+  }
+}
+
+class _ManualButton extends StatelessWidget {
+  const _ManualButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        child: const Text('Enter location manually'),
+      ),
+    );
+  }
+}
+
+class _ManualEntryField extends StatelessWidget {
+  const _ManualEntryField({
+    required this.controller,
+    required this.focusNode,
+    required this.loading,
+    required this.onSubmitted,
+    required this.onSearch,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final bool loading;
+  final ValueChanged<String> onSubmitted;
+  final VoidCallback onSearch;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      focusNode: focusNode,
+      enabled: !loading,
+      textInputAction: TextInputAction.search,
+      onSubmitted: onSubmitted,
+      decoration: InputDecoration(
+        hintText: 'City, State (e.g. New York, NY)',
+        border: const OutlineInputBorder(),
+        suffixIcon: loading
+            ? const Padding(
+                padding: EdgeInsets.all(_itemGap),
+                child: SizedBox.square(
+                  dimension: _dotSize * 2,
+                  child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                ),
+              )
+            : IconButton(icon: const Icon(Icons.search), onPressed: onSearch),
+      ),
+    );
+  }
+}
+
+class _ConfirmCard extends StatelessWidget {
+  const _ConfirmCard({required this.displayName, required this.onChange});
+
+  final String displayName;
+  final VoidCallback onChange;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    final BorderRadius radius = BorderRadius.circular(_cardBorderRadius);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: _cardPaddingHorizontal,
+        vertical: _cardPaddingVertical,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        border: Border.all(color: colors.primary, width: _selectedBorderWidth),
+        color: colors.primary.withValues(alpha: _selectedCardOpacity),
+      ),
+      child: Column(
+        spacing: _itemGap,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(Icons.location_on, color: colors.primary),
+              const SizedBox(width: _itemGap),
+              Expanded(
+                child: Text(
+                  displayName,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          Text(
+            'Location is approximate and may vary based on device GPS '
+            'accuracy, network conditions, or other factors.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: <Widget>[
+              TextButton(onPressed: onChange, child: const Text('Change')),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorText extends StatelessWidget {
+  const _ErrorText({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      message,
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+        color: Theme.of(context).colorScheme.error,
+      ),
+      textAlign: TextAlign.center,
+    );
+  }
+}
+
+/// Progress dots indicating onboarding screen position.
+class _ProgressDots extends StatelessWidget {
+  const _ProgressDots({required this.current, required this.total});
+
+  final int current;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    assert(current >= 0 && current < total, 'current must be in [0, total)');
+    
+    final ColorScheme colors = Theme.of(context).colorScheme;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List<Widget>.generate(total, (int i) {
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: _dotMargin),
+          width: _dotSize,
+          height: _dotSize,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: i == current ? colors.primary : colors.outlineVariant,
+          ),
+        );
+      }),
+    );
+  }
+}

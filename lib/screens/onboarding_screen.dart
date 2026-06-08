@@ -2,12 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uvalert/providers/preferences_provider.dart';
+import 'package:uvalert/constants.dart';
 import 'package:uvalert/providers/settings_provider.dart';
-import 'package:uvalert/screens/dashboard_screen.dart';
-import 'package:uvalert/storage/preferences.dart';
-
-const int _totalOnboardingSteps = 3;
+import 'package:uvalert/screens/location_onboarding_screen.dart';
 
 const int _onboardingThemeScreenIndex = 0;
 
@@ -59,6 +56,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Future<void> _onSelectTheme(ThemeMode mode) async {
     setState(() => _pendingTheme = mode);
+
     await ref.read(settingsProvider.notifier).setTheme(mode);
     // Only clear the optimistic override if no newer tap has superseded it.
     if (mounted && _pendingTheme == mode) setState(() => _pendingTheme = null);
@@ -66,21 +64,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Future<void> _onContinue() async {
     setState(() => _continuing = true);
-    // Theme was already persisted by _onSelectTheme on tap; only first-launch
-    // flag needs writing here.
-    final Preferences prefs = await ref.read(preferencesProvider.future);
-
-    await prefs.setFirstLaunchDone();
+    // Theme was already persisted by _onSelectTheme on tap.
+    // setFirstLaunchDone() is intentionally deferred to the final onboarding
+    // step so an app-kill mid-flow re-enters onboarding rather than skipping
+    // unfinished screens.
 
     if (!mounted) return;
 
-    ref.invalidate(preferencesProvider);
-
-    // TODO(onboarding): replace with location screen (issue #14).
-    // Full flow: Theme → Location → Notifications → Dashboard.
     unawaited(
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const DashboardScreen()),
+        MaterialPageRoute<void>(
+          builder: (_) => const LocationOnboardingScreen(),
+        ),
       ),
     );
   }
@@ -122,14 +117,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               const Spacer(),
               const _ProgressDots(
                 current: _onboardingThemeScreenIndex,
-                total: _totalOnboardingSteps,
+                total: totalOnboardingSteps,
               ),
 
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed:
-                      (settingsReady && !_continuing) ? _onContinue : null,
+                  onPressed: (settingsReady && !_continuing)
+                      ? _onContinue
+                      : null,
                   child: const Text('Continue'),
                 ),
               ),
@@ -228,6 +224,7 @@ class _ProgressDots extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     assert(current >= 0 && current < total, 'current must be in [0, total)');
+    
     final ColorScheme colors = Theme.of(context).colorScheme;
 
     // TODO(milliorn): animate the active dot transition (AnimatedContainer or
