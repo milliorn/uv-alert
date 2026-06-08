@@ -39,7 +39,7 @@ across boundaries.
 
 The OWM API key is never bundled in the app. All UV data requests go through a
 Vercel serverless proxy (`uvwatch-proxy`) that protects the key, caches shared
-location data, and enforces per-device rate limiting via Vercel KV.
+location data, and caches responses in Upstash Redis.
 
 ## Requirements
 
