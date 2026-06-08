@@ -9,13 +9,13 @@ import 'package:uvalert/api/uv_api.dart';
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/storage/cache.dart';
 
+import 'fakes/fake_uv_data.dart';
+
 class MockCache extends Mock implements Cache {}
 
 // Used only in the dispose group to verify close() is never called on
 // externally-owned clients; MockClient suffices everywhere else.
 class MockHttpClient extends Mock implements http.Client {}
-
-class _FakeUvData extends Fake implements UvData {}
 
 UvData _makeData() => UvData(
   currentUvi: 5,
@@ -51,7 +51,7 @@ void main() {
   late MockCache mockCache;
 
   setUpAll(() {
-    registerFallbackValue(_FakeUvData());
+    registerFallbackValue(FakeUvData());
   });
 
   setUp(() {

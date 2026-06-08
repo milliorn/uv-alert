@@ -11,9 +11,9 @@ import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/storage/cache.dart';
 
-class _MockUvApi extends Mock implements UvApi {}
+import 'fakes/fake_uv_data.dart';
 
-class _FakeUvData extends Fake implements UvData {}
+class _MockUvApi extends Mock implements UvApi {}
 
 UvData _makeData() => UvData(
   currentUvi: 3,
@@ -54,7 +54,7 @@ void main() {
   late _MockUvApi mockApi;
 
   setUpAll(() {
-    registerFallbackValue(_FakeUvData());
+    registerFallbackValue(FakeUvData());
   });
 
   setUp(() {

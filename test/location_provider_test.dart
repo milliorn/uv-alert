@@ -3,54 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:uvalert/providers/location_provider.dart';
 
-// ---------------------------------------------------------------------------
-// Fake GeolocatorPlatform
-//
-// plugin_platform_interface requires the mock to *extend* GeolocatorPlatform,
-// not merely implement it, so Mocktail cannot be used here. We use a hand-
-// rolled fake instead. Each field can be set per-test before fetchGps() runs.
-// ---------------------------------------------------------------------------
-
-class _FakePlatform extends GeolocatorPlatform {
-  LocationPermission checkResult = LocationPermission.always;
-  LocationPermission requestResult = LocationPermission.always;
-  Position? positionResult;
-
-  @override
-  Future<LocationPermission> checkPermission() async => checkResult;
-
-  @override
-  Future<LocationPermission> requestPermission() async => requestResult;
-
-  @override
-  Future<Position> getCurrentPosition({
-    LocationSettings? locationSettings,
-  }) async {
-    if (positionResult == null) {
-      throw StateError('_FakePlatform: positionResult not set for this test');
-    }
-    return positionResult!;
-  }
-}
-
-// Minimal Position with only the fields our code touches (lat/lon).
-Position _fakePosition({double lat = 1, double lon = 2}) => Position(
-  latitude: lat,
-  longitude: lon,
-  timestamp: DateTime.utc(2024),
-  accuracy: 0,
-  altitude: 0,
-  altitudeAccuracy: 0,
-  heading: 0,
-  headingAccuracy: 0,
-  speed: 0,
-  speedAccuracy: 0,
-);
+import 'fakes/fake_geolocator.dart';
 
 // Builds a ProviderContainer with a LocationNotifier wired to the given fake.
 // Using `overrideWith` lets us inject a custom notifier instance while keeping
 // the rest of the Riverpod graph untouched.
-ProviderContainer _makeContainer(_FakePlatform platform) {
+ProviderContainer _makeContainer(FakeGeolocatorPlatform platform) {
   return ProviderContainer(
     // ignore: always_specify_types — Override is not in flutter_riverpod's public API
     overrides: [
@@ -65,7 +23,9 @@ void main() {
   // -------------------------------------------------------------------------
 
   test('initial state is null', () {
-    final ProviderContainer container = _makeContainer(_FakePlatform());
+    final ProviderContainer container = _makeContainer(
+      FakeGeolocatorPlatform(),
+    );
     addTearDown(container.dispose);
 
     expect(container.read(locationProvider), isNull);
@@ -76,7 +36,9 @@ void main() {
   // -------------------------------------------------------------------------
 
   test('setManual updates state with supplied coordinates', () {
-    final ProviderContainer container = _makeContainer(_FakePlatform());
+    final ProviderContainer container = _makeContainer(
+      FakeGeolocatorPlatform(),
+    );
     addTearDown(container.dispose);
 
     container.read(locationProvider.notifier).setManual(lat: 51.5, lon: -0.1);
@@ -92,9 +54,9 @@ void main() {
   // -------------------------------------------------------------------------
 
   test('fetchGps stores position when permission is already granted', () async {
-    final _FakePlatform platform = _FakePlatform()
+    final FakeGeolocatorPlatform platform = FakeGeolocatorPlatform()
       ..checkResult = LocationPermission.always
-      ..positionResult = _fakePosition(lat: 10, lon: 20);
+      ..positionResult = fakePosition(lat: 10, lon: 20);
 
     final ProviderContainer container = _makeContainer(platform);
     addTearDown(container.dispose);
@@ -112,10 +74,10 @@ void main() {
   // -------------------------------------------------------------------------
 
   test('fetchGps requests permission when initially denied', () async {
-    final _FakePlatform platform = _FakePlatform()
+    final FakeGeolocatorPlatform platform = FakeGeolocatorPlatform()
       ..checkResult = LocationPermission.denied
       ..requestResult = LocationPermission.whileInUse
-      ..positionResult = _fakePosition(lat: 3, lon: 4);
+      ..positionResult = fakePosition(lat: 3, lon: 4);
 
     final ProviderContainer container = _makeContainer(platform);
     addTearDown(container.dispose);
@@ -134,7 +96,7 @@ void main() {
   test(
     'fetchGps throws PermissionDeniedException when denied forever',
     () async {
-      final _FakePlatform platform = _FakePlatform()
+      final FakeGeolocatorPlatform platform = FakeGeolocatorPlatform()
         ..checkResult = LocationPermission.deniedForever;
 
       final ProviderContainer container = _makeContainer(platform);
@@ -154,7 +116,7 @@ void main() {
   test(
     'fetchGps throws PermissionDeniedException when request is denied',
     () async {
-      final _FakePlatform platform = _FakePlatform()
+      final FakeGeolocatorPlatform platform = FakeGeolocatorPlatform()
         ..checkResult = LocationPermission.denied
         ..requestResult = LocationPermission.denied;
 
@@ -173,9 +135,9 @@ void main() {
   // -------------------------------------------------------------------------
 
   test('default constructor uses GeolocatorPlatform.instance', () async {
-    final _FakePlatform fake = _FakePlatform()
+    final FakeGeolocatorPlatform fake = FakeGeolocatorPlatform()
       ..checkResult = LocationPermission.always
-      ..positionResult = _fakePosition(lat: 5, lon: 6);
+      ..positionResult = fakePosition(lat: 5, lon: 6);
 
     final GeolocatorPlatform original = GeolocatorPlatform.instance;
     GeolocatorPlatform.instance = fake;

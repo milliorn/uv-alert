@@ -11,43 +11,7 @@ import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/screens/dashboard_screen.dart';
 import 'package:uvalert/screens/location_onboarding_screen.dart';
 
-// ---------------------------------------------------------------------------
-// Fake GeolocatorPlatform (reused from location_provider_test.dart pattern)
-// ---------------------------------------------------------------------------
-
-class _FakePlatform extends GeolocatorPlatform {
-  LocationPermission checkResult = LocationPermission.always;
-  LocationPermission requestResult = LocationPermission.always;
-  Position? positionResult;
-
-  @override
-  Future<LocationPermission> checkPermission() async => checkResult;
-
-  @override
-  Future<LocationPermission> requestPermission() async => requestResult;
-
-  @override
-  Future<Position> getCurrentPosition({LocationSettings? locationSettings})
-      async {
-    if (positionResult == null) {
-      throw StateError('positionResult not set');
-    }
-    return positionResult!;
-  }
-}
-
-Position _fakePosition({double lat = 10, double lon = 20}) => Position(
-  latitude: lat,
-  longitude: lon,
-  timestamp: DateTime.utc(2024),
-  accuracy: 0,
-  altitude: 0,
-  altitudeAccuracy: 0,
-  heading: 0,
-  headingAccuracy: 0,
-  speed: 0,
-  speedAccuracy: 0,
-);
+import 'fakes/fake_geolocator.dart';
 
 // ---------------------------------------------------------------------------
 // Fake GeocodingApi
@@ -74,9 +38,10 @@ GeocodingApi _fakeGeocodingApi({
 
 Widget _wrap(
   LocationOnboardingScreen screen, {
-  _FakePlatform? platform,
+  FakeGeolocatorPlatform? platform,
 }) {
-  final _FakePlatform fakePlatform = platform ?? _FakePlatform();
+  final FakeGeolocatorPlatform fakePlatform =
+      platform ?? FakeGeolocatorPlatform();
   return ProviderScope(
     // ignore: always_specify_types — Override not in flutter_riverpod public API
     overrides: [
@@ -106,10 +71,7 @@ void main() {
     final Key key = UniqueKey();
     await tester.pumpWidget(
       _wrap(
-        LocationOnboardingScreen(
-          key: key,
-          geocodingApi: _fakeGeocodingApi(),
-        ),
+        LocationOnboardingScreen(key: key, geocodingApi: _fakeGeocodingApi()),
       ),
     );
     expect(find.byKey(key), findsOneWidget);
@@ -178,215 +140,206 @@ void main() {
     },
   );
 
-  testWidgets(
-    'Continue is enabled after manual geocode succeeds',
-    (WidgetTester tester) async {
-      await tester.pumpWidget(
-        _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
-      );
+  testWidgets('Continue is enabled after manual geocode succeeds', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
+    );
 
-      await tester.tap(find.text('Enter location manually'));
-      await tester.pump();
+    await tester.tap(find.text('Enter location manually'));
+    await tester.pump();
 
-      await tester.enterText(find.byType(TextField), 'Fresno, CA');
-      await tester.testTextInput.receiveAction(TextInputAction.search);
-      await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Fresno, CA');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
 
-      final FilledButton btn = tester.widget<FilledButton>(
-        find.widgetWithText(FilledButton, 'Continue'),
-      );
-      expect(btn.onPressed, isNotNull);
-    },
-  );
+    final FilledButton btn = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Continue'),
+    );
+    expect(btn.onPressed, isNotNull);
+  });
 
-  testWidgets(
-    'geocoding 404 shows not-found error and stays on manual entry',
-    (WidgetTester tester) async {
-      await tester.pumpWidget(
-        _wrap(
-          LocationOnboardingScreen(
-            geocodingApi: _fakeGeocodingApi(status: 404, body: 'not found'),
-          ),
+  testWidgets('geocoding 404 shows not-found error and stays on manual entry', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        LocationOnboardingScreen(
+          geocodingApi: _fakeGeocodingApi(status: 404, body: 'not found'),
         ),
-      );
+      ),
+    );
 
-      await tester.tap(find.text('Enter location manually'));
-      await tester.pump();
+    await tester.tap(find.text('Enter location manually'));
+    await tester.pump();
 
-      await tester.enterText(find.byType(TextField), 'nowhere');
-      await tester.testTextInput.receiveAction(TextInputAction.search);
-      await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'nowhere');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
 
-      expect(
-        find.text('Location not found. Try a different search.'),
-        findsOneWidget,
-      );
-      expect(find.byType(TextField), findsOneWidget);
-    },
-  );
+    expect(
+      find.text('Location not found. Try a different search.'),
+      findsOneWidget,
+    );
+    expect(find.byType(TextField), findsOneWidget);
+  });
 
-  testWidgets(
-    'geocoding 500 shows generic error and stays on manual entry',
-    (WidgetTester tester) async {
-      await tester.pumpWidget(
-        _wrap(
-          LocationOnboardingScreen(
-            geocodingApi: _fakeGeocodingApi(status: 500, body: 'error'),
-          ),
+  testWidgets('geocoding 500 shows generic error and stays on manual entry', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        LocationOnboardingScreen(
+          geocodingApi: _fakeGeocodingApi(status: 500, body: 'error'),
         ),
-      );
+      ),
+    );
 
-      await tester.tap(find.text('Enter location manually'));
-      await tester.pump();
+    await tester.tap(find.text('Enter location manually'));
+    await tester.pump();
 
-      await tester.enterText(find.byType(TextField), 'Fresno, CA');
-      await tester.testTextInput.receiveAction(TextInputAction.search);
-      await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Fresno, CA');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
 
-      expect(
-        find.text('Something went wrong. Please try again.'),
-        findsOneWidget,
-      );
-      expect(find.byType(TextField), findsOneWidget);
-    },
-  );
+    expect(
+      find.text('Something went wrong. Please try again.'),
+      findsOneWidget,
+    );
+    expect(find.byType(TextField), findsOneWidget);
+  });
 
-  testWidgets(
-    'tapping Change from confirm card returns to manual entry',
-    (WidgetTester tester) async {
-      await tester.pumpWidget(
-        _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
-      );
+  testWidgets('tapping Change from confirm card returns to manual entry', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
+    );
 
-      await tester.tap(find.text('Enter location manually'));
-      await tester.pump();
+    await tester.tap(find.text('Enter location manually'));
+    await tester.pump();
 
-      await tester.enterText(find.byType(TextField), 'Fresno, CA');
-      await tester.testTextInput.receiveAction(TextInputAction.search);
-      await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Fresno, CA');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Change'));
-      await tester.pump();
+    await tester.tap(find.text('Change'));
+    await tester.pump();
 
-      expect(find.byType(TextField), findsOneWidget);
-      expect(find.text(_displayName), findsNothing);
-    },
-  );
+    expect(find.byType(TextField), findsOneWidget);
+    expect(find.text(_displayName), findsNothing);
+  });
 
   // -------------------------------------------------------------------------
   // GPS flow
   // -------------------------------------------------------------------------
 
-  testWidgets(
-    'GPS grant shows confirm card after reverse geocode',
-    (WidgetTester tester) async {
-      final _FakePlatform platform = _FakePlatform()
-        ..checkResult = LocationPermission.always
-        ..positionResult = _fakePosition(lat: 36.75, lon: -119.65);
+  testWidgets('GPS grant shows confirm card after reverse geocode', (
+    WidgetTester tester,
+  ) async {
+    final FakeGeolocatorPlatform platform = FakeGeolocatorPlatform()
+      ..checkResult = LocationPermission.always
+      ..positionResult = fakePosition(lat: 36.75, lon: -119.65);
 
-      await tester.pumpWidget(
-        _wrap(
-          LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
-          platform: platform,
+    await tester.pumpWidget(
+      _wrap(
+        LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
+        platform: platform,
+      ),
+    );
+
+    await tester.tap(find.text('Use My Location'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(_displayName), findsOneWidget);
+  });
+
+  testWidgets('GPS permission denied falls through to manual entry', (
+    WidgetTester tester,
+  ) async {
+    final FakeGeolocatorPlatform platform = FakeGeolocatorPlatform()
+      ..checkResult = LocationPermission.denied
+      ..requestResult = LocationPermission.denied;
+
+    await tester.pumpWidget(
+      _wrap(
+        LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
+        platform: platform,
+      ),
+    );
+
+    await tester.tap(find.text('Use My Location'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TextField), findsOneWidget);
+  });
+
+  testWidgets('GPS permission denied forever falls through to manual entry', (
+    WidgetTester tester,
+  ) async {
+    final FakeGeolocatorPlatform platform = FakeGeolocatorPlatform()
+      ..checkResult = LocationPermission.deniedForever;
+
+    await tester.pumpWidget(
+      _wrap(
+        LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
+        platform: platform,
+      ),
+    );
+
+    await tester.tap(find.text('Use My Location'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TextField), findsOneWidget);
+  });
+
+  testWidgets('GPS reverse geocode 404 shows error message', (
+    WidgetTester tester,
+  ) async {
+    final FakeGeolocatorPlatform platform = FakeGeolocatorPlatform()
+      ..checkResult = LocationPermission.always
+      ..positionResult = fakePosition();
+
+    await tester.pumpWidget(
+      _wrap(
+        LocationOnboardingScreen(
+          geocodingApi: _fakeGeocodingApi(status: 404, body: 'not found'),
         ),
-      );
+        platform: platform,
+      ),
+    );
 
-      await tester.tap(find.text('Use My Location'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Use My Location'));
+    await tester.pumpAndSettle();
 
-      expect(find.text(_displayName), findsOneWidget);
-    },
-  );
-
-  testWidgets(
-    'GPS permission denied falls through to manual entry',
-    (WidgetTester tester) async {
-      final _FakePlatform platform = _FakePlatform()
-        ..checkResult = LocationPermission.denied
-        ..requestResult = LocationPermission.denied;
-
-      await tester.pumpWidget(
-        _wrap(
-          LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
-          platform: platform,
-        ),
-      );
-
-      await tester.tap(find.text('Use My Location'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(TextField), findsOneWidget);
-    },
-  );
-
-  testWidgets(
-    'GPS permission denied forever falls through to manual entry',
-    (WidgetTester tester) async {
-      final _FakePlatform platform = _FakePlatform()
-        ..checkResult = LocationPermission.deniedForever;
-
-      await tester.pumpWidget(
-        _wrap(
-          LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
-          platform: platform,
-        ),
-      );
-
-      await tester.tap(find.text('Use My Location'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(TextField), findsOneWidget);
-    },
-  );
-
-  testWidgets(
-    'GPS reverse geocode 404 shows error message',
-    (WidgetTester tester) async {
-      final _FakePlatform platform = _FakePlatform()
-        ..checkResult = LocationPermission.always
-        ..positionResult = _fakePosition();
-
-      await tester.pumpWidget(
-        _wrap(
-          LocationOnboardingScreen(
-            geocodingApi: _fakeGeocodingApi(status: 404, body: 'not found'),
-          ),
-          platform: platform,
-        ),
-      );
-
-      await tester.tap(find.text('Use My Location'));
-      await tester.pumpAndSettle();
-
-      expect(
-        find.text('Could not determine your city. Try entering it manually.'),
-        findsOneWidget,
-      );
-    },
-  );
+    expect(
+      find.text('Could not determine your city. Try entering it manually.'),
+      findsOneWidget,
+    );
+  });
 
   // -------------------------------------------------------------------------
   // Continue navigates to Dashboard
   // -------------------------------------------------------------------------
 
-  testWidgets(
-    'tapping Continue after confirm navigates to DashboardScreen',
-    (WidgetTester tester) async {
-      await tester.pumpWidget(
-        _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
-      );
+  testWidgets('tapping Continue after confirm navigates to DashboardScreen', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
+    );
 
-      await tester.tap(find.text('Enter location manually'));
-      await tester.pump();
+    await tester.tap(find.text('Enter location manually'));
+    await tester.pump();
 
-      await tester.enterText(find.byType(TextField), 'Fresno, CA');
-      await tester.testTextInput.receiveAction(TextInputAction.search);
-      await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Fresno, CA');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
+    await tester.pumpAndSettle();
 
-      expect(find.byType(DashboardScreen), findsOneWidget);
-    },
-  );
+    expect(find.byType(DashboardScreen), findsOneWidget);
+  });
 }
