@@ -17,17 +17,17 @@ The proxy translates all upstream errors to a fixed set of HTTP status codes
 before responding to the app. OWM errors must never be forwarded raw. The
 contract is:
 
-| Code  | Meaning                     | Sentry             |
-| ----- | --------------------------- | ------------------ |
-| `200` | Success                     | No action          |
-| `400` | Invalid params              | Alert              |
-| `404` | Geocoding no results        | Log                |
-| `426` | App version too old         | Log                |
-| `429` | Proxy abuse detection       | Alert              |
-| `500` | Unhandled proxy error       | Alert              |
-| `502` | OWM key invalid/expired     | Alert — rotate key |
-| `503` | OWM unreachable/rate capped | Log                |
-| `504` | OWM timeout                 | Log                |
+| Code  | Meaning                     |
+| ----- | --------------------------- |
+| `200` | Success                     |
+| `400` | Invalid params              |
+| `404` | Geocoding no results        |
+| `426` | App version too old         |
+| `429` | Proxy abuse detection       |
+| `500` | Unhandled proxy error       |
+| `502` | OWM key invalid/expired     |
+| `503` | OWM unreachable/rate capped |
+| `504` | OWM timeout                 |
 
 App UX per code:
 
@@ -50,9 +50,6 @@ App UX per code:
 
 - The app never inspects OWM response bodies — all error semantics flow through
   HTTP status codes
-- Sentry captures every error code on the proxy (Node.js) side today; alerts
-  fire on first occurrence of any error. App-side Sentry integration is pending
-  (see ADR 0005)
 - The 3-consecutive-failure threshold for escalating from toast to persistent
   banner must be tracked in app state — not yet implemented
 - `UvApiException` in `lib/api/uv_api.dart` is thrown on any non-200 response;
