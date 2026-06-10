@@ -1,3 +1,4 @@
+import 'package:catcher_2/catcher_2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uvalert/providers/preferences_provider.dart';
@@ -38,6 +39,7 @@ class UvAlertApp extends ConsumerWidget {
 
     return MaterialApp(
       title: 'UV Alert',
+      navigatorKey: Catcher2.navigatorKey,
       theme: _lightTheme,
       darkTheme: _darkTheme,
       themeMode: themeMode,
