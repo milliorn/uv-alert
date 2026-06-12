@@ -159,4 +159,50 @@ void main() {
       expect(find.byType(DashboardScreen), findsNothing);
     },
   );
+
+  testWidgets('Retry button is shown when an error occurs', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        // ignore: always_specify_types — Override not in flutter_riverpod public API
+        overrides: [
+          settingsProvider.overrideWith(_ErrorSettingsNotifier.new),
+        ],
+        child: const MaterialApp(home: OnboardingScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Error:'), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
+  });
+
+  testWidgets('Retry button is tappable and does not throw', (
+    WidgetTester tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+
+    await tester.pumpWidget(
+      ProviderScope(
+        // ignore: always_specify_types — Override not in flutter_riverpod public API
+        overrides: [
+          settingsProvider.overrideWith(_ErrorSettingsNotifier.new),
+        ],
+        child: const MaterialApp(home: OnboardingScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Retry'), findsOneWidget);
+
+    // Tapping Retry should not throw and should keep the widget on screen.
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+
+    // Widget is still alive (no navigation, no crash).
+    expect(find.byType(OnboardingScreen), findsOneWidget);
+  });
 }
