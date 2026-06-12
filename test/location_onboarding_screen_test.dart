@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,11 +9,35 @@ import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uvalert/api/geocoding_api.dart';
 import 'package:uvalert/providers/location_provider.dart';
+import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/screens/dashboard_screen.dart';
 import 'package:uvalert/screens/location_onboarding_screen.dart';
 
 import 'fakes/fake_geolocator.dart';
+
+// ---------------------------------------------------------------------------
+// LocationNotifier that succeeds without setting state (covers null-loc path)
+// ---------------------------------------------------------------------------
+
+class _NullResultLocationNotifier extends LocationNotifier {
+  _NullResultLocationNotifier() : super(platform: FakeGeolocatorPlatform());
+
+  @override
+  Future<void> fetchGps() async {
+    // Completes without updating state, so locationProvider stays null.
+  }
+}
+
+// ---------------------------------------------------------------------------
+// SettingsNotifier that throws on setManualLocation (covers _onConfirm error)
+// ---------------------------------------------------------------------------
+
+class _ThrowingSettingsNotifier extends SettingsNotifier {
+  @override
+  Future<void> setManualLocation(String location) =>
+      Future<void>.error(Exception('settings write failed'));
+}
 
 // ---------------------------------------------------------------------------
 // Fake GeocodingApi
@@ -342,4 +368,194 @@ void main() {
 
     expect(find.byType(DashboardScreen), findsOneWidget);
   });
+
+  // -------------------------------------------------------------------------
+  // Owned GeocodingApi creation (line 96: _ownedApi ??= GeocodingApi(...))
+  // -------------------------------------------------------------------------
+
+  testWidgets(
+    'uses owned GeocodingApi when none injected — shows error on network fail',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          // ignore: always_specify_types — Override not in public API
+          overrides: [
+            locationProvider.overrideWith(
+              () => LocationNotifier(platform: FakeGeolocatorPlatform()),
+            ),
+            proxyBaseUrlProvider.overrideWithValue('http://0.0.0.0'),
+          ],
+          child: const MaterialApp(home: LocationOnboardingScreen()),
+        ),
+      );
+
+      await tester.tap(find.text('Enter location manually'));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'Anywhere');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Something went wrong. Please try again.'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // GPS null-location path (line 123: _setError('Could not read GPS…'))
+  // -------------------------------------------------------------------------
+
+  testWidgets('GPS fetchGps succeeds but location is null — shows error', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        // ignore: always_specify_types — Override not in public API
+        overrides: [
+          locationProvider.overrideWith(_NullResultLocationNotifier.new),
+          proxyBaseUrlProvider.overrideWithValue(_proxyUrl),
+        ],
+        child: MaterialApp(
+          home: LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Use My Location'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Could not read GPS coordinates.'), findsOneWidget);
+  });
+
+  // -------------------------------------------------------------------------
+  // GPS generic error (lines 146-147: on Object catch in _onUseMyLocation)
+  // -------------------------------------------------------------------------
+
+  testWidgets('GPS throws generic error — shows error message', (
+    WidgetTester tester,
+  ) async {
+    final FakeGeolocatorPlatform platform = FakeGeolocatorPlatform()
+      ..checkResult = LocationPermission.always;
+    // positionResult left null so getCurrentPosition throws StateError,
+    // a generic Object (not PermissionDeniedException or
+    // GeocodingNotFoundException), exercising the on Object branch.
+
+    await tester.pumpWidget(
+      _wrap(
+        LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
+        platform: platform,
+      ),
+    );
+
+    await tester.tap(find.text('Use My Location'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Something went wrong. Please try again.'),
+      findsOneWidget,
+    );
+  });
+
+  // -------------------------------------------------------------------------
+  // CircularProgressIndicator during loading (line 300)
+  // -------------------------------------------------------------------------
+
+  testWidgets('CircularProgressIndicator is visible while GPS is loading', (
+    WidgetTester tester,
+  ) async {
+    final Completer<Position> completer = Completer<Position>();
+    final _SlowGeolocatorPlatform platform = _SlowGeolocatorPlatform(
+      completer.future,
+    );
+
+    await tester.pumpWidget(
+      _wrap(
+        LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
+        platform: platform,
+      ),
+    );
+
+    await tester.tap(find.text('Use My Location'));
+    await tester.pump();
+
+    expect(find.byType(CircularProgressIndicator), findsWidgets);
+
+    completer.completeError(Exception('cancelled'));
+    await tester.pumpAndSettle();
+  });
+
+  // -------------------------------------------------------------------------
+  // onSearch icon button (line 308: onSearch callback)
+  // -------------------------------------------------------------------------
+
+  testWidgets('tapping search icon triggers geocode (onSearch callback)', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
+    );
+
+    await tester.tap(find.text('Enter location manually'));
+    await tester.pump();
+
+    await tester.enterText(find.byType(TextField), 'Fresno, CA');
+    await tester.tap(find.byIcon(Icons.search));
+    await tester.pumpAndSettle();
+
+    expect(find.text(_displayName), findsOneWidget);
+  });
+
+  // -------------------------------------------------------------------------
+  // _onConfirm error path (lines 241-244)
+  // -------------------------------------------------------------------------
+
+  testWidgets('_onConfirm shows error when settingsProvider throws', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        // ignore: always_specify_types — Override not in public API
+        overrides: [
+          locationProvider.overrideWith(
+            () => LocationNotifier(platform: FakeGeolocatorPlatform()),
+          ),
+          proxyBaseUrlProvider.overrideWithValue(_proxyUrl),
+          settingsProvider.overrideWith(_ThrowingSettingsNotifier.new),
+        ],
+        child: MaterialApp(
+          home: LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Enter location manually'));
+    await tester.pump();
+    await tester.enterText(find.byType(TextField), 'Fresno, CA');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Something went wrong. Please try again.'),
+      findsOneWidget,
+    );
+    expect(find.byType(DashboardScreen), findsNothing);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// GeolocatorPlatform that stalls until the given future resolves
+// ---------------------------------------------------------------------------
+
+class _SlowGeolocatorPlatform extends FakeGeolocatorPlatform {
+  _SlowGeolocatorPlatform(this._positionFuture);
+
+  final Future<Position> _positionFuture;
+
+  @override
+  Future<Position> getCurrentPosition({LocationSettings? locationSettings}) =>
+      _positionFuture;
 }

@@ -22,6 +22,11 @@ void main() {
       expect(prefs.isFirstLaunch, isTrue);
     });
 
+    test('isThemeStepDone is false when no value stored', () async {
+      final Preferences prefs = await Preferences.load();
+      expect(prefs.isThemeStepDone, isFalse);
+    });
+
     test('theme defaults to system', () async {
       final Preferences prefs = await Preferences.load();
       expect(prefs.theme, ThemeMode.system);
@@ -63,6 +68,12 @@ void main() {
       final Preferences prefs = await Preferences.load();
       await prefs.setFirstLaunchDone();
       expect(prefs.isFirstLaunch, isFalse);
+    });
+
+    test('setThemeStepDone sets isThemeStepDone to true', () async {
+      final Preferences prefs = await Preferences.load();
+      await prefs.setThemeStepDone();
+      expect(prefs.isThemeStepDone, isTrue);
     });
 
     test('setUuid stores and retrieves uuid', () async {
