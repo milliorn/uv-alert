@@ -241,7 +241,9 @@ packages, Gradle, and GitHub Actions. Dependabot PRs (patch/minor) are
 auto-merged via the `automerge` workflow.
 
 PR titles must follow Conventional Commits:
-`<type>(<scope>): <description>`
+`<type>(<scope>): <description>`. Copilot-generated PR titles do not
+comply -- always correct them before submitting. Common types: `feat`,
+`fix`, `chore`, `docs`, `test`, `refactor`, `ci`, `style`.
 
 ## Permissions
 
@@ -256,6 +258,10 @@ both are planned):
 
 Location can be replaced with a manually entered location in Settings
 if you prefer not to grant GPS access.
+
+## Architecture decision records
+
+Public ADRs are in `docs/adr/`.
 
 ## Contributing
 
