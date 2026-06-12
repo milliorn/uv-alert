@@ -21,7 +21,6 @@ class _ErrorSettingsNotifier extends SettingsNotifier {
   );
 }
 
-
 Widget _wrap({Map<String, Object> prefs = const <String, Object>{}}) {
   SharedPreferences.setMockInitialValues(prefs);
   return const ProviderScope(child: MaterialApp(home: OnboardingScreen()));
