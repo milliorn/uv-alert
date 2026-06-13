@@ -185,6 +185,16 @@ flutter test --coverage
 CI enforces **100% line coverage** on every PR. All new code must
 include tests that keep coverage at 100%.
 
+Integration tests in `test/integration/` require network access and are
+excluded from the normal suite. Run them explicitly:
+
+```sh
+flutter test --tags integration test/integration/
+```
+
+They run in a separate `integration.yml` CI job; `ci.yml` does not run
+them.
+
 Common patterns:
 
 - Use `ProviderContainer(overrides: [...])` with
