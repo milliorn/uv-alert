@@ -44,9 +44,11 @@ class _ThrowingSettingsNotifier extends SettingsNotifier {
 // ---------------------------------------------------------------------------
 
 const String _proxyUrl = 'https://proxy.test';
-const String _displayName = 'Fresno, CA, US';
-const String _validGeoBody =
-    '{"lat":36.75,"lon":-119.65,"display_name":"$_displayName"}';
+
+// _parseResult assembles displayName as 'name, state, country'.
+const String _displayName = 'Fresno, California, US';
+const String _validGeoBody = '{"lat":36.75,"lon":-119.65,'
+    '"name":"Fresno","state":"California","country":"US"}';
 
 GeocodingApi _fakeGeocodingApi({
   int status = 200,
@@ -54,6 +56,7 @@ GeocodingApi _fakeGeocodingApi({
 }) {
   return GeocodingApi(
     proxyBaseUrl: _proxyUrl,
+    deviceId: 'test-device-id',
     httpClient: MockClient((_) async => http.Response(body, status)),
   );
 }
@@ -544,6 +547,42 @@ void main() {
     );
     expect(find.byType(DashboardScreen), findsNothing);
   });
+
+  testWidgets(
+    '_onConfirm error re-enables Continue button so user can retry',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          // ignore: always_specify_types — Override not in public API
+          overrides: [
+            locationProvider.overrideWith(
+              () => LocationNotifier(platform: FakeGeolocatorPlatform()),
+            ),
+            proxyBaseUrlProvider.overrideWithValue(_proxyUrl),
+            settingsProvider.overrideWith(_ThrowingSettingsNotifier.new),
+          ],
+          child: MaterialApp(
+            home: LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Enter location manually'));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'Fresno, CA');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
+      await tester.pumpAndSettle();
+
+      // After error, Continue must be re-enabled so the user can retry.
+      final FilledButton btn = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Continue'),
+      );
+      expect(btn.onPressed, isNotNull);
+    },
+  );
 }
 
 // ---------------------------------------------------------------------------

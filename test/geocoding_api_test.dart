@@ -135,6 +135,73 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
+  // reverseGeocode
+  // -------------------------------------------------------------------------
+
+  group('GeocodingApi.reverseGeocode', () {
+    test('returns result on 200 with state field', () async {
+      final GeocodingApi api = _makeApi(_respondWith(200, _validBodyWithState));
+      final GeocodingResult result = await api.reverseGeocode(
+        lat: 36.75,
+        lon: -119.65,
+      );
+
+      expect(result.lat, 36.75);
+      expect(result.lon, -119.65);
+      expect(result.displayName, 'Fresno, California, US');
+
+      api.dispose();
+    });
+
+    test('throws GeocodingNotFoundException on 404', () async {
+      final GeocodingApi api = _makeApi(_respondWith(404, 'not found'));
+
+      await expectLater(
+        api.reverseGeocode(lat: 36.75, lon: -119.65),
+        throwsA(isA<GeocodingNotFoundException>()),
+      );
+
+      api.dispose();
+    });
+
+    test('sends lat and lon as separate query parameters', () async {
+      Uri? captured;
+      final MockClient client = MockClient((http.Request req) async {
+        captured = req.url;
+        return http.Response(_validBodyWithState, 200);
+      });
+
+      final GeocodingApi api = _makeApi(client);
+      await api.reverseGeocode(lat: 36.75, lon: -119.65);
+
+      expect(captured?.queryParameters['lat'], '36.75');
+      expect(captured?.queryParameters['lon'], '-119.65');
+      expect(captured?.queryParameters['q'], isNull);
+
+      api.dispose();
+    });
+
+    test('sends X-Device-ID header', () async {
+      Map<String, String>? capturedHeaders;
+      final MockClient client = MockClient((http.Request req) async {
+        capturedHeaders = req.headers;
+        return http.Response(_validBodyWithState, 200);
+      });
+
+      final GeocodingApi api = GeocodingApi(
+        proxyBaseUrl: 'https://proxy.test',
+        deviceId: 'my-device-uuid',
+        httpClient: client,
+      );
+      await api.reverseGeocode(lat: 36.75, lon: -119.65);
+
+      expect(capturedHeaders?['X-Device-ID'], 'my-device-uuid');
+
+      api.dispose();
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // GeocodingException.toString
   // -------------------------------------------------------------------------
 
