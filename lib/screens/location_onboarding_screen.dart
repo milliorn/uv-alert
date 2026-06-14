@@ -280,9 +280,21 @@ class _LocationOnboardingScreenState
   @override
   Widget build(BuildContext context) {
     final String proxyBaseUrl = ref.watch(proxyBaseUrlProvider);
-    // Null until deviceIdProvider resolves; buttons that trigger network calls
-    // are disabled while null to prevent sending an empty X-Device-ID header.
+    // Null until deviceIdProvider resolves; callbacks that trigger network
+    // calls are disabled while null to prevent an empty X-Device-ID header.
     final String? deviceId = ref.watch(deviceIdProvider).value;
+    
+    final VoidCallback? onGpsPressed = deviceId == null
+        ? null
+        : () => _onUseMyLocation(proxyBaseUrl, deviceId);
+
+    final VoidCallback? onManualSearch = deviceId == null
+        ? null
+        : () => _onGeocodeManual(proxyBaseUrl, deviceId);
+
+    final ValueChanged<String>? onManualSubmitted = deviceId == null
+        ? null
+        : (_) => _onGeocodeManual(proxyBaseUrl, deviceId);
 
     return Scaffold(
       body: SafeArea(
@@ -299,11 +311,7 @@ class _LocationOnboardingScreenState
               const _Header(),
 
               if (_phase == _Phase.idle || _phase == _Phase.error) ...<Widget>[
-                _GpsButton(
-                  onPressed: deviceId == null
-                      ? null
-                      : () => _onUseMyLocation(proxyBaseUrl, deviceId),
-                ),
+                _GpsButton(onPressed: onGpsPressed),
                 _ManualButton(onPressed: _onEnterManually),
               ],
 
@@ -315,12 +323,8 @@ class _LocationOnboardingScreenState
                   controller: _manualController,
                   focusNode: _manualFocus,
                   loading: _phase == _Phase.geocoding,
-                  onSubmitted: deviceId == null
-                      ? null
-                      : (_) => _onGeocodeManual(proxyBaseUrl, deviceId),
-                  onSearch: deviceId == null
-                      ? null
-                      : () => _onGeocodeManual(proxyBaseUrl, deviceId),
+                  onSubmitted: onManualSubmitted,
+                  onSearch: onManualSearch,
                 ),
 
               if (_phase == _Phase.confirm && _resolvedLocation != null)
