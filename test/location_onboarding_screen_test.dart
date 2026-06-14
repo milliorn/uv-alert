@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uvalert/api/geocoding_api.dart';
+import 'package:uvalert/providers/device_id_provider.dart';
 import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
@@ -78,6 +79,7 @@ Widget _wrap(
         () => LocationNotifier(platform: fakePlatform),
       ),
       proxyBaseUrlProvider.overrideWithValue(_proxyUrl),
+      deviceIdProvider.overrideWith((_) => 'test-device-id'),
     ],
     child: MaterialApp(home: screen),
   );
@@ -387,6 +389,7 @@ void main() {
               () => LocationNotifier(platform: FakeGeolocatorPlatform()),
             ),
             proxyBaseUrlProvider.overrideWithValue('http://0.0.0.0'),
+            deviceIdProvider.overrideWith((_) => 'test-device-id'),
           ],
           child: const MaterialApp(home: LocationOnboardingScreen()),
         ),
@@ -418,6 +421,7 @@ void main() {
         overrides: [
           locationProvider.overrideWith(_NullResultLocationNotifier.new),
           proxyBaseUrlProvider.overrideWithValue(_proxyUrl),
+          deviceIdProvider.overrideWith((_) => 'test-device-id'),
         ],
         child: MaterialApp(
           home: LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
@@ -525,6 +529,7 @@ void main() {
           ),
           proxyBaseUrlProvider.overrideWithValue(_proxyUrl),
           settingsProvider.overrideWith(_ThrowingSettingsNotifier.new),
+          deviceIdProvider.overrideWith((_) => 'test-device-id'),
         ],
         child: MaterialApp(
           home: LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
@@ -560,6 +565,7 @@ void main() {
             ),
             proxyBaseUrlProvider.overrideWithValue(_proxyUrl),
             settingsProvider.overrideWith(_ThrowingSettingsNotifier.new),
+            deviceIdProvider.overrideWith((_) => 'test-device-id'),
           ],
           child: MaterialApp(
             home: LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
