@@ -166,9 +166,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         // ignore: always_specify_types — Override not in flutter_riverpod public API
-        overrides: [
-          settingsProvider.overrideWith(_ErrorSettingsNotifier.new),
-        ],
+        overrides: [settingsProvider.overrideWith(_ErrorSettingsNotifier.new)],
         child: const MaterialApp(home: OnboardingScreen()),
       ),
     );
@@ -187,9 +185,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         // ignore: always_specify_types — Override not in flutter_riverpod public API
-        overrides: [
-          settingsProvider.overrideWith(_ErrorSettingsNotifier.new),
-        ],
+        overrides: [settingsProvider.overrideWith(_ErrorSettingsNotifier.new)],
         child: const MaterialApp(home: OnboardingScreen()),
       ),
     );

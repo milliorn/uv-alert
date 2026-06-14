@@ -21,10 +21,7 @@ void main() {
   late GeocodingApi api;
 
   setUp(() {
-    api = GeocodingApi(
-      proxyBaseUrl: _proxyBaseUrl,
-      deviceId: _testDeviceId,
-    );
+    api = GeocodingApi(proxyBaseUrl: _proxyBaseUrl, deviceId: _testDeviceId);
   });
 
   tearDown(() => api.dispose());
