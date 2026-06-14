@@ -25,5 +25,5 @@ Use Flutter for the UI framework and Riverpod for state management.
 - iOS builds require macOS and Xcode — deferred until a Mac, Apple Developer
   account, and iOS device are available (Codemagic identified as cloud build
   solution)
-- Linux desktop is a supported development target (used for local iteration on
-  the developer's Arch machine)
+- Linux desktop is not a supported target; the developer runs on Linux/Arch
+  but targets Android via a connected Pixel device or emulator
