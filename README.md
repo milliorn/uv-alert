@@ -77,7 +77,7 @@ lib/
    (`$proxyBaseUrl/api/uv`); sends `lat`, `lon`, and `X-Device-ID`
    (UUID); 10 s timeout; returns `UvData`
 2. `lib/api/geocoding_api.dart` -- forward/reverse geocoding via
-   `$proxyBaseUrl/api/geo`; same timeout pattern
+   `$proxyBaseUrl/api/geocode`; same timeout pattern
 3. `lib/storage/cache.dart` -- 24-hour `SharedPreferences` cache keyed
    on server-provided `fetchedAt` timestamp;
    `isValid = !isEmpty && !isStale`
@@ -192,8 +192,8 @@ excluded from the normal suite. Run them explicitly:
 flutter test --tags integration test/integration/
 ```
 
-They run in a separate `integration.yml` CI job; `ci.yml` does not run
-them.
+They are excluded from `ci.yml` via `--exclude-tags integration` and must
+be run manually.
 
 Common patterns:
 
