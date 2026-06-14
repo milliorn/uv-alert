@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:uvalert/constants.dart';
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/storage/cache.dart';
 
@@ -63,7 +64,7 @@ class UvApi {
     // TODO(retry): add exponential backoff for TimeoutException
     //   and transient errors
     final http.Response response = await _httpClient
-        .get(uri, headers: <String, String>{'X-Device-ID': uuid})
+        .get(uri, headers: <String, String>{deviceIdHeader: uuid})
         .timeout(_timeout);
 
     if (response.statusCode != _httpOk) {

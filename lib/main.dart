@@ -3,26 +3,19 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uvalert/app.dart';
 
+final EmailManualHandler _emailHandler = EmailManualHandler(<String>[
+  'scottmilliorn@gmail.com',
+], emailTitle: 'UV Alert crash report');
+
 Future<void> main() async {
   final Catcher2Options debugOptions = Catcher2Options(
     DialogReportMode(),
-    <ReportHandler>[
-      EmailManualHandler(
-        <String>['scottmilliorn@gmail.com'],
-        emailTitle: 'UV Alert crash report',
-      ),
-      ConsoleHandler(),
-    ],
+    <ReportHandler>[_emailHandler, ConsoleHandler()],
   );
 
   final Catcher2Options releaseOptions = Catcher2Options(
     SilentReportMode(),
-    <ReportHandler>[
-      EmailManualHandler(
-        <String>['scottmilliorn@gmail.com'],
-        emailTitle: 'UV Alert crash report',
-      ),
-    ],
+    <ReportHandler>[_emailHandler],
   );
 
   Catcher2(

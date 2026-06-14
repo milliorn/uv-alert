@@ -1,18 +1,24 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:uvalert/constants.dart';
 
 const Duration _defaultTimeout = Duration(seconds: 10);
 const int _httpOk = 200;
 const int _httpNotFound = 404;
 
-/// Result from a geocoding or reverse-geocoding call.
+/// Result from a geocoding call.
 typedef GeocodingResult = ({double lat, double lon, String displayName});
 
-/// HTTP client for geocoding and reverse-geocoding via the proxy.
+/// HTTP client for forward and reverse geocoding via the proxy.
 ///
-/// Forward geocoding: city string -> coords + display name.
-/// Reverse geocoding: coords -> display name.
+/// Forward geocoding: city string -> coords + display name (`geocode`).
+/// Reverse geocoding: lat/lon -> display name (`reverseGeocode`).
+///
+/// Both methods use `GET /api/geocode` with the device UUID sent as the
+/// `X-Device-ID` request header.
+///
+/// Response shape: `{ lat, lon, name, country, state? }`.
 class GeocodingApi {
   /// Creates a [GeocodingApi].
   ///
@@ -20,19 +26,25 @@ class GeocodingApi {
   /// this instance (closed on [dispose]).
   GeocodingApi({
     required String proxyBaseUrl,
+    required String deviceId,
     Duration timeout = _defaultTimeout,
     http.Client? httpClient,
   }) : _proxyBaseUrl = proxyBaseUrl.endsWith('/')
            ? proxyBaseUrl.substring(0, proxyBaseUrl.length - 1)
            : proxyBaseUrl,
+       _deviceId = deviceId,
        _timeout = timeout,
        _ownsClient = httpClient == null,
        _httpClient = httpClient ?? http.Client();
 
   final Duration _timeout;
+  final String _deviceId;
   final http.Client _httpClient;
   final bool _ownsClient;
-  late final Uri _geoUri = Uri.parse('$_proxyBaseUrl/api/geo');
+  late final Uri _geocodeUri = Uri.parse('$_proxyBaseUrl/api/geocode');
+  late final Map<String, String> _headers = <String, String>{
+    deviceIdHeader: _deviceId,
+  };
   final String _proxyBaseUrl;
 
   /// Releases the underlying HTTP client if this instance owns it.
@@ -40,17 +52,19 @@ class GeocodingApi {
     if (_ownsClient) _httpClient.close();
   }
 
-  /// Resolves a location [query] string (e.g. "Fresno, CA") to coordinates
+  /// Resolves a location [query] string (e.g. "Fresno") to coordinates
   /// and a human-readable display name.
   ///
   /// Throws [GeocodingNotFoundException] when the proxy returns 404 (no match).
   /// Throws [GeocodingException] on any other non-200 response or parse error.
   Future<GeocodingResult> geocode(String query) async {
-    final Uri uri = _geoUri.replace(
+    final Uri uri = _geocodeUri.replace(
       queryParameters: <String, String>{'q': query},
     );
 
-    final http.Response response = await _httpClient.get(uri).timeout(_timeout);
+    final http.Response response = await _httpClient
+        .get(uri, headers: _headers)
+        .timeout(_timeout);
 
     if (response.statusCode == _httpNotFound) {
       throw const GeocodingNotFoundException();
@@ -59,25 +73,24 @@ class GeocodingApi {
     return _parseResult(response);
   }
 
-  /// Resolves [lat]/[lon] to a human-readable display name.
+  /// Resolves GPS [lat]/[lon] coordinates to a human-readable display name.
   ///
-  /// Returns a [GeocodingResult] with the same [lat]/[lon] passed in plus
-  /// the resolved display name from the proxy.
-  ///
-  /// Throws [GeocodingNotFoundException] when the proxy returns 404.
+  /// Throws [GeocodingNotFoundException] when the proxy returns 404 (no match).
   /// Throws [GeocodingException] on any other non-200 response or parse error.
   Future<GeocodingResult> reverseGeocode({
     required double lat,
     required double lon,
   }) async {
-    final Uri uri = _geoUri.replace(
+    final Uri uri = _geocodeUri.replace(
       queryParameters: <String, String>{
         'lat': lat.toString(),
         'lon': lon.toString(),
       },
     );
 
-    final http.Response response = await _httpClient.get(uri).timeout(_timeout);
+    final http.Response response = await _httpClient
+        .get(uri, headers: _headers)
+        .timeout(_timeout);
 
     if (response.statusCode == _httpNotFound) {
       throw const GeocodingNotFoundException();
@@ -100,11 +113,17 @@ class GeocodingApi {
 
       final Object? lat = decoded['lat'];
       final Object? lon = decoded['lon'];
-      final Object? displayName = decoded['display_name'];
+      final Object? name = decoded['name'];
+      final Object? country = decoded['country'];
+      final Object? state = decoded['state'];
 
-      if (lat is! num || lon is! num || displayName is! String) {
+      if (lat is! num || lon is! num || name is! String || country is! String) {
         throw GeocodingException(response.statusCode, response.body);
       }
+
+      final String displayName = state is String
+          ? '$name, $state, $country'
+          : '$name, $country';
 
       return (
         lat: lat.toDouble(),

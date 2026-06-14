@@ -5,11 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:uvalert/api/geocoding_api.dart';
 import 'package:uvalert/constants.dart';
+import 'package:uvalert/providers/device_id_provider.dart';
 import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/providers/preferences_provider.dart';
 import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/screens/dashboard_screen.dart';
+import 'package:uvalert/screens/onboarding_progress_dots.dart';
 import 'package:uvalert/storage/preferences.dart';
 
 // ---------------------------------------------------------------------------
@@ -29,9 +31,7 @@ const double _cardPaddingVertical = 16;
 
 const double _selectedBorderWidth = 2;
 const double _selectedCardOpacity = 0.08;
-
-const double _dotMargin = 4;
-const double _dotSize = 8;
+const double _spinnerSize = 16;
 
 // ---------------------------------------------------------------------------
 // Internal state machine
@@ -91,9 +91,13 @@ class _LocationOnboardingScreenState
 
   GeocodingApi? _ownedApi;
 
-  GeocodingApi _geocodingApi(String proxyBaseUrl) {
+  GeocodingApi _geocodingApi(String proxyBaseUrl, String deviceId) {
     if (widget._geocodingApi != null) return widget._geocodingApi!;
-    return _ownedApi ??= GeocodingApi(proxyBaseUrl: proxyBaseUrl);
+    
+    return _ownedApi ??= GeocodingApi(
+      proxyBaseUrl: proxyBaseUrl,
+      deviceId: deviceId,
+    );
   }
 
   @override
@@ -108,7 +112,7 @@ class _LocationOnboardingScreenState
   // GPS flow
   // -------------------------------------------------------------------------
 
-  Future<void> _onUseMyLocation(String proxyBaseUrl) async {
+  Future<void> _onUseMyLocation(String proxyBaseUrl, String deviceId) async {
     setState(() {
       _phase = _Phase.loading;
       _errorMessage = '';
@@ -126,6 +130,7 @@ class _LocationOnboardingScreenState
 
       final GeocodingResult result = await _geocodingApi(
         proxyBaseUrl,
+        deviceId,
       ).reverseGeocode(lat: loc.lat, lon: loc.lon);
 
       if (!mounted) return;
@@ -160,7 +165,7 @@ class _LocationOnboardingScreenState
     _manualFocus.requestFocus();
   }
 
-  Future<void> _onGeocodeManual(String proxyBaseUrl) async {
+  Future<void> _onGeocodeManual(String proxyBaseUrl, String deviceId) async {
     final String query = _manualController.text.trim();
 
     if (query.isEmpty) return;
@@ -173,6 +178,7 @@ class _LocationOnboardingScreenState
     try {
       final GeocodingResult result = await _geocodingApi(
         proxyBaseUrl,
+        deviceId,
       ).geocode(query);
 
       if (!mounted) return;
@@ -216,7 +222,7 @@ class _LocationOnboardingScreenState
       await ref
           .read(settingsProvider.notifier)
           .setManualLocation(loc.displayName);
-    
+
       await ref.read(settingsProvider.notifier).setUseGps(value: false);
 
       if (!mounted) return;
@@ -241,6 +247,7 @@ class _LocationOnboardingScreenState
       if (!mounted) return;
       setState(() {
         _continuing = false;
+        _phase = _Phase.confirm;
         _errorMessage = 'Something went wrong. Please try again.';
       });
     }
@@ -273,9 +280,9 @@ class _LocationOnboardingScreenState
   @override
   Widget build(BuildContext context) {
     final String proxyBaseUrl = ref.watch(proxyBaseUrlProvider);
-
-    final bool isLoading =
-        _phase == _Phase.loading || _phase == _Phase.geocoding;
+    // Null until deviceIdProvider resolves; buttons that trigger network calls
+    // are disabled while null to prevent sending an empty X-Device-ID header.
+    final String? deviceId = ref.watch(deviceIdProvider).value;
 
     return Scaffold(
       body: SafeArea(
@@ -292,7 +299,11 @@ class _LocationOnboardingScreenState
               const _Header(),
 
               if (_phase == _Phase.idle || _phase == _Phase.error) ...<Widget>[
-                _GpsButton(onPressed: () => _onUseMyLocation(proxyBaseUrl)),
+                _GpsButton(
+                  onPressed: deviceId == null
+                      ? null
+                      : () => _onUseMyLocation(proxyBaseUrl, deviceId),
+                ),
                 _ManualButton(onPressed: _onEnterManually),
               ],
 
@@ -304,8 +315,12 @@ class _LocationOnboardingScreenState
                   controller: _manualController,
                   focusNode: _manualFocus,
                   loading: _phase == _Phase.geocoding,
-                  onSubmitted: (_) => _onGeocodeManual(proxyBaseUrl),
-                  onSearch: () => _onGeocodeManual(proxyBaseUrl),
+                  onSubmitted: deviceId == null
+                      ? null
+                      : (_) => _onGeocodeManual(proxyBaseUrl, deviceId),
+                  onSearch: deviceId == null
+                      ? null
+                      : () => _onGeocodeManual(proxyBaseUrl, deviceId),
                 ),
 
               if (_phase == _Phase.confirm && _resolvedLocation != null)
@@ -318,7 +333,7 @@ class _LocationOnboardingScreenState
 
               const Spacer(),
 
-              const _ProgressDots(
+              const OnboardingProgressDots(
                 current: _locationScreenIndex,
                 total: totalOnboardingSteps,
               ),
@@ -327,8 +342,7 @@ class _LocationOnboardingScreenState
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed:
-                      (_phase == _Phase.confirm && !isLoading && !_continuing)
+                  onPressed: (_phase == _Phase.confirm && !_continuing)
                       ? _onConfirm
                       : null,
                   child: const Text('Continue'),
@@ -372,7 +386,7 @@ class _Header extends StatelessWidget {
 class _GpsButton extends StatelessWidget {
   const _GpsButton({required this.onPressed});
 
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -416,8 +430,8 @@ class _ManualEntryField extends StatelessWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
   final bool loading;
-  final ValueChanged<String> onSubmitted;
-  final VoidCallback onSearch;
+  final ValueChanged<String>? onSubmitted;
+  final VoidCallback? onSearch;
 
   @override
   Widget build(BuildContext context) {
@@ -434,7 +448,7 @@ class _ManualEntryField extends StatelessWidget {
             ? const Padding(
                 padding: EdgeInsets.all(_itemGap),
                 child: SizedBox.square(
-                  dimension: _dotSize * 2,
+                  dimension: _spinnerSize,
                   child: CircularProgressIndicator.adaptive(strokeWidth: 2),
                 ),
               )
@@ -514,36 +528,6 @@ class _ErrorText extends StatelessWidget {
         color: Theme.of(context).colorScheme.error,
       ),
       textAlign: TextAlign.center,
-    );
-  }
-}
-
-/// Progress dots indicating onboarding screen position.
-class _ProgressDots extends StatelessWidget {
-  const _ProgressDots({required this.current, required this.total});
-
-  final int current;
-  final int total;
-
-  @override
-  Widget build(BuildContext context) {
-    assert(current >= 0 && current < total, 'current must be in [0, total)');
-    
-    final ColorScheme colors = Theme.of(context).colorScheme;
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List<Widget>.generate(total, (int i) {
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: _dotMargin),
-          width: _dotSize,
-          height: _dotSize,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: i == current ? colors.primary : colors.outlineVariant,
-          ),
-        );
-      }),
     );
   }
 }
