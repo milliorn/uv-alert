@@ -70,6 +70,9 @@ GeocodingApi _fakeGeocodingApi({
 Widget _wrap(
   LocationOnboardingScreen screen, {
   FakeGeolocatorPlatform? platform,
+  LocationNotifier Function()? locationFactory,
+  SettingsNotifier Function()? settingsFactory,
+  String proxyUrl = _proxyUrl,
 }) {
   final FakeGeolocatorPlatform fakePlatform =
       platform ?? FakeGeolocatorPlatform();
@@ -77,10 +80,12 @@ Widget _wrap(
     // ignore: always_specify_types — Override not in flutter_riverpod public API
     overrides: [
       locationProvider.overrideWith(
-        () => LocationNotifier(platform: fakePlatform),
+        locationFactory ?? () => LocationNotifier(platform: fakePlatform),
       ),
-      proxyBaseUrlProvider.overrideWithValue(_proxyUrl),
+      proxyBaseUrlProvider.overrideWithValue(proxyUrl),
       deviceIdProvider.overrideWith((_) => 'test-device-id'),
+      if (settingsFactory != null)
+        settingsProvider.overrideWith(settingsFactory),
     ],
     child: MaterialApp(home: screen),
   );
@@ -383,16 +388,9 @@ void main() {
     'uses owned GeocodingApi when none injected — shows error on network fail',
     (WidgetTester tester) async {
       await tester.pumpWidget(
-        ProviderScope(
-          // ignore: always_specify_types — Override not in public API
-          overrides: [
-            locationProvider.overrideWith(
-              () => LocationNotifier(platform: FakeGeolocatorPlatform()),
-            ),
-            proxyBaseUrlProvider.overrideWithValue('http://0.0.0.0'),
-            deviceIdProvider.overrideWith((_) => 'test-device-id'),
-          ],
-          child: const MaterialApp(home: LocationOnboardingScreen()),
+        _wrap(
+          const LocationOnboardingScreen(),
+          proxyUrl: 'http://0.0.0.0',
         ),
       );
 
@@ -417,16 +415,9 @@ void main() {
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
-      ProviderScope(
-        // ignore: always_specify_types — Override not in public API
-        overrides: [
-          locationProvider.overrideWith(_NullResultLocationNotifier.new),
-          proxyBaseUrlProvider.overrideWithValue(_proxyUrl),
-          deviceIdProvider.overrideWith((_) => 'test-device-id'),
-        ],
-        child: MaterialApp(
-          home: LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
-        ),
+      _wrap(
+        LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
+        locationFactory: _NullResultLocationNotifier.new,
       ),
     );
 
@@ -522,19 +513,9 @@ void main() {
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
-      ProviderScope(
-        // ignore: always_specify_types — Override not in public API
-        overrides: [
-          locationProvider.overrideWith(
-            () => LocationNotifier(platform: FakeGeolocatorPlatform()),
-          ),
-          proxyBaseUrlProvider.overrideWithValue(_proxyUrl),
-          settingsProvider.overrideWith(_ThrowingSettingsNotifier.new),
-          deviceIdProvider.overrideWith((_) => 'test-device-id'),
-        ],
-        child: MaterialApp(
-          home: LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
-        ),
+      _wrap(
+        LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
+        settingsFactory: _ThrowingSettingsNotifier.new,
       ),
     );
 
@@ -558,19 +539,9 @@ void main() {
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
-      ProviderScope(
-        // ignore: always_specify_types — Override not in public API
-        overrides: [
-          locationProvider.overrideWith(
-            () => LocationNotifier(platform: FakeGeolocatorPlatform()),
-          ),
-          proxyBaseUrlProvider.overrideWithValue(_proxyUrl),
-          settingsProvider.overrideWith(_ThrowingSettingsNotifier.new),
-          deviceIdProvider.overrideWith((_) => 'test-device-id'),
-        ],
-        child: MaterialApp(
-          home: LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
-        ),
+      _wrap(
+        LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
+        settingsFactory: _ThrowingSettingsNotifier.new,
       ),
     );
 

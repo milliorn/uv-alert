@@ -121,14 +121,10 @@ void main() {
         return http.Response(_validBodyWithState, 200);
       });
 
-      final GeocodingApi api = GeocodingApi(
-        proxyBaseUrl: 'https://proxy.test',
-        deviceId: 'my-device-uuid',
-        httpClient: client,
-      );
+      final GeocodingApi api = _makeApi(client);
       await api.geocode('Fresno, CA');
 
-      expect(capturedHeaders?['X-Device-ID'], 'my-device-uuid');
+      expect(capturedHeaders?['X-Device-ID'], 'test-device-id');
 
       api.dispose();
     });
@@ -188,14 +184,10 @@ void main() {
         return http.Response(_validBodyWithState, 200);
       });
 
-      final GeocodingApi api = GeocodingApi(
-        proxyBaseUrl: 'https://proxy.test',
-        deviceId: 'my-device-uuid',
-        httpClient: client,
-      );
+      final GeocodingApi api = _makeApi(client);
       await api.reverseGeocode(lat: 36.75, lon: -119.65);
 
-      expect(capturedHeaders?['X-Device-ID'], 'my-device-uuid');
+      expect(capturedHeaders?['X-Device-ID'], 'test-device-id');
 
       api.dispose();
     });
