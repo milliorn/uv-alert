@@ -99,6 +99,17 @@ void main() {
       },
     );
 
+    test('throws GeocodingException on malformed JSON body', () async {
+      final GeocodingApi api = _makeApi(_respondWith(200, '{not json}'));
+
+      await expectLater(
+        api.geocode('Fresno, CA'),
+        throwsA(isA<GeocodingException>()),
+      );
+
+      api.dispose();
+    });
+
     test('sends query as q parameter', () async {
       Uri? captured;
       final MockClient client = MockClient((http.Request req) async {
@@ -125,6 +136,26 @@ void main() {
       await api.geocode('Fresno, CA');
 
       expect(capturedHeaders?['X-Device-ID'], 'test-device-id');
+
+      api.dispose();
+    });
+
+    test('strips trailing slash from proxyBaseUrl', () async {
+      Uri? captured;
+      final MockClient client = MockClient((http.Request req) async {
+        captured = req.url;
+        return http.Response(_validBodyWithState, 200);
+      });
+
+      final GeocodingApi api = GeocodingApi(
+        proxyBaseUrl: 'https://proxy.test/',
+        deviceId: 'test-device-id',
+        httpClient: client,
+      );
+      await api.geocode('Fresno, CA');
+
+      expect(captured?.host, 'proxy.test');
+      expect(captured?.path, '/api/geocode');
 
       api.dispose();
     });

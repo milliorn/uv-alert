@@ -21,6 +21,13 @@ class _ErrorSettingsNotifier extends SettingsNotifier {
   );
 }
 
+// SettingsNotifier that stays in loading state forever (triggers timeout).
+class _LoadingForeverSettingsNotifier extends SettingsNotifier {
+  @override
+  AsyncValue<SettingsState> build() =>
+      const AsyncValue<SettingsState>.loading();
+}
+
 Widget _wrap({Map<String, Object> prefs = const <String, Object>{}}) {
   SharedPreferences.setMockInitialValues(prefs);
   return const ProviderScope(child: MaterialApp(home: OnboardingScreen()));
@@ -201,4 +208,33 @@ void main() {
     // Widget is still alive (no navigation, no crash).
     expect(find.byType(OnboardingScreen), findsOneWidget);
   });
+
+  testWidgets(
+    'shows timeout error when settingsProvider never resolves',
+    (WidgetTester tester) async {
+      await tester.runAsync(() async {
+        await tester.pumpWidget(
+          ProviderScope(
+            // ignore: always_specify_types — Override not in flutter_riverpod public API
+            overrides: [
+              settingsProvider.overrideWith(
+                _LoadingForeverSettingsNotifier.new,
+              ),
+            ],
+            child: const MaterialApp(home: OnboardingScreen()),
+          ),
+        );
+
+        // Advance past the 10-second _settingsTimeout.
+        await Future<void>.delayed(const Duration(seconds: 11));
+        await tester.pump();
+        await tester.pumpAndSettle();
+      });
+
+      expect(
+        find.textContaining('Could not load settings'),
+        findsOneWidget,
+      );
+    },
+  );
 }

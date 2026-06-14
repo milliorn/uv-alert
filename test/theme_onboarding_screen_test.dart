@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uvalert/providers/preferences_provider.dart';
 import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/screens/location_onboarding_screen.dart';
 import 'package:uvalert/screens/theme_onboarding_screen.dart';
@@ -200,4 +201,38 @@ void main() {
     final AsyncValue<SettingsState> settings = container.read(settingsProvider);
     expect(settings.requireValue.themeMode, equals(ThemeMode.dark));
   });
+
+  testWidgets(
+    'Continue shows snackbar and re-enables button when preferencesProvider '
+    'throws',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          // ignore: always_specify_types — Override not in flutter_riverpod public API
+          overrides: [
+            preferencesProvider.overrideWithValue(
+              AsyncValue<Preferences>.error(
+                Exception('prefs failed'),
+                StackTrace.empty,
+              ),
+            ),
+          ],
+          child: const MaterialApp(home: ThemeOnboardingScreen()),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Continue'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.textContaining('Could not continue:'), findsOneWidget);
+
+      final FilledButton btn = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Continue'),
+      );
+      expect(btn.onPressed, isNotNull);
+    },
+  );
 }
