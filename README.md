@@ -16,7 +16,8 @@ when exposure risk is high. Targets Android.
 - Hourly and daily UV forecast with sunrise/sunset awareness and cloud cover
 - Persistent user preferences: theme (light/dark/system), notification
   toggle, and GPS vs. manual location
-- Material 3 design with an orange seed color palette
+- Material 3 design with a periwinkle seed color palette (`#9498ED`) drawn
+  from the app logo
 - Anonymous per-install UUID used for per-device request tracking
 
 ## Requirements
@@ -68,7 +69,7 @@ lib/
   storage/      # Cache (24h TTL); Preferences (SharedPrefs wrapper)
   app.dart      # Root widget; Material 3 theme with light/dark/system ThemeMode
   constants.dart # App-wide constants
-  main.dart     # Entry point with Riverpod ProviderScope and zone error hooks
+  main.dart     # Entry point with Riverpod ProviderScope; crash reporting via catcher_2
 ```
 
 **Data flow:**
@@ -151,6 +152,8 @@ without mocks leaking across boundaries.
 - `lib/services/` (background polling via `workmanager`, local
   notifications via `flutter_local_notifications`)
 - Runtime GPS permission request on Android (manifest entries planned)
+- Crash reporting wired via `catcher_2`; email delivery not yet
+  validated end-to-end
 
 ## Models
 
@@ -203,6 +206,8 @@ Common patterns:
   in `setUp`
 - Use `Future<void>.delayed(Duration.zero)` to flush microtasks after
   triggering async state transitions
+- Use `pumpSplash(tester)` from `test/helpers.dart` to advance past the
+  2-second splash minimum and settle all navigation animations
 - Shared fakes live in `test/fakes/`
   (e.g., `FakeGeolocator`, `FakeUvData`)
 

@@ -21,6 +21,10 @@ Use Upstash Redis for caching. The proxy lives in a separate repo
 - OWM API key never exposed to the client; base URL is injected at build time
   via the `PROXY_BASE_URL` compile-time environment variable
 - App sends `lat`, `lon`, and an `X-Device-ID` header (UUID) to `GET /api/uv`
+- App sends location queries to `GET /api/geocode` for forward geocoding
+  (city string -> coords) and reverse geocoding (coords -> display name);
+  same `X-Device-ID` header; geocoding results are cached in Upstash Redis
+  with a long TTL (coordinates of a city do not change)
 - Shared location cache in Upstash Redis reduces OWM calls when multiple users
   request the same coordinates
 - No location change limits — cache amortizes costs naturally across users
