@@ -69,7 +69,7 @@ lib/
   storage/      # Cache (24h TTL); Preferences (SharedPrefs wrapper)
   app.dart      # Root widget; Material 3 theme with light/dark/system ThemeMode
   constants.dart # App-wide constants
-  main.dart     # Entry point with Riverpod ProviderScope; crash reporting via catcher_2
+  main.dart     # Entry point; Riverpod ProviderScope; crash reporting via catcher_2
 ```
 
 **Data flow:**
@@ -79,12 +79,15 @@ lib/
    (UUID); 10 s timeout; returns `UvData`
 2. `lib/api/geocoding_api.dart` -- forward/reverse geocoding via
    `$proxyBaseUrl/api/geocode`; same timeout pattern
-3. `lib/storage/cache.dart` -- 24-hour `SharedPreferences` cache keyed
+3. `lib/api/crash_report_handler.dart` -- `catcher_2` handler that POSTs
+   crash reports to `$proxyBaseUrl/api/crash`; proxy forwards via Gmail
+   SMTP; no credentials in the app binary
+4. `lib/storage/cache.dart` -- 24-hour `SharedPreferences` cache keyed
    on server-provided `fetchedAt` timestamp;
    `isValid = !isEmpty && !isStale`
-4. `lib/storage/preferences.dart` -- typed `SharedPreferences` wrapper;
+5. `lib/storage/preferences.dart` -- typed `SharedPreferences` wrapper;
    all keys prefixed `uvalert_`
-5. `lib/models/uv_model.dart` -- `UvData` and `UvForecastEntry`;
+6. `lib/models/uv_model.dart` -- `UvData` and `UvForecastEntry`;
    immutable; JSON via factory constructors; epoch-seconds helpers
 
 **Proxy:** The OWM API key is never bundled in the app. All requests go
@@ -152,8 +155,7 @@ without mocks leaking across boundaries.
 - `lib/services/` (background polling via `workmanager`, local
   notifications via `flutter_local_notifications`)
 - Runtime GPS permission request on Android (manifest entries planned)
-- Crash reporting wired via `catcher_2`; email delivery not yet
-  validated end-to-end
+- Onboarding step 3 (notifications, issue #15)
 
 ## Models
 
