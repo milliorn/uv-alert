@@ -1,2 +1,2 @@
-testConfiguration:
-  integration: true
+tags:
+  integration: {}
