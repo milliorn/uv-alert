@@ -5,8 +5,8 @@
 //
 //   flutter test --tags integration test/integration/geocoding_api_live_test.dart
 //
-// In CI they run in a dedicated workflow job (integration.yml) that has network
-// access; the standard ci.yml job does not run them.
+// ci.yml excludes them via --exclude-tags integration; run manually when
+// needed.
 
 @Tags(<String>['integration'])
 library;
