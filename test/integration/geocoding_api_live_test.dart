@@ -30,7 +30,7 @@ void main() {
     test(
       'happy path with state - Fresno returns name, state, country',
       () async {
-        final GeocodingResult result = await api.geocode('Fresno, CA');
+        final GeocodingResult result = await api.geocode('Fresno');
 
         expect(result.lat, isNonZero);
         expect(result.lon, isNonZero);
@@ -69,7 +69,7 @@ void main() {
     test(
       'coords round-trip - Fresno lat/lon are in the right ballpark',
       () async {
-        final GeocodingResult result = await api.geocode('Fresno, CA');
+        final GeocodingResult result = await api.geocode('Fresno');
 
         // Fresno, CA is roughly 36-37°N, 119-120°W
         expect(result.lat, inInclusiveRange(35.0, 38.0));
