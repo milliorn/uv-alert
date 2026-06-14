@@ -93,7 +93,7 @@ class _LocationOnboardingScreenState
 
   GeocodingApi _geocodingApi(String proxyBaseUrl, String deviceId) {
     if (widget._geocodingApi != null) return widget._geocodingApi!;
-    
+
     return _ownedApi ??= GeocodingApi(
       proxyBaseUrl: proxyBaseUrl,
       deviceId: deviceId,
