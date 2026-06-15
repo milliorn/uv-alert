@@ -13,12 +13,26 @@ import 'package:uvalert/constants.dart';
 class CrashReportHandler extends ReportHandler {
   /// Creates a [CrashReportHandler].
   ///
+  /// [proxyBaseUrl] is the base URL of the proxy; defaults to the compile-time
+  /// [proxyBaseUrl] constant. Pass a custom value in tests to avoid hitting
+  /// the real endpoint.
+  ///
   /// [httpClient] is injected for testing; defaults to a real instance.
-  CrashReportHandler({http.Client? httpClient})
-    : _httpClient = httpClient ?? http.Client();
+  CrashReportHandler({
+    String proxyBaseUrl = proxyBaseUrl,
+    http.Client? httpClient,
+  }) : _ownsClient = httpClient == null,
+       _httpClient = httpClient ?? http.Client(),
+       _crashUri = Uri.parse('${stripTrailingSlash(proxyBaseUrl)}/api/crash');
 
   final http.Client _httpClient;
-  late final Uri _crashUri = Uri.parse('$proxyBaseUrl/api/crash');
+  final bool _ownsClient;
+  final Uri _crashUri;
+
+  /// Releases the underlying HTTP client if this instance owns it.
+  void dispose() {
+    if (_ownsClient) _httpClient.close();
+  }
 
   @override
   List<PlatformType> getSupportedPlatforms() => PlatformType.values.toList();

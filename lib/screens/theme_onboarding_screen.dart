@@ -11,22 +11,22 @@ import 'package:uvalert/storage/preferences.dart';
 
 const int _onboardingThemeScreenIndex = 0;
 
-const double _screenPaddingHorizontal = 24;
-const double _screenPaddingVertical = 32;
+const double _screenPaddingHorizontal = onboardingPaddingHorizontal;
+const double _screenPaddingVertical = onboardingPaddingVertical;
 
 const double _cardGap = 16;
 
 const Duration _cardAnimationDuration = Duration(milliseconds: 200);
 
-const double _cardPaddingHorizontal = 20;
-const double _cardPaddingVertical = 16;
+const double _cardPaddingHorizontal = onboardingCardPaddingHorizontal;
+const double _cardPaddingVertical = onboardingCardPaddingVertical;
 
-const double _cardBorderRadius = 12;
+const double _cardBorderRadius = onboardingCardBorderRadius;
 
-const double _selectedBorderWidth = 2;
+const double _selectedBorderWidth = onboardingSelectedBorderWidth;
 const double _unselectedBorderWidth = 1;
 
-const double _selectedCardOpacity = 0.08;
+const double _selectedCardOpacity = onboardingSelectedCardOpacity;
 
 const double _cardIconGap = 16;
 

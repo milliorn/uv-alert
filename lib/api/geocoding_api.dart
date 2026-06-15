@@ -25,7 +25,7 @@ class GeocodingApi {
     required String deviceId,
     Duration timeout = apiDefaultTimeout,
     http.Client? httpClient,
-  }) : _proxyBaseUrl = stripTrailingSlash(proxyBaseUrl),
+  }) : _geocodeUri = Uri.parse('${stripTrailingSlash(proxyBaseUrl)}/api/geocode'),
        _deviceId = deviceId,
        _timeout = timeout,
        _ownsClient = httpClient == null,
@@ -35,11 +35,11 @@ class GeocodingApi {
   final String _deviceId;
   final http.Client _httpClient;
   final bool _ownsClient;
-  late final Uri _geocodeUri = Uri.parse('$_proxyBaseUrl/api/geocode');
+  final Uri _geocodeUri;
+
   late final Map<String, String> _headers = <String, String>{
     deviceIdHeader: _deviceId,
   };
-  final String _proxyBaseUrl;
 
   /// Releases the underlying HTTP client if this instance owns it.
   void dispose() {
@@ -89,6 +89,7 @@ class GeocodingApi {
     if (response.statusCode == httpNotFound) {
       throw const GeocodingNotFoundException();
     }
+    
     if (response.statusCode != httpOk) {
       throw GeocodingException(response.statusCode, response.body);
     }

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uvalert/constants.dart';
 import 'package:uvalert/providers/preferences_provider.dart';
 import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/screens/dashboard_screen.dart';
@@ -10,7 +11,7 @@ import 'package:uvalert/screens/theme_onboarding_screen.dart';
 import 'package:uvalert/storage/preferences.dart';
 
 const double _logoWidth = 200;
-const Duration _settingsTimeout = Duration(seconds: 10);
+const Duration _settingsTimeout = apiDefaultTimeout;
 const Duration _minSplashDuration = Duration(seconds: 2);
 const double _splashPaddingHorizontal = 32;
 const double _statusTopGap = 16;
@@ -18,13 +19,14 @@ const double _bottomGap = 32;
 const double _settingsStepProgress = 0.5;
 
 enum _SplashStep {
-  loading('Loading preferences…', 0),
+  // null → indeterminate animation while preferences are being read.
+  loading('Loading preferences…', null),
   settings('Loading settings…', _settingsStepProgress);
 
   const _SplashStep(this.label, this.progress);
 
   final String label;
-  final double progress;
+  final double? progress;
 }
 
 /// Returns the first screen the user should see based on [prefs].
@@ -156,7 +158,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
               const Spacer(),
 
-              LinearProgressIndicator(value: _step.progress),
+              // On error: freeze the bar so pumpAndSettle can settle in tests
+              // and the user sees a stopped indicator rather than a spinner.
+              LinearProgressIndicator(
+                value: _errorMessage.isNotEmpty ? 0 : _step.progress,
+              ),
 
               const SizedBox(height: _statusTopGap),
 

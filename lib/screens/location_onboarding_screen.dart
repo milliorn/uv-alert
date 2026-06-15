@@ -19,18 +19,18 @@ import 'package:uvalert/storage/preferences.dart';
 // ---------------------------------------------------------------------------
 const int _locationScreenIndex = 1;
 
-const double _screenPaddingHorizontal = 24;
-const double _screenPaddingVertical = 32;
+const double _screenPaddingHorizontal = onboardingPaddingHorizontal;
+const double _screenPaddingVertical = onboardingPaddingVertical;
 
 const double _sectionGap = 24;
 const double _itemGap = 12;
 
-const double _cardBorderRadius = 12;
-const double _cardPaddingHorizontal = 20;
-const double _cardPaddingVertical = 16;
+const double _cardBorderRadius = onboardingCardBorderRadius;
+const double _cardPaddingHorizontal = onboardingCardPaddingHorizontal;
+const double _cardPaddingVertical = onboardingCardPaddingVertical;
 
-const double _selectedBorderWidth = 2;
-const double _selectedCardOpacity = 0.08;
+const double _selectedBorderWidth = onboardingSelectedBorderWidth;
+const double _selectedCardOpacity = onboardingSelectedCardOpacity;
 const double _spinnerSize = 16;
 
 // ---------------------------------------------------------------------------
@@ -40,6 +40,7 @@ const double _spinnerSize = 16;
 /// The UI phase this screen is in.
 enum _Phase {
   /// Initial view — two option buttons, no result yet.
+  /// Also used after an error: _errorMessage drives the error text display.
   idle,
 
   /// GPS or geocoding request in-flight.
@@ -53,9 +54,6 @@ enum _Phase {
 
   /// Geocoding the manual-entry string.
   geocoding,
-
-  /// Something went wrong; error message is shown.
-  error,
 }
 
 // ---------------------------------------------------------------------------
@@ -83,6 +81,7 @@ class _LocationOnboardingScreenState
     extends ConsumerState<LocationOnboardingScreen> {
   _Phase _phase = _Phase.idle;
   bool _continuing = false;
+  bool _usedGps = false;
   GeocodingResult? _resolvedLocation;
   String _errorMessage = '';
 
@@ -138,6 +137,7 @@ class _LocationOnboardingScreenState
       setState(() {
         _resolvedLocation = result;
         _phase = _Phase.confirm;
+        _usedGps = true;
       });
     } on PermissionDeniedException {
       if (!mounted) return;
@@ -186,6 +186,7 @@ class _LocationOnboardingScreenState
       setState(() {
         _resolvedLocation = result;
         _phase = _Phase.confirm;
+        _usedGps = false;
       });
     } on GeocodingNotFoundException {
       if (!mounted) return;
@@ -223,7 +224,7 @@ class _LocationOnboardingScreenState
           .read(settingsProvider.notifier)
           .setManualLocation(loc.displayName);
 
-      await ref.read(settingsProvider.notifier).setUseGps(value: false);
+      await ref.read(settingsProvider.notifier).setUseGps(value: _usedGps);
 
       if (!mounted) return;
 
@@ -268,7 +269,7 @@ class _LocationOnboardingScreenState
 
   void _setError(String message) {
     setState(() {
-      _phase = _Phase.error;
+      _phase = _Phase.idle;
       _errorMessage = message;
     });
   }
@@ -283,7 +284,7 @@ class _LocationOnboardingScreenState
     // Null until deviceIdProvider resolves; callbacks that trigger network
     // calls are disabled while null to prevent an empty X-Device-ID header.
     final String? deviceId = ref.watch(deviceIdProvider).value;
-    
+
     final VoidCallback? onGpsPressed = deviceId == null
         ? null
         : () => _onUseMyLocation(proxyBaseUrl, deviceId);
@@ -292,9 +293,8 @@ class _LocationOnboardingScreenState
         ? null
         : () => _onGeocodeManual(proxyBaseUrl, deviceId);
 
-    final ValueChanged<String>? onManualSubmitted = deviceId == null
-        ? null
-        : (_) => _onGeocodeManual(proxyBaseUrl, deviceId);
+    final ValueChanged<String>? onManualSubmitted =
+        onManualSearch == null ? null : (_) => onManualSearch();
 
     return Scaffold(
       body: SafeArea(
@@ -310,7 +310,7 @@ class _LocationOnboardingScreenState
 
               const _Header(),
 
-              if (_phase == _Phase.idle || _phase == _Phase.error) ...<Widget>[
+              if (_phase == _Phase.idle) ...<Widget>[
                 _GpsButton(onPressed: onGpsPressed),
                 _ManualButton(onPressed: _onEnterManually),
               ],
