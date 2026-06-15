@@ -209,32 +209,26 @@ void main() {
     expect(find.byType(OnboardingScreen), findsOneWidget);
   });
 
-  testWidgets(
-    'shows timeout error when settingsProvider never resolves',
-    (WidgetTester tester) async {
-      await tester.runAsync(() async {
-        await tester.pumpWidget(
-          ProviderScope(
-            // ignore: always_specify_types — Override not in flutter_riverpod public API
-            overrides: [
-              settingsProvider.overrideWith(
-                _LoadingForeverSettingsNotifier.new,
-              ),
-            ],
-            child: const MaterialApp(home: OnboardingScreen()),
-          ),
-        );
-
-        // Advance past the 10-second _settingsTimeout.
-        await Future<void>.delayed(const Duration(seconds: 11));
-        await tester.pump();
-        await tester.pumpAndSettle();
-      });
-
-      expect(
-        find.textContaining('Could not load settings'),
-        findsOneWidget,
+  testWidgets('shows timeout error when settingsProvider never resolves', (
+    WidgetTester tester,
+  ) async {
+    await tester.runAsync(() async {
+      await tester.pumpWidget(
+        ProviderScope(
+          // ignore: always_specify_types — Override not in flutter_riverpod public API
+          overrides: [
+            settingsProvider.overrideWith(_LoadingForeverSettingsNotifier.new),
+          ],
+          child: const MaterialApp(home: OnboardingScreen()),
+        ),
       );
-    },
-  );
+
+      // Advance past the 10-second _settingsTimeout.
+      await Future<void>.delayed(const Duration(seconds: 11));
+      await tester.pump();
+      await tester.pumpAndSettle();
+    });
+
+    expect(find.textContaining('Could not load settings'), findsOneWidget);
+  });
 }

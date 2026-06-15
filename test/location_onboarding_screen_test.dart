@@ -388,10 +388,7 @@ void main() {
     'uses owned GeocodingApi when none injected — shows error on network fail',
     (WidgetTester tester) async {
       await tester.pumpWidget(
-        _wrap(
-          const LocationOnboardingScreen(),
-          proxyUrl: 'http://0.0.0.0',
-        ),
+        _wrap(const LocationOnboardingScreen(), proxyUrl: 'http://0.0.0.0'),
       );
 
       await tester.tap(find.text('Enter location manually'));

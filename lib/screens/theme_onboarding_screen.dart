@@ -87,7 +87,9 @@ class _ThemeOnboardingScreenState extends ConsumerState<ThemeOnboardingScreen> {
       );
     } on Object catch (e) {
       if (!mounted) return;
+
       setState(() => _continuing = false);
+
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Could not continue: $e')));

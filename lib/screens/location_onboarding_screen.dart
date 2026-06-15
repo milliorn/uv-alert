@@ -293,8 +293,9 @@ class _LocationOnboardingScreenState
         ? null
         : () => _onGeocodeManual(proxyBaseUrl, deviceId);
 
-    final ValueChanged<String>? onManualSubmitted =
-        onManualSearch == null ? null : (_) => onManualSearch();
+    final ValueChanged<String>? onManualSubmitted = onManualSearch == null
+        ? null
+        : (_) => onManualSearch();
 
     return Scaffold(
       body: SafeArea(

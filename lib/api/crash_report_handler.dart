@@ -41,8 +41,7 @@ class CrashReportHandler extends ReportHandler {
   Future<bool> handle(Report report, BuildContext? context) async {
     final Map<String, Object> body = <String, Object>{
       'error': report.error.toString(),
-      if (report.stackTrace != null)
-        'stack': report.stackTrace.toString(),
+      if (report.stackTrace != null) 'stack': report.stackTrace.toString(),
       if (report.deviceParameters.isNotEmpty)
         'deviceInfo': report.deviceParameters,
       if (report.applicationParameters.isNotEmpty)
@@ -52,9 +51,7 @@ class CrashReportHandler extends ReportHandler {
     try {
       final http.Response response = await _httpClient.post(
         _crashUri,
-        headers: <String, String>{
-          'Content-Type': 'application/json',
-        },
+        headers: <String, String>{'Content-Type': 'application/json'},
         body: jsonEncode(body),
       );
 

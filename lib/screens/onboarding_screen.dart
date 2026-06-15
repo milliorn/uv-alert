@@ -77,6 +77,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       final Duration splashFloor = _shouldEnforceMinSplash(preferences)
           ? _minSplashDuration
           : Duration.zero;
+
       await _awaitSettingsFor(splashFloor);
 
       if (!mounted) return;
@@ -122,6 +123,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           AsyncValue<SettingsState> next,
         ) {
           if (completer.isCompleted) return;
+
           if (next.hasValue) {
             completer.complete();
           } else if (next.hasError) {
@@ -133,6 +135,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     stopwatch.stop();
 
     final Duration remaining = minDuration - stopwatch.elapsed;
+
     if (remaining > Duration.zero) {
       await Future<void>.delayed(remaining);
     }

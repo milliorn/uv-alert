@@ -262,10 +262,7 @@ void main() {
         httpClient: _clientReturning(200),
       );
 
-      expect(
-        handler.getSupportedPlatforms(),
-        containsAll(PlatformType.values),
-      );
+      expect(handler.getSupportedPlatforms(), containsAll(PlatformType.values));
     });
   });
 

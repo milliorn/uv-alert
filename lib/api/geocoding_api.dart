@@ -25,7 +25,9 @@ class GeocodingApi {
     required String deviceId,
     Duration timeout = apiDefaultTimeout,
     http.Client? httpClient,
-  }) : _geocodeUri = Uri.parse('${stripTrailingSlash(proxyBaseUrl)}/api/geocode'),
+  }) : _geocodeUri = Uri.parse(
+         '${stripTrailingSlash(proxyBaseUrl)}/api/geocode',
+       ),
        _deviceId = deviceId,
        _timeout = timeout,
        _ownsClient = httpClient == null,
@@ -89,7 +91,7 @@ class GeocodingApi {
     if (response.statusCode == httpNotFound) {
       throw const GeocodingNotFoundException();
     }
-    
+
     if (response.statusCode != httpOk) {
       throw GeocodingException(response.statusCode, response.body);
     }
