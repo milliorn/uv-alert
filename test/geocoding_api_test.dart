@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:uvalert/api/geocoding_api.dart';
+import 'package:uvalert/constants.dart';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -128,7 +129,7 @@ void main() {
       addTearDown(api.dispose);
       await api.geocode('Fresno, CA');
 
-      expect(capturedHeaders?['X-Device-ID'], 'test-device-id');
+      expect(capturedHeaders?[deviceIdHeader], 'test-device-id');
     });
 
     test('strips trailing slash from proxyBaseUrl', () async {
@@ -206,7 +207,7 @@ void main() {
       addTearDown(api.dispose);
       await api.reverseGeocode(lat: 36.75, lon: -119.65);
 
-      expect(capturedHeaders?['X-Device-ID'], 'test-device-id');
+      expect(capturedHeaders?[deviceIdHeader], 'test-device-id');
     });
   });
 
