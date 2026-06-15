@@ -155,7 +155,6 @@ without mocks leaking across boundaries.
 - `lib/services/` (background polling via `workmanager`, local
   notifications via `flutter_local_notifications`)
 - Runtime GPS permission request on Android (manifest entries planned)
-- Onboarding step 3 (notifications, issue #15)
 
 ## Models
 
