@@ -3,10 +3,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:uvalert/constants.dart';
 
-const Duration _defaultTimeout = Duration(seconds: 10);
-const int _httpOk = 200;
-const int _httpNotFound = 404;
-
 /// Result from a geocoding call.
 typedef GeocodingResult = ({double lat, double lon, String displayName});
 
@@ -27,11 +23,9 @@ class GeocodingApi {
   GeocodingApi({
     required String proxyBaseUrl,
     required String deviceId,
-    Duration timeout = _defaultTimeout,
+    Duration timeout = apiDefaultTimeout,
     http.Client? httpClient,
-  }) : _proxyBaseUrl = proxyBaseUrl.endsWith('/')
-           ? proxyBaseUrl.substring(0, proxyBaseUrl.length - 1)
-           : proxyBaseUrl,
+  }) : _proxyBaseUrl = stripTrailingSlash(proxyBaseUrl),
        _deviceId = deviceId,
        _timeout = timeout,
        _ownsClient = httpClient == null,
@@ -66,10 +60,6 @@ class GeocodingApi {
         .get(uri, headers: _headers)
         .timeout(_timeout);
 
-    if (response.statusCode == _httpNotFound) {
-      throw const GeocodingNotFoundException();
-    }
-
     return _parseResult(response);
   }
 
@@ -92,15 +82,14 @@ class GeocodingApi {
         .get(uri, headers: _headers)
         .timeout(_timeout);
 
-    if (response.statusCode == _httpNotFound) {
-      throw const GeocodingNotFoundException();
-    }
-
     return _parseResult(response);
   }
 
   GeocodingResult _parseResult(http.Response response) {
-    if (response.statusCode != _httpOk) {
+    if (response.statusCode == httpNotFound) {
+      throw const GeocodingNotFoundException();
+    }
+    if (response.statusCode != httpOk) {
       throw GeocodingException(response.statusCode, response.body);
     }
 

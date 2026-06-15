@@ -18,13 +18,13 @@ class CrashReportHandler extends ReportHandler {
     : _httpClient = httpClient ?? http.Client();
 
   final http.Client _httpClient;
+  late final Uri _crashUri = Uri.parse('$proxyBaseUrl/api/crash');
 
   @override
   List<PlatformType> getSupportedPlatforms() => PlatformType.values.toList();
 
   @override
   Future<bool> handle(Report report, BuildContext? context) async {
-    final Uri uri = Uri.parse('$proxyBaseUrl/api/crash');
 
     final Map<String, Object> body = <String, Object>{
       'error': report.error.toString(),
@@ -38,14 +38,14 @@ class CrashReportHandler extends ReportHandler {
 
     try {
       final http.Response response = await _httpClient.post(
-        uri,
+        _crashUri,
         headers: <String, String>{
           'Content-Type': 'application/json',
         },
         body: jsonEncode(body),
       );
 
-      return response.statusCode == 200;
+      return response.statusCode == httpOk;
     } on Object catch (e) {
       if (kDebugMode) debugPrint('CrashReportHandler.handle: $e');
       return false;

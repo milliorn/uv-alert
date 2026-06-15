@@ -15,10 +15,11 @@ const Duration _minSplashDuration = Duration(seconds: 2);
 const double _splashPaddingHorizontal = 32;
 const double _statusTopGap = 16;
 const double _bottomGap = 32;
+const double _settingsStepProgress = 0.5;
 
 enum _SplashStep {
   loading('Loading preferences…', 0),
-  settings('Loading settings…', 0.5);
+  settings('Loading settings…', _settingsStepProgress);
 
   const _SplashStep(this.label, this.progress);
 
@@ -118,9 +119,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           _,
           AsyncValue<SettingsState> next,
         ) {
-          if (next.hasValue && !completer.isCompleted) {
+          if (completer.isCompleted) return;
+          if (next.hasValue) {
             completer.complete();
-          } else if (next.hasError && !completer.isCompleted) {
+          } else if (next.hasError) {
             completer.completeError(next.error!, next.stackTrace);
           }
         }, fireImmediately: true);

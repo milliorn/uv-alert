@@ -5,9 +5,6 @@ import 'package:uvalert/constants.dart';
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/storage/cache.dart';
 
-const Duration _defaultTimeout = Duration(seconds: 10);
-const int _httpOk = 200;
-
 /// HTTP client for fetching UV data from the proxy API.
 class UvApi {
   /// Creates a [UvApi] instance.
@@ -18,12 +15,10 @@ class UvApi {
   UvApi({
     required Cache cache,
     required String proxyBaseUrl,
-    Duration timeout = _defaultTimeout,
+    Duration timeout = apiDefaultTimeout,
     http.Client? httpClient,
   }) : _cache = cache,
-       _proxyBaseUrl = proxyBaseUrl.endsWith('/')
-           ? proxyBaseUrl.substring(0, proxyBaseUrl.length - 1)
-           : proxyBaseUrl,
+       _proxyBaseUrl = stripTrailingSlash(proxyBaseUrl),
        _timeout = timeout,
        _ownsClient = httpClient == null,
        _httpClient = httpClient ?? http.Client();
@@ -67,7 +62,7 @@ class UvApi {
         .get(uri, headers: <String, String>{deviceIdHeader: uuid})
         .timeout(_timeout);
 
-    if (response.statusCode != _httpOk) {
+    if (response.statusCode != httpOk) {
       throw UvApiException(response.statusCode, response.body);
     }
 
