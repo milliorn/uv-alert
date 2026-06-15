@@ -32,82 +32,75 @@ void main() {
   group('GeocodingApi.geocode', () {
     test('returns result on 200 with state field', () async {
       final GeocodingApi api = _makeApi(_respondWith(200, _validBodyWithState));
+      addTearDown(api.dispose);
       final GeocodingResult result = await api.geocode('Fresno, CA');
 
       expect(result.lat, 36.75);
       expect(result.lon, -119.65);
       expect(result.displayName, 'Fresno, California, US');
-
-      api.dispose();
     });
 
     test('returns result on 200 without state field', () async {
       final GeocodingApi api = _makeApi(_respondWith(200, _validBodyNoState));
+      addTearDown(api.dispose);
       final GeocodingResult result = await api.geocode('Paris');
 
       expect(result.lat, 48.85);
       expect(result.lon, 2.35);
       expect(result.displayName, 'Paris, FR');
-
-      api.dispose();
     });
 
     test('throws GeocodingNotFoundException on 404', () async {
       final GeocodingApi api = _makeApi(_respondWith(404, 'not found'));
+      addTearDown(api.dispose);
 
       await expectLater(
         api.geocode('nowhere'),
         throwsA(isA<GeocodingNotFoundException>()),
       );
-
-      api.dispose();
     });
 
     test('throws GeocodingException on 500', () async {
       final GeocodingApi api = _makeApi(_respondWith(500, 'error'));
+      addTearDown(api.dispose);
 
       await expectLater(
         api.geocode('Fresno, CA'),
         throwsA(isA<GeocodingException>()),
       );
-
-      api.dispose();
     });
 
     test('throws GeocodingException when body is not a JSON object', () async {
       final GeocodingApi api = _makeApi(_respondWith(200, '"string"'));
+      addTearDown(api.dispose);
 
       await expectLater(
         api.geocode('Fresno, CA'),
         throwsA(isA<GeocodingException>()),
       );
-
-      api.dispose();
     });
 
     test(
       'throws GeocodingException when required fields are missing',
       () async {
         final GeocodingApi api = _makeApi(_respondWith(200, '{"lat":36.75}'));
+        addTearDown(api.dispose);
 
         await expectLater(
           api.geocode('Fresno, CA'),
           throwsA(isA<GeocodingException>()),
         );
-
-        api.dispose();
       },
     );
 
     test('throws GeocodingException on malformed JSON body', () async {
       final GeocodingApi api = _makeApi(_respondWith(200, '{not json}'));
+      addTearDown(api.dispose);
 
       await expectLater(
         api.geocode('Fresno, CA'),
         throwsA(isA<GeocodingException>()),
       );
-
-      api.dispose();
     });
 
     test('sends query as q parameter', () async {
@@ -118,11 +111,10 @@ void main() {
       });
 
       final GeocodingApi api = _makeApi(client);
+      addTearDown(api.dispose);
       await api.geocode('Fresno, CA');
 
       expect(captured?.queryParameters['q'], 'Fresno, CA');
-
-      api.dispose();
     });
 
     test('sends X-Device-ID header', () async {
@@ -133,11 +125,10 @@ void main() {
       });
 
       final GeocodingApi api = _makeApi(client);
+      addTearDown(api.dispose);
       await api.geocode('Fresno, CA');
 
       expect(capturedHeaders?['X-Device-ID'], 'test-device-id');
-
-      api.dispose();
     });
 
     test('strips trailing slash from proxyBaseUrl', () async {
@@ -152,12 +143,11 @@ void main() {
         deviceId: 'test-device-id',
         httpClient: client,
       );
+      addTearDown(api.dispose);
       await api.geocode('Fresno, CA');
 
       expect(captured?.host, 'proxy.test');
       expect(captured?.path, '/api/geocode');
-
-      api.dispose();
     });
   });
 
@@ -168,6 +158,7 @@ void main() {
   group('GeocodingApi.reverseGeocode', () {
     test('returns result on 200 with state field', () async {
       final GeocodingApi api = _makeApi(_respondWith(200, _validBodyWithState));
+      addTearDown(api.dispose);
       final GeocodingResult result = await api.reverseGeocode(
         lat: 36.75,
         lon: -119.65,
@@ -176,19 +167,16 @@ void main() {
       expect(result.lat, 36.75);
       expect(result.lon, -119.65);
       expect(result.displayName, 'Fresno, California, US');
-
-      api.dispose();
     });
 
     test('throws GeocodingNotFoundException on 404', () async {
       final GeocodingApi api = _makeApi(_respondWith(404, 'not found'));
+      addTearDown(api.dispose);
 
       await expectLater(
         api.reverseGeocode(lat: 36.75, lon: -119.65),
         throwsA(isA<GeocodingNotFoundException>()),
       );
-
-      api.dispose();
     });
 
     test('sends lat and lon as separate query parameters', () async {
@@ -199,13 +187,12 @@ void main() {
       });
 
       final GeocodingApi api = _makeApi(client);
+      addTearDown(api.dispose);
       await api.reverseGeocode(lat: 36.75, lon: -119.65);
 
       expect(captured?.queryParameters['lat'], '36.75');
       expect(captured?.queryParameters['lon'], '-119.65');
       expect(captured?.queryParameters['q'], isNull);
-
-      api.dispose();
     });
 
     test('sends X-Device-ID header', () async {
@@ -216,11 +203,10 @@ void main() {
       });
 
       final GeocodingApi api = _makeApi(client);
+      addTearDown(api.dispose);
       await api.reverseGeocode(lat: 36.75, lon: -119.65);
 
       expect(capturedHeaders?['X-Device-ID'], 'test-device-id');
-
-      api.dispose();
     });
   });
 
