@@ -25,7 +25,6 @@ class CrashReportHandler extends ReportHandler {
 
   @override
   Future<bool> handle(Report report, BuildContext? context) async {
-
     final Map<String, Object> body = <String, Object>{
       'error': report.error.toString(),
       if (report.stackTrace != null)
