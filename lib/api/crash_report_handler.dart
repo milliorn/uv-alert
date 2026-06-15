@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:catcher_2/model/platform_type.dart';
 import 'package:catcher_2/model/report.dart';
 import 'package:catcher_2/model/report_handler.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:uvalert/constants.dart';
@@ -45,7 +46,8 @@ class CrashReportHandler extends ReportHandler {
       );
 
       return response.statusCode == 200;
-    } on Object {
+    } on Object catch (e) {
+      if (kDebugMode) debugPrint('CrashReportHandler.handle: $e');
       return false;
     }
   }
