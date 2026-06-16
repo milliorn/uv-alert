@@ -19,19 +19,20 @@ import 'package:uvalert/storage/preferences.dart';
 // ---------------------------------------------------------------------------
 const int _locationScreenIndex = 1;
 
-const double _screenPaddingHorizontal = onboardingPaddingHorizontal;
-const double _screenPaddingVertical = onboardingPaddingVertical;
-
 const double _sectionGap = 24;
 const double _itemGap = 12;
-
-const double _cardBorderRadius = onboardingCardBorderRadius;
-const double _cardPaddingHorizontal = onboardingCardPaddingHorizontal;
-const double _cardPaddingVertical = onboardingCardPaddingVertical;
-
-const double _selectedBorderWidth = onboardingSelectedBorderWidth;
-const double _selectedCardOpacity = onboardingSelectedCardOpacity;
 const double _spinnerSize = 16;
+
+// ---------------------------------------------------------------------------
+// Confirm result
+// ---------------------------------------------------------------------------
+
+/// Bundles the resolved location with how it was obtained.
+///
+/// Stored as a single nullable field so the two values can never desync —
+/// both are set together when transitioning to [_Phase.confirm] and cleared
+/// together when the user changes location.
+typedef _ConfirmResult = ({GeocodingResult result, bool fromGps});
 
 // ---------------------------------------------------------------------------
 // Internal state machine
@@ -81,8 +82,7 @@ class _LocationOnboardingScreenState
     extends ConsumerState<LocationOnboardingScreen> {
   _Phase _phase = _Phase.idle;
   bool _continuing = false;
-  bool _usedGps = false;
-  GeocodingResult? _resolvedLocation;
+  _ConfirmResult? _pending;
   String _errorMessage = '';
 
   final TextEditingController _manualController = TextEditingController();
@@ -135,9 +135,8 @@ class _LocationOnboardingScreenState
       if (!mounted) return;
 
       setState(() {
-        _resolvedLocation = result;
+        _pending = (result: result, fromGps: true);
         _phase = _Phase.confirm;
-        _usedGps = true;
       });
     } on PermissionDeniedException {
       if (!mounted) return;
@@ -184,9 +183,8 @@ class _LocationOnboardingScreenState
       if (!mounted) return;
 
       setState(() {
-        _resolvedLocation = result;
+        _pending = (result: result, fromGps: false);
         _phase = _Phase.confirm;
-        _usedGps = false;
       });
     } on GeocodingNotFoundException {
       if (!mounted) return;
@@ -210,21 +208,23 @@ class _LocationOnboardingScreenState
   Future<void> _onConfirm() async {
     setState(() => _continuing = true);
 
-    assert(
-      _resolvedLocation != null,
-      '_onConfirm called outside confirm phase',
-    );
+    assert(_pending != null, '_onConfirm called outside confirm phase');
 
-    final GeocodingResult loc = _resolvedLocation!;
+    final _ConfirmResult confirmed = _pending!;
 
     try {
-      ref.read(locationProvider.notifier).setManual(lat: loc.lat, lon: loc.lon);
+      ref.read(locationProvider.notifier).setManual(
+        lat: confirmed.result.lat,
+        lon: confirmed.result.lon,
+      );
 
       await ref
           .read(settingsProvider.notifier)
-          .setManualLocation(loc.displayName);
+          .setManualLocation(confirmed.result.displayName);
 
-      await ref.read(settingsProvider.notifier).setUseGps(value: _usedGps);
+      await ref
+          .read(settingsProvider.notifier)
+          .setUseGps(value: confirmed.fromGps);
 
       if (!mounted) return;
 
@@ -257,7 +257,7 @@ class _LocationOnboardingScreenState
   void _onChangeLocation() {
     setState(() {
       _phase = _Phase.manual;
-      _resolvedLocation = null;
+      _pending = null;
       _errorMessage = '';
     });
     _manualFocus.requestFocus();
@@ -301,8 +301,8 @@ class _LocationOnboardingScreenState
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(
-            horizontal: _screenPaddingHorizontal,
-            vertical: _screenPaddingVertical,
+            horizontal: onboardingPaddingHorizontal,
+            vertical: onboardingPaddingVertical,
           ),
           child: Column(
             spacing: _sectionGap,
@@ -328,9 +328,9 @@ class _LocationOnboardingScreenState
                   onSearch: onManualSearch,
                 ),
 
-              if (_phase == _Phase.confirm && _resolvedLocation != null)
+              if (_phase == _Phase.confirm)
                 _ConfirmCard(
-                  displayName: _resolvedLocation!.displayName,
+                  displayName: _pending!.result.displayName,
                   onChange: _onChangeLocation,
                 ),
 
@@ -472,17 +472,21 @@ class _ConfirmCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
-    final BorderRadius radius = BorderRadius.circular(_cardBorderRadius);
+    final BorderRadius radius =
+        BorderRadius.circular(onboardingCardBorderRadius);
 
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: _cardPaddingHorizontal,
-        vertical: _cardPaddingVertical,
+        horizontal: onboardingCardPaddingHorizontal,
+        vertical: onboardingCardPaddingVertical,
       ),
       decoration: BoxDecoration(
         borderRadius: radius,
-        border: Border.all(color: colors.primary, width: _selectedBorderWidth),
-        color: colors.primary.withValues(alpha: _selectedCardOpacity),
+        border: Border.all(
+          color: colors.primary,
+          width: onboardingSelectedBorderWidth,
+        ),
+        color: colors.primary.withValues(alpha: onboardingSelectedCardOpacity),
       ),
       child: Column(
         spacing: _itemGap,

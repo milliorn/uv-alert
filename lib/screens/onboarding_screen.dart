@@ -21,7 +21,10 @@ const double _settingsStepProgress = 0.5;
 enum _SplashStep {
   // null → indeterminate animation while preferences are being read.
   loading('Loading preferences…', null),
-  settings('Loading settings…', _settingsStepProgress);
+  settings('Loading settings…', _settingsStepProgress),
+  // Frozen at 0 so pumpAndSettle can settle in tests and the user sees a
+  // stopped bar rather than a spinner when something goes wrong.
+  error('', 0);
 
   const _SplashStep(this.label, this.progress);
 
@@ -92,11 +95,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     } on TimeoutException {
       if (!mounted) return;
       setState(() {
+        _step = _SplashStep.error;
         _errorMessage = 'Could not load settings. Please restart the app.';
       });
-    } on Object catch (e) {
+    } on Object {
       if (!mounted) return;
-      setState(() => _errorMessage = 'Error: $e');
+      setState(() {
+        _step = _SplashStep.error;
+        _errorMessage = 'Something went wrong. Please restart the app.';
+      });
     }
   }
 
@@ -161,11 +168,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
               const Spacer(),
 
-              // On error: freeze the bar so pumpAndSettle can settle in tests
-              // and the user sees a stopped indicator rather than a spinner.
-              LinearProgressIndicator(
-                value: _errorMessage.isNotEmpty ? 0 : _step.progress,
-              ),
+              LinearProgressIndicator(value: _step.progress),
 
               const SizedBox(height: _statusTopGap),
 

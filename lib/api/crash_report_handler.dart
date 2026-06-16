@@ -8,6 +8,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:uvalert/constants.dart';
 
+// Allocated once; getSupportedPlatforms() is called on every crash dispatch.
+const List<PlatformType> _allPlatforms = PlatformType.values;
+
 /// Sends crash reports to the proxy's `/api/crash` endpoint so no email
 /// address needs to be embedded in the app binary.
 class CrashReportHandler extends ReportHandler {
@@ -20,11 +23,14 @@ class CrashReportHandler extends ReportHandler {
   /// [httpClient] is injected for testing; defaults to a real instance.
   CrashReportHandler({
     String proxyBaseUrl = proxyBaseUrl,
+    Duration timeout = apiDefaultTimeout,
     http.Client? httpClient,
-  }) : _ownsClient = httpClient == null,
+  }) : _timeout = timeout,
+       _ownsClient = httpClient == null,
        _httpClient = httpClient ?? http.Client(),
        _crashUri = Uri.parse('${stripTrailingSlash(proxyBaseUrl)}/api/crash');
 
+  final Duration _timeout;
   final http.Client _httpClient;
   final bool _ownsClient;
   final Uri _crashUri;
@@ -35,7 +41,7 @@ class CrashReportHandler extends ReportHandler {
   }
 
   @override
-  List<PlatformType> getSupportedPlatforms() => PlatformType.values.toList();
+  List<PlatformType> getSupportedPlatforms() => _allPlatforms;
 
   @override
   Future<bool> handle(Report report, BuildContext? context) async {
@@ -49,11 +55,13 @@ class CrashReportHandler extends ReportHandler {
     };
 
     try {
-      final http.Response response = await _httpClient.post(
-        _crashUri,
-        headers: <String, String>{'Content-Type': 'application/json'},
-        body: jsonEncode(body),
-      );
+      final http.Response response = await _httpClient
+          .post(
+            _crashUri,
+            headers: <String, String>{'Content-Type': 'application/json'},
+            body: jsonEncode(body),
+          )
+          .timeout(_timeout);
 
       return response.statusCode == httpOk;
     } on Object catch (e) {

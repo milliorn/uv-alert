@@ -11,22 +11,11 @@ import 'package:uvalert/storage/preferences.dart';
 
 const int _onboardingThemeScreenIndex = 0;
 
-const double _screenPaddingHorizontal = onboardingPaddingHorizontal;
-const double _screenPaddingVertical = onboardingPaddingVertical;
-
 const double _cardGap = 16;
 
 const Duration _cardAnimationDuration = Duration(milliseconds: 200);
 
-const double _cardPaddingHorizontal = onboardingCardPaddingHorizontal;
-const double _cardPaddingVertical = onboardingCardPaddingVertical;
-
-const double _cardBorderRadius = onboardingCardBorderRadius;
-
-const double _selectedBorderWidth = onboardingSelectedBorderWidth;
 const double _unselectedBorderWidth = 1;
-
-const double _selectedCardOpacity = onboardingSelectedCardOpacity;
 
 const double _cardIconGap = 16;
 
@@ -107,8 +96,8 @@ class _ThemeOnboardingScreenState extends ConsumerState<ThemeOnboardingScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(
-            horizontal: _screenPaddingHorizontal,
-            vertical: _screenPaddingVertical,
+            horizontal: onboardingPaddingHorizontal,
+            vertical: onboardingPaddingVertical,
           ),
           child: Column(
             spacing: _cardGap,
@@ -173,7 +162,8 @@ class _ThemeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
     final Color contentColor = selected ? colors.primary : colors.onSurface;
-    final BorderRadius cardRadius = BorderRadius.circular(_cardBorderRadius);
+    final BorderRadius cardRadius =
+        BorderRadius.circular(onboardingCardBorderRadius);
 
     return Semantics(
       button: true,
@@ -186,8 +176,8 @@ class _ThemeCard extends StatelessWidget {
         child: AnimatedContainer(
           duration: _cardAnimationDuration,
           padding: const EdgeInsets.symmetric(
-            horizontal: _cardPaddingHorizontal,
-            vertical: _cardPaddingVertical,
+            horizontal: onboardingCardPaddingHorizontal,
+            vertical: onboardingCardPaddingVertical,
           ),
 
           decoration: BoxDecoration(
@@ -195,11 +185,15 @@ class _ThemeCard extends StatelessWidget {
 
             border: Border.all(
               color: selected ? colors.primary : colors.outlineVariant,
-              width: selected ? _selectedBorderWidth : _unselectedBorderWidth,
+              width: selected
+                  ? onboardingSelectedBorderWidth
+                  : _unselectedBorderWidth,
             ),
 
             color: selected
-                ? colors.primary.withValues(alpha: _selectedCardOpacity)
+                ? colors.primary.withValues(
+                    alpha: onboardingSelectedCardOpacity,
+                  )
                 : colors.surface,
           ),
 
