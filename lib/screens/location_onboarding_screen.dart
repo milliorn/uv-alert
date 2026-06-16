@@ -459,7 +459,11 @@ class _ManualEntryField extends StatelessWidget {
                   ),
                 ),
               )
-            : IconButton(icon: const Icon(Icons.search), onPressed: onSearch),
+            : IconButton(
+                icon: const Icon(Icons.search),
+                tooltip: 'Search',
+                onPressed: onSearch,
+              ),
       ),
     );
   }

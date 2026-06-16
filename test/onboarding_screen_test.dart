@@ -212,6 +212,8 @@ void main() {
   testWidgets('shows timeout error when settingsProvider never resolves', (
     WidgetTester tester,
   ) async {
+    const Duration shortTimeout = Duration(milliseconds: 10);
+
     await tester.runAsync(() async {
       await tester.pumpWidget(
         ProviderScope(
@@ -219,12 +221,16 @@ void main() {
           overrides: [
             settingsProvider.overrideWith(_LoadingForeverSettingsNotifier.new),
           ],
-          child: const MaterialApp(home: OnboardingScreen()),
+          child: const MaterialApp(
+            home: OnboardingScreen(loadTimeout: shortTimeout),
+          ),
         ),
       );
 
-      // Advance past the 10-second _settingsTimeout.
-      await Future<void>.delayed(const Duration(seconds: 11));
+      // Advance past the injected timeout.
+      await Future<void>.delayed(
+        shortTimeout + const Duration(milliseconds: 50),
+      );
       await tester.pump();
       await tester.pumpAndSettle();
     });

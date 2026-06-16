@@ -52,7 +52,13 @@ bool _shouldEnforceMinSplash(Preferences prefs) =>
 /// appropriate screen based on onboarding state.
 class OnboardingScreen extends ConsumerStatefulWidget {
   /// Creates an [OnboardingScreen].
-  const OnboardingScreen({super.key});
+  ///
+  /// [loadTimeout] is injected for testing; defaults to [_loadTimeout].
+  const OnboardingScreen({super.key, this.loadTimeout});
+
+  /// Override for tests; production code leaves this null and the state
+  /// falls back to [_loadTimeout].
+  final Duration? loadTimeout;
 
   @override
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -61,6 +67,8 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   _SplashStep _step = _SplashStep.loading;
   String _errorMessage = '';
+
+  Duration get _timeout => widget.loadTimeout ?? _loadTimeout;
 
   @override
   void initState() {
@@ -72,7 +80,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     try {
       final Preferences preferences = await ref
           .read(preferencesProvider.future)
-          .timeout(_loadTimeout);
+          .timeout(_timeout);
 
       if (!mounted) return;
 
@@ -113,6 +121,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       _step = _SplashStep.loading;
       _errorMessage = '';
     });
+    ref
+      ..invalidate(preferencesProvider)
+      ..invalidate(settingsProvider);
     unawaited(_run());
   }
 
@@ -139,7 +150,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           }
         }, fireImmediately: true);
 
-    await completer.future.timeout(_loadTimeout).whenComplete(sub.close);
+    await completer.future.timeout(_timeout).whenComplete(sub.close);
     stopwatch.stop();
 
     final Duration remaining = minDuration - stopwatch.elapsed;

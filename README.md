@@ -235,7 +235,9 @@ Additional style rules:
   contains a double quote
 - File-private helpers go at file scope with `_` prefix, not as static
   methods
-- No trailing commas (`require_trailing_commas` is off permanently)
+- Trailing commas are managed by the formatter
+  (`formatter.trailing_commas: automate`); `require_trailing_commas` lint
+  is off -- do not add or remove them manually
 - No `k` prefix on constants (`kFoo` is prohibited; use `foo`)
 
 ## CI/CD
