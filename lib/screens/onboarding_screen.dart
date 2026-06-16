@@ -11,8 +11,7 @@ import 'package:uvalert/screens/theme_onboarding_screen.dart';
 import 'package:uvalert/storage/preferences.dart';
 
 const double _logoWidth = 200;
-const Duration _prefsTimeout = apiDefaultTimeout;
-const Duration _settingsTimeout = apiDefaultTimeout;
+const Duration _loadTimeout = apiDefaultTimeout;
 const Duration _minSplashDuration = Duration(seconds: 2);
 const double _splashPaddingHorizontal = 32;
 const double _statusTopGap = 16;
@@ -73,7 +72,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     try {
       final Preferences preferences = await ref
           .read(preferencesProvider.future)
-          .timeout(_prefsTimeout);
+          .timeout(_loadTimeout);
 
       if (!mounted) return;
 
@@ -140,7 +139,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           }
         }, fireImmediately: true);
 
-    await completer.future.timeout(_settingsTimeout).whenComplete(sub.close);
+    await completer.future.timeout(_loadTimeout).whenComplete(sub.close);
     stopwatch.stop();
 
     final Duration remaining = minDuration - stopwatch.elapsed;
@@ -175,11 +174,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               const SizedBox(height: _statusTopGap),
 
               Text(
-                _errorMessage.isEmpty ? _step.label : _errorMessage,
+                _step == _SplashStep.error ? _errorMessage : _step.label,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
 
-              if (_errorMessage.isNotEmpty) ...<Widget>[
+              if (_step == _SplashStep.error) ...<Widget>[
                 const SizedBox(height: _statusTopGap),
                 FilledButton.tonal(
                   onPressed: _onRetry,
