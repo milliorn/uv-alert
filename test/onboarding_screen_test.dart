@@ -134,7 +134,7 @@ void main() {
       await tester.pump();
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Error:'), findsOneWidget);
+      expect(find.textContaining('Something went wrong'), findsOneWidget);
       expect(find.byType(ThemeOnboardingScreen), findsNothing);
       expect(find.byType(DashboardScreen), findsNothing);
     },
@@ -160,7 +160,7 @@ void main() {
       await tester.pump();
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Error:'), findsOneWidget);
+      expect(find.textContaining('Something went wrong'), findsOneWidget);
       expect(find.byType(ThemeOnboardingScreen), findsNothing);
       expect(find.byType(LocationOnboardingScreen), findsNothing);
       expect(find.byType(DashboardScreen), findsNothing);
@@ -180,7 +180,7 @@ void main() {
     await tester.pump();
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Error:'), findsOneWidget);
+    expect(find.textContaining('Something went wrong'), findsOneWidget);
     expect(find.text('Retry'), findsOneWidget);
   });
 
