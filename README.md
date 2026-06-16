@@ -16,8 +16,8 @@ when exposure risk is high. Targets Android.
 - Hourly and daily UV forecast with sunrise/sunset awareness and cloud cover
 - Persistent user preferences: theme (light/dark/system), notification
   toggle, and GPS vs. manual location
-- Material 3 design with a periwinkle seed color palette (`#9498ED`) drawn
-  from the app logo
+- Material 3 design: orange seed for light mode (warmth/UV signal), periwinkle
+  (`#9498ED`) for dark mode (drawn from the app logo)
 - Anonymous per-install UUID used for per-device request tracking
 
 ## Requirements
@@ -63,7 +63,7 @@ All providers are in `lib/providers/`.
 
 ```text
 lib/
-  api/          # UvApi, GeocodingApi: HTTP clients with timeout/error handling
+  api/          # UvApi, GeocodingApi, CrashReportHandler: HTTP clients
   models/       # UvData, UvForecastEntry: immutable, JSON-serializable value types
   providers/    # Riverpod notifiers and providers
   storage/      # Cache (24h TTL); Preferences (SharedPrefs wrapper)
@@ -91,7 +91,7 @@ lib/
    immutable; JSON via factory constructors; epoch-seconds helpers
 
 **Proxy:** The OWM API key is never bundled in the app. All requests go
-through a Vercel serverless proxy (`uvwatch-proxy`) that protects the
+through a Vercel serverless proxy (`uv-alert-proxy`) that protects the
 key and caches responses in Upstash Redis. `proxyBaseUrl` is injected
 via `--dart-define=PROXY_BASE_URL=...` at build time.
 

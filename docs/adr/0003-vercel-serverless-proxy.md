@@ -14,7 +14,7 @@ limiting.
 
 Use a Vercel serverless function (Node.js) as a proxy between the app and OWM.
 Use Upstash Redis for caching. The proxy lives in a separate repo
-(`uvwatch-proxy`).
+(`uv-alert-proxy`).
 
 ## Consequences
 
@@ -27,6 +27,8 @@ Use Upstash Redis for caching. The proxy lives in a separate repo
   with a long TTL (coordinates of a city do not change)
 - Shared location cache in Upstash Redis reduces OWM calls when multiple users
   request the same coordinates
+- App POSTs crash reports to `POST /api/crash`; proxy forwards via Gmail
+  SMTP (Nodemailer); no email credentials in the app binary
 - No location change limits — cache amortizes costs naturally across users
 - Vercel free tier supports ~4,761 users before upgrade needed (1M
   invocations/month)
