@@ -214,10 +214,9 @@ class _LocationOnboardingScreenState
     final _ConfirmResult confirmed = _pending!;
 
     try {
-      ref.read(locationProvider.notifier).setManual(
-        lat: confirmed.result.lat,
-        lon: confirmed.result.lon,
-      );
+      ref
+          .read(locationProvider.notifier)
+          .setManual(lat: confirmed.result.lat, lon: confirmed.result.lon);
 
       await ref
           .read(settingsProvider.notifier)
@@ -475,8 +474,9 @@ class _ConfirmCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
-    final BorderRadius radius =
-        BorderRadius.circular(onboardingCardBorderRadius);
+    final BorderRadius radius = BorderRadius.circular(
+      onboardingCardBorderRadius,
+    );
 
     return Container(
       padding: const EdgeInsets.symmetric(

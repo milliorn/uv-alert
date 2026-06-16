@@ -162,8 +162,9 @@ class _ThemeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
     final Color contentColor = selected ? colors.primary : colors.onSurface;
-    final BorderRadius cardRadius =
-        BorderRadius.circular(onboardingCardBorderRadius);
+    final BorderRadius cardRadius = BorderRadius.circular(
+      onboardingCardBorderRadius,
+    );
 
     return Semantics(
       button: true,
