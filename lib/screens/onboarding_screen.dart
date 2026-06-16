@@ -11,20 +11,22 @@ import 'package:uvalert/screens/theme_onboarding_screen.dart';
 import 'package:uvalert/storage/preferences.dart';
 
 const double _logoWidth = 200;
+const Duration _prefsTimeout = apiDefaultTimeout;
 const Duration _settingsTimeout = apiDefaultTimeout;
 const Duration _minSplashDuration = Duration(seconds: 2);
 const double _splashPaddingHorizontal = 32;
 const double _statusTopGap = 16;
 const double _bottomGap = 32;
 const double _settingsStepProgress = 0.5;
+const double _errorStepProgress = 0;
 
 enum _SplashStep {
   // null → indeterminate animation while preferences are being read.
   loading('Loading preferences…', null),
   settings('Loading settings…', _settingsStepProgress),
-  // Frozen at 0 so pumpAndSettle can settle in tests and the user sees a
-  // stopped bar rather than a spinner when something goes wrong.
-  error('', 0);
+  // Frozen at _errorStepProgress so pumpAndSettle can settle in tests and the
+  // user sees a stopped bar rather than a spinner when something goes wrong.
+  error('', _errorStepProgress);
 
   const _SplashStep(this.label, this.progress);
 
@@ -69,9 +71,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Future<void> _run() async {
     try {
-      final Preferences preferences = await ref.read(
-        preferencesProvider.future,
-      );
+      final Preferences preferences = await ref
+          .read(preferencesProvider.future)
+          .timeout(_prefsTimeout);
 
       if (!mounted) return;
 

@@ -22,6 +22,7 @@ const int _locationScreenIndex = 1;
 const double _sectionGap = 24;
 const double _itemGap = 12;
 const double _spinnerSize = 16;
+const double _spinnerStrokeWidth = 2;
 
 // ---------------------------------------------------------------------------
 // Confirm result
@@ -454,7 +455,9 @@ class _ManualEntryField extends StatelessWidget {
                 padding: EdgeInsets.all(_itemGap),
                 child: SizedBox.square(
                   dimension: _spinnerSize,
-                  child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                  child: CircularProgressIndicator.adaptive(
+                    strokeWidth: _spinnerStrokeWidth,
+                  ),
                 ),
               )
             : IconButton(icon: const Icon(Icons.search), onPressed: onSearch),
