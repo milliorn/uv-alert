@@ -105,7 +105,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       if (!mounted) return;
       setState(() {
         _step = _SplashStep.error;
-        _errorMessage = 'Could not load settings. Please restart the app.';
+        _errorMessage = 'Could not load app data. Please restart the app.';
       });
     } on Object {
       if (!mounted) return;
