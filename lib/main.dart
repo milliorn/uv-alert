@@ -20,10 +20,7 @@ class _CrashHandlerDisposer extends WidgetsBindingObserver {
 }
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
   final CrashReportHandler crashHandler = CrashReportHandler();
-  WidgetsBinding.instance.addObserver(_CrashHandlerDisposer(crashHandler));
 
   final Catcher2Options debugOptions = Catcher2Options(
     DialogReportMode(),
@@ -35,10 +32,16 @@ Future<void> main() async {
     <ReportHandler>[crashHandler],
   );
 
+  // ensureInitialized: true lets Catcher2 call WidgetsFlutterBinding
+  // .ensureInitialized() inside its own runZonedGuarded zone on web, avoiding
+  // the zone-mismatch warning that fires when we initialize the binding in the
+  // outer zone before Catcher2's zone is set up.
   Catcher2(
     debugConfig: debugOptions,
     releaseConfig: releaseOptions,
+    ensureInitialized: true,
     runAppFunction: () {
+      WidgetsBinding.instance.addObserver(_CrashHandlerDisposer(crashHandler));
       runApp(const ProviderScope(child: UvAlertApp()));
     },
   );
