@@ -40,7 +40,7 @@ void main() {
     });
 
     await tester.pumpWidget(const ProviderScope(child: UvAlertApp()));
-    await pumpSplash(tester);
+    await pumpSplash(tester, hasSplashFloor: false);
 
     expect(find.byType(DashboardScreen), findsOneWidget);
   });

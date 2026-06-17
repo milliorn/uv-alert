@@ -115,7 +115,7 @@ void main() {
         prefs: <String, Object>{Preferences.keyFirstLaunchForTesting: false},
       ),
     );
-    await pumpSplash(tester);
+    await pumpSplash(tester, hasSplashFloor: false);
     expect(find.byType(DashboardScreen), findsOneWidget);
   });
 
@@ -235,6 +235,6 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    expect(find.textContaining('Could not load settings'), findsOneWidget);
+    expect(find.textContaining('Could not load app data'), findsOneWidget);
   });
 }
