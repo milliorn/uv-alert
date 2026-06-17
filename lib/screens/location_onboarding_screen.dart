@@ -30,7 +30,7 @@ const double _spinnerStrokeWidth = 2;
 
 /// Bundles the resolved location with how it was obtained.
 ///
-/// Stored as a single nullable field so the two values can never desync —
+/// Stored as a single nullable field so the two values can never desync;
 /// both are set together when transitioning to [_Phase.confirm] and cleared
 /// together when the user changes location.
 typedef _ConfirmResult = ({GeocodingResult result, bool fromGps});
@@ -41,7 +41,7 @@ typedef _ConfirmResult = ({GeocodingResult result, bool fromGps});
 
 /// The UI phase this screen is in.
 enum _Phase {
-  /// Initial view — two option buttons, no result yet.
+  /// Initial view: two option buttons, no result yet.
   /// Also used after an error: _errorMessage drives the error text display.
   idle,
 
@@ -141,7 +141,7 @@ class _LocationOnboardingScreenState
       });
     } on PermissionDeniedException {
       if (!mounted) return;
-      // Permission denied — fall through to manual entry.
+      // Permission denied; fall through to manual entry.
       setState(() => _phase = _Phase.manual);
       _manualFocus.requestFocus();
     } on GeocodingNotFoundException {
