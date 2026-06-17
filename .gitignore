@@ -12,6 +12,7 @@
 # IDE
 .idea/
 *.iml
+.vscode/launch.json
 
 # Unused platforms (Android-only project)
 linux/
