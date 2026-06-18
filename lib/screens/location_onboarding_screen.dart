@@ -218,13 +218,14 @@ class _LocationOnboardingScreenState
           .read(locationProvider.notifier)
           .setManual(lat: confirmed.result.lat, lon: confirmed.result.lon);
 
-      await ref
-          .read(settingsProvider.notifier)
-          .setManualLocation(confirmed.result.displayName);
-
-      await ref
-          .read(settingsProvider.notifier)
-          .setUseGps(value: confirmed.fromGps);
+      await Future.wait(<Future<void>>[
+        ref
+            .read(settingsProvider.notifier)
+            .setManualLocation(confirmed.result.displayName),
+        ref
+            .read(settingsProvider.notifier)
+            .setUseGps(value: confirmed.fromGps),
+      ]);
 
       if (!mounted) return;
 
@@ -293,10 +294,6 @@ class _LocationOnboardingScreenState
         ? null
         : () => _onGeocodeManual(proxyBaseUrl, deviceId);
 
-    final ValueChanged<String>? onManualSubmitted = onManualSearch == null
-        ? null
-        : (_) => onManualSearch();
-
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -324,7 +321,6 @@ class _LocationOnboardingScreenState
                   controller: _manualController,
                   focusNode: _manualFocus,
                   loading: _phase == _Phase.geocoding,
-                  onSubmitted: onManualSubmitted,
                   onSearch: onManualSearch,
                 ),
 
@@ -428,14 +424,12 @@ class _ManualEntryField extends StatelessWidget {
     required this.controller,
     required this.focusNode,
     required this.loading,
-    required this.onSubmitted,
     required this.onSearch,
   });
 
   final TextEditingController controller;
   final FocusNode focusNode;
   final bool loading;
-  final ValueChanged<String>? onSubmitted;
   final VoidCallback? onSearch;
 
   @override
@@ -445,7 +439,7 @@ class _ManualEntryField extends StatelessWidget {
       focusNode: focusNode,
       enabled: !loading,
       textInputAction: TextInputAction.search,
-      onSubmitted: onSubmitted,
+      onSubmitted: onSearch == null ? null : (_) => onSearch!(),
       decoration: InputDecoration(
         hintText: 'City, State (e.g. New York, NY)',
         border: const OutlineInputBorder(),
@@ -519,11 +513,9 @@ class _ConfirmCard extends StatelessWidget {
               context,
             ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: <Widget>[
-              TextButton(onPressed: onChange, child: const Text('Change')),
-            ],
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(onPressed: onChange, child: const Text('Change')),
           ),
         ],
       ),

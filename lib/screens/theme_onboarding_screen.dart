@@ -17,6 +17,10 @@ const Duration _cardAnimationDuration = Duration(milliseconds: 200);
 
 const double _unselectedBorderWidth = 1;
 
+const BorderRadius _cardRadius = BorderRadius.all(
+  Radius.circular(onboardingCardBorderRadius),
+);
+
 const double _cardIconGap = 16;
 
 // (label, icon, themeMode) for each selectable theme option.
@@ -74,21 +78,22 @@ class _ThemeOnboardingScreenState extends ConsumerState<ThemeOnboardingScreen> {
           ),
         ),
       );
-    } on Object catch (e) {
+    } on Object {
       if (!mounted) return;
 
       setState(() => _continuing = false);
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Could not continue: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Something went wrong. Please try again.'),
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final AsyncValue<SettingsState> settings = ref.watch(settingsProvider);
-    final bool settingsReady = settings.hasValue || settings.hasError;
     final ThemeMode selectedTheme =
         _pendingTheme ?? settings.value?.themeMode ?? ThemeMode.system;
 
@@ -129,7 +134,8 @@ class _ThemeOnboardingScreenState extends ConsumerState<ThemeOnboardingScreen> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: (settingsReady && !_continuing)
+                  onPressed: (settings.hasValue || settings.hasError) &&
+                          !_continuing
                       ? _onContinue
                       : null,
                   child: const Text('Continue'),
@@ -162,9 +168,6 @@ class _ThemeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
     final Color contentColor = selected ? colors.primary : colors.onSurface;
-    final BorderRadius cardRadius = BorderRadius.circular(
-      onboardingCardBorderRadius,
-    );
 
     return Semantics(
       button: true,
@@ -172,7 +175,7 @@ class _ThemeCard extends StatelessWidget {
       label: label,
       child: InkWell(
         onTap: onTap,
-        borderRadius: cardRadius,
+        borderRadius: _cardRadius,
 
         child: AnimatedContainer(
           duration: _cardAnimationDuration,
@@ -182,7 +185,7 @@ class _ThemeCard extends StatelessWidget {
           ),
 
           decoration: BoxDecoration(
-            borderRadius: cardRadius,
+            borderRadius: _cardRadius,
 
             border: Border.all(
               color: selected ? colors.primary : colors.outlineVariant,

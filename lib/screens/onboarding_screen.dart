@@ -16,7 +16,7 @@ const Duration _minSplashDuration = Duration(seconds: 2);
 const double _splashPaddingHorizontal = 32;
 const double _statusTopGap = 16;
 const double _bottomGap = 32;
-const double _settingsStepProgress = 0.5;
+const double _settingsStepProgress = 1 / totalOnboardingSteps;
 const double _errorStepProgress = 0;
 
 enum _SplashStep {

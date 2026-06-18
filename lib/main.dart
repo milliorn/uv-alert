@@ -6,6 +6,8 @@ import 'package:uvalert/app.dart';
 
 // Disposes [CrashReportHandler] when the app is detached (process about to
 // exit on desktop; best-effort on mobile where the OS may kill without notice).
+// Removes itself as an observer after disposal so a hot-restart debug cycle
+// cannot double-dispose the handler.
 class _CrashHandlerDisposer extends WidgetsBindingObserver {
   _CrashHandlerDisposer(this._handler);
 
@@ -14,6 +16,7 @@ class _CrashHandlerDisposer extends WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.detached) {
+      WidgetsBinding.instance.removeObserver(this);
       _handler.dispose();
     }
   }

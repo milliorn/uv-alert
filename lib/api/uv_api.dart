@@ -18,12 +18,12 @@ class UvApi {
     Duration timeout = apiDefaultTimeout,
     http.Client? httpClient,
   }) : _cache = cache,
-       _proxyBaseUrl = stripTrailingSlash(proxyBaseUrl),
+       _uvUri = Uri.parse('${stripTrailingSlash(proxyBaseUrl)}/api/uv'),
        _timeout = timeout,
        _ownsClient = httpClient == null,
        _httpClient = httpClient ?? http.Client();
   final Cache _cache;
-  final String _proxyBaseUrl;
+  final Uri _uvUri;
   final Duration _timeout;
   final http.Client _httpClient;
   final bool _ownsClient;
@@ -49,7 +49,7 @@ class UvApi {
       if (cached != null) return cached;
     }
 
-    final Uri uri = Uri.parse('$_proxyBaseUrl/api/uv').replace(
+    final Uri uri = _uvUri.replace(
       queryParameters: <String, String>{
         'lat': lat.toString(),
         'lon': lon.toString(),
