@@ -10,6 +10,7 @@ import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/storage/cache.dart';
 
 import 'fakes/fake_uv_data.dart';
+import 'helpers.dart';
 
 class MockCache extends Mock implements Cache {}
 
@@ -17,15 +18,9 @@ class MockCache extends Mock implements Cache {}
 // externally-owned clients; MockClient suffices everywhere else.
 class MockHttpClient extends Mock implements http.Client {}
 
-UvData _makeData() => UvData(
-  currentUvi: 5,
+UvData _makeData() => makeUvData(
   sunrise: DateTime.utc(2023, 11, 14, 6),
   sunset: DateTime.utc(2023, 11, 14, 18),
-  clouds: 0,
-  hourly: const <UvForecastEntry>[],
-  daily: const <UvForecastEntry>[],
-  timezone: 'UTC',
-  timezoneOffset: 0,
   fetchedAt: DateTime.utc(2023, 11, 14, 12),
 );
 
@@ -43,9 +38,6 @@ Map<String, Object?> _apiJson() => <String, Object?>{
   'fetched_at': 1699963200,
 };
 
-http.Client _clientReturning(int status, Map<String, Object?> body) {
-  return MockClient((_) async => http.Response(jsonEncode(body), status));
-}
 
 void main() {
   late MockCache mockCache;
@@ -90,7 +82,7 @@ void main() {
       final UvApi api = UvApi(
         cache: mockCache,
         proxyBaseUrl: 'http://example.com',
-        httpClient: _clientReturning(200, _apiJson()),
+        httpClient: mockClientReturning(200, jsonEncode(_apiJson())),
       );
 
       final UvData result = await api.fetch(
@@ -114,7 +106,7 @@ void main() {
       final UvApi api = UvApi(
         cache: mockCache,
         proxyBaseUrl: 'http://example.com',
-        httpClient: _clientReturning(200, _apiJson()),
+        httpClient: mockClientReturning(200, jsonEncode(_apiJson())),
       );
 
       final UvData result = await api.fetch(
@@ -131,9 +123,10 @@ void main() {
       final UvApi api = UvApi(
         cache: mockCache,
         proxyBaseUrl: 'http://example.com',
-        httpClient: _clientReturning(500, <String, Object?>{
-          'error': 'server error',
-        }),
+        httpClient: mockClientReturning(
+          500,
+          jsonEncode(<String, Object?>{'error': 'server error'}),
+        ),
       );
 
       await expectLater(

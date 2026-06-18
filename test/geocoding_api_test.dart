@@ -4,18 +4,17 @@ import 'package:http/testing.dart';
 import 'package:uvalert/api/geocoding_api.dart';
 import 'package:uvalert/constants.dart';
 
+import 'helpers.dart';
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-GeocodingApi _makeApi(MockClient client) => GeocodingApi(
+GeocodingApi _makeApi(http.Client client) => GeocodingApi(
   proxyBaseUrl: 'https://proxy.test',
   deviceId: 'test-device-id',
   httpClient: client,
 );
-
-MockClient _respondWith(int status, String body) =>
-    MockClient((_) async => http.Response(body, status));
 
 // Proxy response shape: { lat, lon, name, country, state? }
 const String _validBodyWithState =
@@ -32,7 +31,8 @@ const String _validBodyNoState =
 void main() {
   group('GeocodingApi.geocode', () {
     test('returns result on 200 with state field', () async {
-      final GeocodingApi api = _makeApi(_respondWith(200, _validBodyWithState));
+      final GeocodingApi api =
+          _makeApi(mockClientReturning(200, _validBodyWithState));
       addTearDown(api.dispose);
       final GeocodingResult result = await api.geocode('Fresno, CA');
 
@@ -42,7 +42,8 @@ void main() {
     });
 
     test('returns result on 200 without state field', () async {
-      final GeocodingApi api = _makeApi(_respondWith(200, _validBodyNoState));
+      final GeocodingApi api =
+          _makeApi(mockClientReturning(200, _validBodyNoState));
       addTearDown(api.dispose);
       final GeocodingResult result = await api.geocode('Paris');
 
@@ -52,7 +53,7 @@ void main() {
     });
 
     test('throws GeocodingNotFoundException on 404', () async {
-      final GeocodingApi api = _makeApi(_respondWith(404, 'not found'));
+      final GeocodingApi api = _makeApi(mockClientReturning(404, 'not found'));
       addTearDown(api.dispose);
 
       await expectLater(
@@ -62,7 +63,7 @@ void main() {
     });
 
     test('throws GeocodingException on 500', () async {
-      final GeocodingApi api = _makeApi(_respondWith(500, 'error'));
+      final GeocodingApi api = _makeApi(mockClientReturning(500, 'error'));
       addTearDown(api.dispose);
 
       await expectLater(
@@ -72,7 +73,7 @@ void main() {
     });
 
     test('throws GeocodingException when body is not a JSON object', () async {
-      final GeocodingApi api = _makeApi(_respondWith(200, '"string"'));
+      final GeocodingApi api = _makeApi(mockClientReturning(200, '"string"'));
       addTearDown(api.dispose);
 
       await expectLater(
@@ -84,7 +85,8 @@ void main() {
     test(
       'throws GeocodingException when required fields are missing',
       () async {
-        final GeocodingApi api = _makeApi(_respondWith(200, '{"lat":36.75}'));
+        final GeocodingApi api =
+            _makeApi(mockClientReturning(200, '{"lat":36.75}'));
         addTearDown(api.dispose);
 
         await expectLater(
@@ -95,7 +97,7 @@ void main() {
     );
 
     test('throws GeocodingException on malformed JSON body', () async {
-      final GeocodingApi api = _makeApi(_respondWith(200, '{not json}'));
+      final GeocodingApi api = _makeApi(mockClientReturning(200, '{not json}'));
       addTearDown(api.dispose);
 
       await expectLater(
@@ -158,7 +160,8 @@ void main() {
 
   group('GeocodingApi.reverseGeocode', () {
     test('returns result on 200 with state field', () async {
-      final GeocodingApi api = _makeApi(_respondWith(200, _validBodyWithState));
+      final GeocodingApi api =
+          _makeApi(mockClientReturning(200, _validBodyWithState));
       addTearDown(api.dispose);
       final GeocodingResult result = await api.reverseGeocode(
         lat: 36.75,
@@ -171,7 +174,7 @@ void main() {
     });
 
     test('throws GeocodingNotFoundException on 404', () async {
-      final GeocodingApi api = _makeApi(_respondWith(404, 'not found'));
+      final GeocodingApi api = _makeApi(mockClientReturning(404, 'not found'));
       addTearDown(api.dispose);
 
       await expectLater(

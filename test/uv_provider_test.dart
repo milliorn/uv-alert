@@ -15,17 +15,7 @@ import 'fakes/fake_uv_data.dart';
 
 class _MockUvApi extends Mock implements UvApi {}
 
-UvData _makeData() => UvData(
-  currentUvi: 3,
-  sunrise: DateTime.utc(2024, 6, 1, 6),
-  sunset: DateTime.utc(2024, 6, 1, 20),
-  clouds: 10,
-  hourly: const <UvForecastEntry>[],
-  daily: const <UvForecastEntry>[],
-  timezone: 'UTC',
-  timezoneOffset: 0,
-  fetchedAt: DateTime.utc(2024, 6, 1, 12),
-);
+UvData _makeData() => makeUvData();
 
 ProviderContainer _makeContainerWith(_MockUvApi api) {
   final ProviderContainer container = ProviderContainer(

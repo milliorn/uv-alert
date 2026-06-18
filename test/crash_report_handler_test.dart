@@ -8,6 +8,8 @@ import 'package:http/testing.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:uvalert/api/crash_report_handler.dart';
 
+import 'helpers.dart';
+
 class _MockHttpClient extends Mock implements http.Client {}
 
 // Builds a minimal Report with all required fields.
@@ -30,16 +32,12 @@ Report _makeReport({
   );
 }
 
-http.Client _clientReturning(int status) {
-  return MockClient((_) async => http.Response('', status));
-}
-
 void main() {
   group('CrashReportHandler.handle', () {
     test('returns true on HTTP 200', () async {
       final CrashReportHandler handler = CrashReportHandler(
         proxyBaseUrl: 'http://example.com',
-        httpClient: _clientReturning(200),
+        httpClient: mockClientReturning(200),
       );
 
       final bool result = await handler.handle(_makeReport(), null);
@@ -51,7 +49,7 @@ void main() {
       for (final int status in <int>[400, 404, 500, 503]) {
         final CrashReportHandler handler = CrashReportHandler(
           proxyBaseUrl: 'http://example.com',
-          httpClient: _clientReturning(status),
+          httpClient: mockClientReturning(status),
         );
 
         final bool result = await handler.handle(_makeReport(), null);
@@ -259,7 +257,7 @@ void main() {
     test('returns all platform types', () {
       final CrashReportHandler handler = CrashReportHandler(
         proxyBaseUrl: 'http://example.com',
-        httpClient: _clientReturning(200),
+        httpClient: mockClientReturning(200),
       );
 
       expect(handler.getSupportedPlatforms(), containsAll(PlatformType.values));
