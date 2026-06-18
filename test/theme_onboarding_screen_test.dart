@@ -8,6 +8,22 @@ import 'package:uvalert/screens/location_onboarding_screen.dart';
 import 'package:uvalert/screens/theme_onboarding_screen.dart';
 import 'package:uvalert/storage/preferences.dart';
 
+// SettingsNotifier that returns data immediately without reading preferences,
+// so Continue is enabled even when preferencesProvider is overridden to error.
+class _LoadedSettingsNotifier extends SettingsNotifier {
+  @override
+  AsyncValue<SettingsState> build() {
+    return const AsyncValue<SettingsState>.data(
+      SettingsState(
+        themeMode: ThemeMode.system,
+        useGps: false,
+        manualLocation: null,
+        notificationsEnabled: false,
+      ),
+    );
+  }
+}
+
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
@@ -206,10 +222,14 @@ void main() {
     'Continue shows snackbar and re-enables button when preferencesProvider '
     'throws',
     (WidgetTester tester) async {
+      // _LoadedSettingsNotifier returns data immediately in build() so Continue
+      // is enabled. preferencesProvider errors so _onContinue throws when it
+      // calls ref.read(preferencesProvider.future) to write setThemeStepDone.
       await tester.pumpWidget(
         ProviderScope(
-          // ignore: always_specify_types — Override not in flutter_riverpod public API
+          // ignore: always_specify_types - Override not in flutter_riverpod public API
           overrides: [
+            settingsProvider.overrideWith(_LoadedSettingsNotifier.new),
             preferencesProvider.overrideWithValue(
               AsyncValue<Preferences>.error(
                 Exception('prefs failed'),
@@ -227,7 +247,10 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      expect(find.textContaining('Could not continue:'), findsOneWidget);
+      expect(
+        find.text('Something went wrong. Please try again.'),
+        findsOneWidget,
+      );
 
       final FilledButton btn = tester.widget<FilledButton>(
         find.widgetWithText(FilledButton, 'Continue'),

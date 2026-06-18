@@ -77,7 +77,7 @@ Widget _wrap(
   final FakeGeolocatorPlatform fakePlatform =
       platform ?? FakeGeolocatorPlatform();
   return ProviderScope(
-    // ignore: always_specify_types — Override not in flutter_riverpod public API
+    // ignore: always_specify_types (overrideWith is not in the flutter_riverpod public API)
     overrides: [
       locationProvider.overrideWith(
         locationFactory ?? () => LocationNotifier(platform: fakePlatform),
@@ -385,7 +385,7 @@ void main() {
   // -------------------------------------------------------------------------
 
   testWidgets(
-    'uses owned GeocodingApi when none injected — shows error on network fail',
+    'no injected GeocodingApi: owned instance shows error on network fail',
     (WidgetTester tester) async {
       await tester.pumpWidget(
         _wrap(const LocationOnboardingScreen(), proxyUrl: 'http://0.0.0.0'),
@@ -408,7 +408,7 @@ void main() {
   // GPS null-location path (line 123: _setError('Could not read GPS…'))
   // -------------------------------------------------------------------------
 
-  testWidgets('GPS fetchGps succeeds but location is null — shows error', (
+  testWidgets('GPS fetchGps succeeds with null location shows error', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
@@ -428,7 +428,7 @@ void main() {
   // GPS generic error (lines 146-147: on Object catch in _onUseMyLocation)
   // -------------------------------------------------------------------------
 
-  testWidgets('GPS throws generic error — shows error message', (
+  testWidgets('GPS generic error shows error message', (
     WidgetTester tester,
   ) async {
     final FakeGeolocatorPlatform platform = FakeGeolocatorPlatform()
