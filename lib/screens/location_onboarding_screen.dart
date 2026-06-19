@@ -121,6 +121,8 @@ class _LocationOnboardingScreenState
     try {
       await ref.read(locationProvider.notifier).fetchGps();
 
+      if (!mounted) return;
+
       final LocationState loc = ref.read(locationProvider);
 
       if (loc == null) {
@@ -214,18 +216,17 @@ class _LocationOnboardingScreenState
     final _ConfirmResult confirmed = _pending!;
 
     try {
+      await ref
+          .read(settingsProvider.notifier)
+          .setManualLocation(confirmed.result.displayName);
+
+      await ref
+          .read(settingsProvider.notifier)
+          .setUseGps(value: confirmed.fromGps);
+
       ref
           .read(locationProvider.notifier)
           .setManual(lat: confirmed.result.lat, lon: confirmed.result.lon);
-
-      await Future.wait(<Future<void>>[
-        ref
-            .read(settingsProvider.notifier)
-            .setManualLocation(confirmed.result.displayName),
-        ref
-            .read(settingsProvider.notifier)
-            .setUseGps(value: confirmed.fromGps),
-      ]);
 
       if (!mounted) return;
 
@@ -430,6 +431,9 @@ class _ManualEntryField extends StatelessWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
   final bool loading;
+  // No onSubmitted parameter: TextField.onSubmitted passes the field value
+  // which this widget never uses. The adapter (_) => onSearch!() is derived
+  // here from onSearch so the caller stays free of that boilerplate.
   final VoidCallback? onSearch;
 
   @override
@@ -513,9 +517,11 @@ class _ConfirmCard extends StatelessWidget {
               context,
             ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
           ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(onPressed: onChange, child: const Text('Change')),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: <Widget>[
+              TextButton(onPressed: onChange, child: const Text('Change')),
+            ],
           ),
         ],
       ),
