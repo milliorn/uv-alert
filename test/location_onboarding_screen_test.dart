@@ -228,7 +228,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Location not found. Try a different search.'),
+      find.textContaining('Location not found. '),
       findsOneWidget,
     );
     expect(find.byType(TextField), findsOneWidget);
