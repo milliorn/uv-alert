@@ -1,11 +1,9 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:uvalert/constants.dart';
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/storage/cache.dart';
-
-const Duration _defaultTimeout = Duration(seconds: 10);
-const int _httpOk = 200;
 
 /// HTTP client for fetching UV data from the proxy API.
 class UvApi {
@@ -17,17 +15,15 @@ class UvApi {
   UvApi({
     required Cache cache,
     required String proxyBaseUrl,
-    Duration timeout = _defaultTimeout,
+    Duration timeout = apiDefaultTimeout,
     http.Client? httpClient,
   }) : _cache = cache,
-       _proxyBaseUrl = proxyBaseUrl.endsWith('/')
-           ? proxyBaseUrl.substring(0, proxyBaseUrl.length - 1)
-           : proxyBaseUrl,
+       _uvUri = Uri.parse('${stripTrailingSlash(proxyBaseUrl)}/api/uv'),
        _timeout = timeout,
        _ownsClient = httpClient == null,
        _httpClient = httpClient ?? http.Client();
   final Cache _cache;
-  final String _proxyBaseUrl;
+  final Uri _uvUri;
   final Duration _timeout;
   final http.Client _httpClient;
   final bool _ownsClient;
@@ -53,7 +49,7 @@ class UvApi {
       if (cached != null) return cached;
     }
 
-    final Uri uri = Uri.parse('$_proxyBaseUrl/api/uv').replace(
+    final Uri uri = _uvUri.replace(
       queryParameters: <String, String>{
         'lat': lat.toString(),
         'lon': lon.toString(),
@@ -63,10 +59,10 @@ class UvApi {
     // TODO(retry): add exponential backoff for TimeoutException
     //   and transient errors
     final http.Response response = await _httpClient
-        .get(uri, headers: <String, String>{'X-Device-ID': uuid})
+        .get(uri, headers: <String, String>{deviceIdHeader: uuid})
         .timeout(_timeout);
 
-    if (response.statusCode != _httpOk) {
+    if (response.statusCode != httpOk) {
       throw UvApiException(response.statusCode, response.body);
     }
 

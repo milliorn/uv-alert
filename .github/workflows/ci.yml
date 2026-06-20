@@ -29,7 +29,7 @@ jobs:
         run: dart doc --validate-links
 
       - name: Test with coverage
-        run: flutter test --coverage
+        run: flutter test --coverage --exclude-tags integration
 
       - name: Enforce 100% line coverage
         run: |

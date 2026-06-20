@@ -2,10 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uvalert/providers/preferences_provider.dart';
 import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/screens/dashboard_screen.dart';
+import 'package:uvalert/screens/location_onboarding_screen.dart';
 import 'package:uvalert/screens/onboarding_screen.dart';
+import 'package:uvalert/screens/theme_onboarding_screen.dart';
 import 'package:uvalert/storage/preferences.dart';
+
+import 'fakes/fake_settings_notifier.dart';
+import 'helpers.dart';
+
+Widget _wrap({Map<String, Object> prefs = const <String, Object>{}}) {
+  SharedPreferences.setMockInitialValues(prefs);
+  return const ProviderScope(child: MaterialApp(home: OnboardingScreen()));
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
 
 void main() {
   setUp(() {
@@ -15,175 +30,200 @@ void main() {
   testWidgets('OnboardingScreen constructs with an explicit key', (
     WidgetTester tester,
   ) async {
-    // Use a non-const key so the constructor is called at runtime,
-    // ensuring the super.key path is traced by the coverage tool.
     final Key key = UniqueKey();
-
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(home: OnboardingScreen(key: key)),
       ),
     );
-
     expect(find.byKey(key), findsOneWidget);
+    await pumpSplash(tester);
   });
 
-  testWidgets('OnboardingScreen renders all three theme cards', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(
-      const ProviderScope(child: MaterialApp(home: OnboardingScreen())),
-    );
-
-    expect(find.text('Light'), findsOneWidget);
-    expect(find.text('Dark'), findsOneWidget);
-    expect(find.text('System Default'), findsOneWidget);
-  });
-
-  testWidgets('System Default card is pre-selected', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(
-      const ProviderScope(child: MaterialApp(home: OnboardingScreen())),
-    );
-
-    // The check_circle icon only appears on the selected card.
-    // There should be exactly one -- on System Default.
-    expect(find.byIcon(Icons.check_circle), findsOneWidget);
-  });
-
-  testWidgets('tapping a theme card selects it', (WidgetTester tester) async {
-    await tester.pumpWidget(
-      const ProviderScope(child: MaterialApp(home: OnboardingScreen())),
-    );
-
-    await tester.tap(find.text('Dark'));
-    await tester.pump();
-
-    // After tapping Dark, check_circle must be inside the Dark card only.
+  testWidgets('renders logo image', (WidgetTester tester) async {
+    await tester.pumpWidget(_wrap());
     expect(
-      find.descendant(
-        of: find.byKey(const ValueKey<ThemeMode>(ThemeMode.dark)),
-        matching: find.byIcon(Icons.check_circle),
+      find.byWidgetPredicate(
+        (Widget w) =>
+            w is Image &&
+            w.image is AssetImage &&
+            (w.image as AssetImage).assetName ==
+                'assets/images/high-resolution-color-logo.png',
       ),
       findsOneWidget,
     );
+    await pumpSplash(tester);
   });
 
-  testWidgets('tapping Continue navigates to DashboardScreen', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(
-      const ProviderScope(child: MaterialApp(home: OnboardingScreen())),
-    );
-
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Continue'));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(DashboardScreen), findsOneWidget);
+  testWidgets('shows initial status text', (WidgetTester tester) async {
+    await tester.pumpWidget(_wrap());
+    expect(find.text('Loading preferences…'), findsOneWidget);
+    await pumpSplash(tester);
   });
 
-  testWidgets('tapping Continue sets isFirstLaunch to false', (
+  testWidgets('LinearProgressIndicator is present', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(
-      const ProviderScope(child: MaterialApp(home: OnboardingScreen())),
-    );
-
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Continue'));
-    await tester.pumpAndSettle();
-
-    final Preferences prefs = await Preferences.load();
-    expect(prefs.isFirstLaunch, isFalse);
-  });
-
-  testWidgets('tapping a card immediately writes theme to settingsProvider', (
-    WidgetTester tester,
-  ) async {
-    final ProviderContainer container = ProviderContainer();
-    addTearDown(container.dispose);
-
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MaterialApp(home: OnboardingScreen()),
-      ),
-    );
-
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Dark'));
-    await tester.pumpAndSettle();
-
-    final AsyncValue<SettingsState> settings = container.read(settingsProvider);
-    expect(settings.requireValue.themeMode, equals(ThemeMode.dark));
-  });
-
-  testWidgets('tapping a card writes theme to SharedPreferences', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(
-      const ProviderScope(child: MaterialApp(home: OnboardingScreen())),
-    );
-
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Dark'));
-    await tester.pumpAndSettle();
-
-    final Preferences prefs = await Preferences.load();
-    expect(prefs.theme, ThemeMode.dark);
+    await tester.pumpWidget(_wrap());
+    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    await pumpSplash(tester);
   });
 
   testWidgets(
-    'card reflects stored non-default theme once settingsProvider loads',
+    'routes to ThemeOnboardingScreen when first launch, theme not done',
     (WidgetTester tester) async {
-      SharedPreferences.setMockInitialValues(<String, Object>{
-        'uvalert_theme': 'light',
-      });
-
-      await tester.pumpWidget(
-        const ProviderScope(child: MaterialApp(home: OnboardingScreen())),
-      );
-
-      // Let settingsProvider finish loading so the card reflects stored theme.
-      await tester.pumpAndSettle();
-
-      // The Light card should now be selected (check_circle inside it only).
-      expect(
-        find.descendant(
-          of: find.byKey(const ValueKey<ThemeMode>(ThemeMode.light)),
-          matching: find.byIcon(Icons.check_circle),
-        ),
-        findsOneWidget,
-      );
+      // isFirstLaunch defaults to true, isThemeStepDone defaults to false.
+      await tester.pumpWidget(_wrap());
+      await pumpSplash(tester);
+      expect(find.byType(ThemeOnboardingScreen), findsOneWidget);
     },
   );
 
-  testWidgets('selected theme is in settingsProvider when Continue is tapped', (
+  testWidgets(
+    'routes to LocationOnboardingScreen when first launch, theme done',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          prefs: <String, Object>{Preferences.keyThemeStepDoneForTesting: true},
+        ),
+      );
+      await pumpSplash(tester);
+      expect(find.byType(LocationOnboardingScreen), findsOneWidget);
+    },
+  );
+
+  testWidgets('routes to DashboardScreen when isFirstLaunch=false', (
     WidgetTester tester,
   ) async {
-    final ProviderContainer container = ProviderContainer();
-    addTearDown(container.dispose);
-
     await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
+      _wrap(
+        prefs: <String, Object>{Preferences.keyFirstLaunchForTesting: false},
+      ),
+    );
+    await pumpSplash(tester, hasSplashFloor: false);
+    expect(find.byType(DashboardScreen), findsOneWidget);
+  });
+
+  testWidgets(
+    'shows error status and does not navigate when settingsProvider errors',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          // ignore: always_specify_types — Override not in flutter_riverpod public API
+          overrides: [
+            settingsProvider.overrideWith(FakeErrorSettingsNotifier.new),
+          ],
+          child: const MaterialApp(home: OnboardingScreen()),
+        ),
+      );
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Something went wrong'), findsOneWidget);
+      expect(find.byType(ThemeOnboardingScreen), findsNothing);
+      expect(find.byType(DashboardScreen), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'shows error status and does not navigate when preferencesProvider throws',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          // ignore: always_specify_types — Override not in flutter_riverpod public API
+          overrides: [
+            preferencesProvider.overrideWithValue(
+              AsyncValue<Preferences>.error(
+                Exception('prefs failed'),
+                StackTrace.empty,
+              ),
+            ),
+          ],
+          child: const MaterialApp(home: OnboardingScreen()),
+        ),
+      );
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Something went wrong'), findsOneWidget);
+      expect(find.byType(ThemeOnboardingScreen), findsNothing);
+      expect(find.byType(LocationOnboardingScreen), findsNothing);
+      expect(find.byType(DashboardScreen), findsNothing);
+    },
+  );
+
+  testWidgets('Retry button is shown when an error occurs', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        // ignore: always_specify_types — Override not in flutter_riverpod public API
+        overrides: [
+          settingsProvider.overrideWith(FakeErrorSettingsNotifier.new),
+        ],
         child: const MaterialApp(home: OnboardingScreen()),
       ),
     );
-
-    await tester.tap(find.text('Dark'));
     await tester.pump();
-
-    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
-    final AsyncValue<SettingsState> settings = container.read(settingsProvider);
-    expect(settings.requireValue.themeMode, equals(ThemeMode.dark));
+    expect(find.textContaining('Something went wrong'), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
+  });
+
+  testWidgets('Retry button is tappable and does not throw', (
+    WidgetTester tester,
+  ) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+
+    await tester.pumpWidget(
+      ProviderScope(
+        // ignore: always_specify_types — Override not in flutter_riverpod public API
+        overrides: [
+          settingsProvider.overrideWith(FakeErrorSettingsNotifier.new),
+        ],
+        child: const MaterialApp(home: OnboardingScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Retry'), findsOneWidget);
+
+    // Tapping Retry should not throw and should keep the widget on screen.
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+
+    // Widget is still alive (no navigation, no crash).
+    expect(find.byType(OnboardingScreen), findsOneWidget);
+  });
+
+  testWidgets('shows timeout error when settingsProvider never resolves', (
+    WidgetTester tester,
+  ) async {
+    const Duration shortTimeout = Duration(milliseconds: 10);
+
+    await tester.runAsync(() async {
+      await tester.pumpWidget(
+        ProviderScope(
+          // ignore: always_specify_types — Override not in flutter_riverpod public API
+          overrides: [
+            settingsProvider.overrideWith(FakeLoadingSettingsNotifier.new),
+          ],
+          child: const MaterialApp(
+            home: OnboardingScreen(loadTimeout: shortTimeout),
+          ),
+        ),
+      );
+
+      // Advance past the injected timeout.
+      await Future<void>.delayed(
+        shortTimeout + const Duration(milliseconds: 50),
+      );
+      await tester.pump();
+      await tester.pumpAndSettle();
+    });
+
+    expect(find.textContaining('Could not load app data'), findsOneWidget);
   });
 }

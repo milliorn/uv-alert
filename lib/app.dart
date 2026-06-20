@@ -1,10 +1,9 @@
+import 'package:catcher_2/catcher_2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uvalert/providers/preferences_provider.dart';
+import 'package:uvalert/constants.dart';
 import 'package:uvalert/providers/settings_provider.dart';
-import 'package:uvalert/screens/dashboard_screen.dart';
 import 'package:uvalert/screens/onboarding_screen.dart';
-import 'package:uvalert/storage/preferences.dart';
 
 // Built once at startup; ColorScheme.fromSeed is expensive per-build.
 final ThemeData _lightTheme = ThemeData(
@@ -14,7 +13,7 @@ final ThemeData _lightTheme = ThemeData(
 
 final ThemeData _darkTheme = ThemeData(
   colorScheme: ColorScheme.fromSeed(
-    seedColor: Colors.orange,
+    seedColor: logoPurple,
     brightness: Brightness.dark,
   ),
   useMaterial3: true,
@@ -27,8 +26,6 @@ class UvAlertApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<Preferences> prefs = ref.watch(preferencesProvider);
-
     // Fall back to system theme while settings are loading or on error.
     final ThemeMode themeMode = ref.watch(
       settingsProvider.select(
@@ -38,19 +35,11 @@ class UvAlertApp extends ConsumerWidget {
 
     return MaterialApp(
       title: 'UV Alert',
+      navigatorKey: Catcher2.navigatorKey,
       theme: _lightTheme,
       darkTheme: _darkTheme,
       themeMode: themeMode,
-      home: switch (prefs) {
-        AsyncData<Preferences>(:final Preferences value) =>
-          value.isFirstLaunch
-              ? const OnboardingScreen()
-              : const DashboardScreen(),
-        AsyncError<Preferences>() => const Scaffold(
-          body: Center(child: Text('Failed to load preferences.')),
-        ),
-        _ => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      },
+      home: const OnboardingScreen(),
     );
   }
 }

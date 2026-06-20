@@ -13,6 +13,13 @@ class Preferences {
   /// The SharedPreferences key for [isFirstLaunch]. Exposed for tests only.
   @visibleForTesting
   static const String keyFirstLaunchForTesting = _keyFirstLaunch;
+
+  static const String _keyThemeStepDone = '${_prefix}theme_step_done';
+
+  /// The SharedPreferences key for [isThemeStepDone]. Exposed for tests only.
+  @visibleForTesting
+  static const String keyThemeStepDoneForTesting = _keyThemeStepDone;
+
   static const String _keyUuid = '${_prefix}uuid';
   static const String _keyTheme = '${_prefix}theme';
   static const String _keyUseGps = '${_prefix}use_gps';
@@ -36,6 +43,13 @@ class Preferences {
   /// Marks the first launch as complete.
   Future<void> setFirstLaunchDone() async =>
       _prefs.setBool(_keyFirstLaunch, false);
+
+  /// Whether the theme onboarding step has been completed.
+  bool get isThemeStepDone => _prefs.getBool(_keyThemeStepDone) ?? false;
+
+  /// Marks the theme onboarding step as complete.
+  Future<void> setThemeStepDone() async =>
+      _prefs.setBool(_keyThemeStepDone, true);
 
   /// The stored device UUID, or `null` if not yet set.
   String? get uuid => _prefs.getString(_keyUuid);
