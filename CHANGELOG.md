@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/milliorn/uv-alert/compare/v1.6.0...v1.7.0) (2026-06-20)
+
+
+### Features
+
+* implement onboarding location permission screen ([#62](https://github.com/milliorn/uv-alert/issues/62)) ([a92ff36](https://github.com/milliorn/uv-alert/commit/a92ff36ecf44591d8c48972f879d1d9cbe21c3a4))
+
 ## [1.6.0](https://github.com/milliorn/uv-alert/compare/v1.5.0...v1.6.0) (2026-06-05)
 
 
