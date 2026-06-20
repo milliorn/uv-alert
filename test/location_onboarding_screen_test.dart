@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uvalert/api/geocoding_api.dart';
 import 'package:uvalert/providers/device_id_provider.dart';
@@ -14,8 +12,10 @@ import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/screens/dashboard_screen.dart';
 import 'package:uvalert/screens/location_onboarding_screen.dart';
+import 'package:uvalert/storage/preferences.dart';
 
 import 'fakes/fake_geolocator.dart';
+import 'helpers.dart';
 
 // ---------------------------------------------------------------------------
 // LocationNotifier that succeeds without setting state (covers null-loc path)
@@ -59,7 +59,7 @@ GeocodingApi _fakeGeocodingApi({
   return GeocodingApi(
     proxyBaseUrl: _proxyUrl,
     deviceId: 'test-device-id',
-    httpClient: MockClient((_) async => http.Response(body, status)),
+    httpClient: mockClientReturning(status, body),
   );
 }
 
@@ -378,6 +378,29 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(DashboardScreen), findsOneWidget);
+  });
+
+  testWidgets(
+    'tapping Continue after confirm persists isFirstLaunch as false',
+    (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
+    );
+
+    await tester.tap(find.text('Enter location manually'));
+    await tester.pump();
+
+    await tester.enterText(find.byType(TextField), 'Fresno, CA');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
+    await tester.pumpAndSettle();
+
+    final Preferences prefs = await Preferences.load();
+    expect(prefs.isFirstLaunch, isFalse);
   });
 
   // -------------------------------------------------------------------------
