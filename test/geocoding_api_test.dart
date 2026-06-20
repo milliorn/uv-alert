@@ -31,8 +31,9 @@ const String _validBodyNoState =
 void main() {
   group('GeocodingApi.geocode', () {
     test('returns result on 200 with state field', () async {
-      final GeocodingApi api =
-          _makeApi(mockClientReturning(200, _validBodyWithState));
+      final GeocodingApi api = _makeApi(
+        mockClientReturning(200, _validBodyWithState),
+      );
       addTearDown(api.dispose);
       final GeocodingResult result = await api.geocode('Fresno, CA');
 
@@ -42,8 +43,9 @@ void main() {
     });
 
     test('returns result on 200 without state field', () async {
-      final GeocodingApi api =
-          _makeApi(mockClientReturning(200, _validBodyNoState));
+      final GeocodingApi api = _makeApi(
+        mockClientReturning(200, _validBodyNoState),
+      );
       addTearDown(api.dispose);
       final GeocodingResult result = await api.geocode('Paris');
 
@@ -85,8 +87,9 @@ void main() {
     test(
       'throws GeocodingException when required fields are missing',
       () async {
-        final GeocodingApi api =
-            _makeApi(mockClientReturning(200, '{"lat":36.75}'));
+        final GeocodingApi api = _makeApi(
+          mockClientReturning(200, '{"lat":36.75}'),
+        );
         addTearDown(api.dispose);
 
         await expectLater(
@@ -160,8 +163,9 @@ void main() {
 
   group('GeocodingApi.reverseGeocode', () {
     test('returns result on 200 with state field', () async {
-      final GeocodingApi api =
-          _makeApi(mockClientReturning(200, _validBodyWithState));
+      final GeocodingApi api = _makeApi(
+        mockClientReturning(200, _validBodyWithState),
+      );
       addTearDown(api.dispose);
       final GeocodingResult result = await api.reverseGeocode(
         lat: 36.75,

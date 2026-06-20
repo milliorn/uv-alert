@@ -191,7 +191,8 @@ class _LocationOnboardingScreenState
       if (!mounted) return;
       setState(() {
         _phase = _Phase.manual;
-        _errorMessage = 'Location not found. Try city only'
+        _errorMessage =
+            'Location not found. Try city only'
             ' (e.g. "London") or with full country name'
             ' (e.g. "London, England").';
       });

@@ -38,7 +38,6 @@ Map<String, Object?> _apiJson() => <String, Object?>{
   'fetched_at': 1699963200,
 };
 
-
 void main() {
   late MockCache mockCache;
 

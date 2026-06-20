@@ -134,8 +134,8 @@ class _ThemeOnboardingScreenState extends ConsumerState<ThemeOnboardingScreen> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: (settings.hasValue || settings.hasError) &&
-                          !_continuing
+                  onPressed:
+                      (settings.hasValue || settings.hasError) && !_continuing
                       ? _onContinue
                       : null,
                   child: const Text('Continue'),
