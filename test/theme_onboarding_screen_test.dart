@@ -8,21 +8,7 @@ import 'package:uvalert/screens/location_onboarding_screen.dart';
 import 'package:uvalert/screens/theme_onboarding_screen.dart';
 import 'package:uvalert/storage/preferences.dart';
 
-// SettingsNotifier that returns data immediately without reading preferences,
-// so Continue is enabled even when preferencesProvider is overridden to error.
-class _LoadedSettingsNotifier extends SettingsNotifier {
-  @override
-  AsyncValue<SettingsState> build() {
-    return const AsyncValue<SettingsState>.data(
-      SettingsState(
-        themeMode: ThemeMode.system,
-        useGps: false,
-        manualLocation: null,
-        notificationsEnabled: false,
-      ),
-    );
-  }
-}
+import 'fakes/fake_settings_notifier.dart';
 
 void main() {
   setUp(() {
@@ -222,14 +208,14 @@ void main() {
     'Continue shows snackbar and re-enables button when preferencesProvider '
     'throws',
     (WidgetTester tester) async {
-      // _LoadedSettingsNotifier returns data immediately in build() so Continue
-      // is enabled. preferencesProvider errors so _onContinue throws when it
+      // FakeLoadedSettingsNotifier returns data immediately so Continue is
+      // enabled. preferencesProvider errors so _onContinue throws when it
       // calls ref.read(preferencesProvider.future) to write setThemeStepDone.
       await tester.pumpWidget(
         ProviderScope(
           // ignore: always_specify_types - Override not in flutter_riverpod public API
           overrides: [
-            settingsProvider.overrideWith(_LoadedSettingsNotifier.new),
+            settingsProvider.overrideWith(FakeLoadedSettingsNotifier.new),
             preferencesProvider.overrideWithValue(
               AsyncValue<Preferences>.error(
                 Exception('prefs failed'),

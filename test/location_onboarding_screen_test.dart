@@ -63,6 +63,18 @@ GeocodingApi _fakeGeocodingApi({
   );
 }
 
+/// Drives the screen through manual entry to the confirm phase and taps
+/// Continue. Leaves the tester settled at the post-navigation state.
+Future<void> _tapContinueAfterManualEntry(WidgetTester tester) async {
+  await tester.tap(find.text('Enter location manually'));
+  await tester.pump();
+  await tester.enterText(find.byType(TextField), 'Fresno, CA');
+  await tester.testTextInput.receiveAction(TextInputAction.search);
+  await tester.pumpAndSettle();
+  await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
+  await tester.pumpAndSettle();
+}
+
 // ---------------------------------------------------------------------------
 // Widget helpers
 // ---------------------------------------------------------------------------
@@ -366,42 +378,21 @@ void main() {
     await tester.pumpWidget(
       _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
     );
-
-    await tester.tap(find.text('Enter location manually'));
-    await tester.pump();
-
-    await tester.enterText(find.byType(TextField), 'Fresno, CA');
-    await tester.testTextInput.receiveAction(TextInputAction.search);
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
-    await tester.pumpAndSettle();
-
+    await _tapContinueAfterManualEntry(tester);
     expect(find.byType(DashboardScreen), findsOneWidget);
   });
 
   testWidgets(
     'tapping Continue after confirm persists isFirstLaunch as false',
-    (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(
-      _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
-    );
-
-    await tester.tap(find.text('Enter location manually'));
-    await tester.pump();
-
-    await tester.enterText(find.byType(TextField), 'Fresno, CA');
-    await tester.testTextInput.receiveAction(TextInputAction.search);
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
-    await tester.pumpAndSettle();
-
-    final Preferences prefs = await Preferences.load();
-    expect(prefs.isFirstLaunch, isFalse);
-  });
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
+      );
+      await _tapContinueAfterManualEntry(tester);
+      final Preferences prefs = await Preferences.load();
+      expect(prefs.isFirstLaunch, isFalse);
+    },
+  );
 
   // -------------------------------------------------------------------------
   // Owned GeocodingApi creation (line 96: _ownedApi ??= GeocodingApi(...))

@@ -10,23 +10,8 @@ import 'package:uvalert/screens/onboarding_screen.dart';
 import 'package:uvalert/screens/theme_onboarding_screen.dart';
 import 'package:uvalert/storage/preferences.dart';
 
+import 'fakes/fake_settings_notifier.dart';
 import 'helpers.dart';
-
-// SettingsNotifier that immediately emits an error state.
-class _ErrorSettingsNotifier extends SettingsNotifier {
-  @override
-  AsyncValue<SettingsState> build() => AsyncValue<SettingsState>.error(
-    Exception('settings failed'),
-    StackTrace.empty,
-  );
-}
-
-// SettingsNotifier that stays in loading state forever (triggers timeout).
-class _LoadingForeverSettingsNotifier extends SettingsNotifier {
-  @override
-  AsyncValue<SettingsState> build() =>
-      const AsyncValue<SettingsState>.loading();
-}
 
 Widget _wrap({Map<String, Object> prefs = const <String, Object>{}}) {
   SharedPreferences.setMockInitialValues(prefs);
@@ -126,7 +111,7 @@ void main() {
         ProviderScope(
           // ignore: always_specify_types — Override not in flutter_riverpod public API
           overrides: [
-            settingsProvider.overrideWith(_ErrorSettingsNotifier.new),
+            settingsProvider.overrideWith(FakeErrorSettingsNotifier.new),
           ],
           child: const MaterialApp(home: OnboardingScreen()),
         ),
@@ -173,7 +158,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         // ignore: always_specify_types — Override not in flutter_riverpod public API
-        overrides: [settingsProvider.overrideWith(_ErrorSettingsNotifier.new)],
+        overrides: [
+          settingsProvider.overrideWith(FakeErrorSettingsNotifier.new),
+        ],
         child: const MaterialApp(home: OnboardingScreen()),
       ),
     );
@@ -192,7 +179,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         // ignore: always_specify_types — Override not in flutter_riverpod public API
-        overrides: [settingsProvider.overrideWith(_ErrorSettingsNotifier.new)],
+        overrides: [
+          settingsProvider.overrideWith(FakeErrorSettingsNotifier.new),
+        ],
         child: const MaterialApp(home: OnboardingScreen()),
       ),
     );
@@ -219,7 +208,7 @@ void main() {
         ProviderScope(
           // ignore: always_specify_types — Override not in flutter_riverpod public API
           overrides: [
-            settingsProvider.overrideWith(_LoadingForeverSettingsNotifier.new),
+            settingsProvider.overrideWith(FakeLoadingSettingsNotifier.new),
           ],
           child: const MaterialApp(
             home: OnboardingScreen(loadTimeout: shortTimeout),
