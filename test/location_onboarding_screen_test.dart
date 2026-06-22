@@ -10,8 +10,8 @@ import 'package:uvalert/providers/device_id_provider.dart';
 import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
-import 'package:uvalert/screens/dashboard_screen.dart';
 import 'package:uvalert/screens/location_onboarding_screen.dart';
+import 'package:uvalert/screens/notification_onboarding_screen.dart';
 import 'package:uvalert/storage/preferences.dart';
 
 import 'fakes/fake_geolocator.dart';
@@ -369,25 +369,28 @@ void main() {
   // Continue navigates to Dashboard
   // -------------------------------------------------------------------------
 
-  testWidgets('tapping Continue after confirm navigates to DashboardScreen', (
+  testWidgets(
+    'tapping Continue after confirm navigates to NotificationOnboardingScreen',
+    (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
       _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
     );
     await _tapContinueAfterManualEntry(tester);
-    expect(find.byType(DashboardScreen), findsOneWidget);
+    expect(find.byType(NotificationOnboardingScreen), findsOneWidget);
   });
 
   testWidgets(
-    'tapping Continue after confirm persists isFirstLaunch as false',
+    'tapping Continue after confirm does not clear isFirstLaunch',
     (WidgetTester tester) async {
       await tester.pumpWidget(
         _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
       );
       await _tapContinueAfterManualEntry(tester);
       final Preferences prefs = await Preferences.load();
-      expect(prefs.isFirstLaunch, isFalse);
+      // setFirstLaunchDone() moved to NotificationOnboardingScreen (issue #15).
+      expect(prefs.isFirstLaunch, isTrue);
     },
   );
 
@@ -540,7 +543,7 @@ void main() {
       find.text('Something went wrong. Please try again.'),
       findsOneWidget,
     );
-    expect(find.byType(DashboardScreen), findsNothing);
+    expect(find.byType(NotificationOnboardingScreen), findsNothing);
   });
 
   testWidgets('_onConfirm error re-enables Continue button so user can retry', (
