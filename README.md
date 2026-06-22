@@ -143,14 +143,15 @@ without mocks leaking across boundaries.
 - `theme_onboarding_screen.dart` -- step 1: theme selection; calls
   `prefs.setThemeStepDone()`; does NOT call `setFirstLaunchDone()`
 - `location_onboarding_screen.dart` -- step 2: GPS or manual entry via
-  geocoding; calls `setFirstLaunchDone()` after all data is written
+  geocoding; navigates to `NotificationOnboardingScreen`
+- `notification_onboarding_screen.dart` -- step 3: notification
+  preference (Default or None); calls `setFirstLaunchDone()` then
+  navigates to `DashboardScreen`
 - `dashboard_screen.dart` -- placeholder only
 - `onboarding_progress_dots.dart` -- shared progress indicator widget
 
 ### Not yet implemented
 
-- Onboarding step 3 (notifications, issue #15) -- when added, move
-  `setFirstLaunchDone()` there and bump `totalOnboardingSteps` to 3
 - Real dashboard screen and settings screen
 - `lib/services/` (background polling via `workmanager`, local
   notifications via `flutter_local_notifications`)
