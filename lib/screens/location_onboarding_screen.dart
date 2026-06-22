@@ -10,9 +10,8 @@ import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/providers/preferences_provider.dart';
 import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
-import 'package:uvalert/screens/dashboard_screen.dart';
+import 'package:uvalert/screens/notification_onboarding_screen.dart';
 import 'package:uvalert/screens/onboarding_progress_dots.dart';
-import 'package:uvalert/storage/preferences.dart';
 
 // ---------------------------------------------------------------------------
 // Layout constants
@@ -231,20 +230,13 @@ class _LocationOnboardingScreenState
 
       if (!mounted) return;
 
-      final Preferences prefs = await ref.read(preferencesProvider.future);
-      // Mark onboarding complete only after all data is written; this is the
-      // last onboarding step until the notifications screen (issue #15) is
-      // added, at which point setFirstLaunchDone() moves there.
-      await prefs.setFirstLaunchDone();
-
-      if (!mounted) return;
-
       ref.invalidate(preferencesProvider);
 
-      // TODO(onboarding): navigate to notifications screen (issue #15).
       unawaited(
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute<void>(builder: (_) => const DashboardScreen()),
+          MaterialPageRoute<void>(
+            builder: (_) => const NotificationOnboardingScreen(),
+          ),
         ),
       );
     } on Object {
