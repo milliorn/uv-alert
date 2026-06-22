@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 const int msPerSecond = 1000;
 
 /// Total number of onboarding steps shown in the progress indicator.
-const int totalOnboardingSteps = 2;
+const int totalOnboardingSteps = 3;
 
 /// Brand periwinkle drawn from the logo's actual color (#9498ED).
 const Color logoPurple = Color(0xFF9498ED);
