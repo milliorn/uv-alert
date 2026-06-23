@@ -134,6 +134,9 @@ without mocks leaking across boundaries.
   kick off async initialization.
 - Unawaited `Navigator` push calls must be wrapped in `unawaited()`
   (required by `unawaited_futures` + `discarded_futures` lint rules).
+- `setFirstLaunchDone()` is owned by the **last** onboarding screen
+  (`NotificationOnboardingScreen`); move it forward when a new screen
+  is appended.
 
 ### Screens (`lib/screens/`)
 
@@ -179,6 +182,16 @@ Used for both `hourly` (48 h) and `daily` (8 d) lists.
 | `notifications_enabled` | `bool` | `false` |
 | `cached_payload` | `String?` | -- |
 | `cached_payload_at` | `String?` | -- |
+
+## Headless display (Linux)
+
+Required for running the Flutter Linux desktop target under Xvfb
+
+```sh
+pgrep -x Xvfb >/dev/null || Xvfb :99 -screen 0 1280x1024x24 -ac &
+sleep 0.5
+export DISPLAY=:99
+```
 
 ## Running Tests
 
@@ -232,8 +245,8 @@ Additional style rules:
   (`always_specify_types: true`)
 - All numeric literals must be named constants -- no magic numbers, no
   single-use exemptions
-- Double quotes for strings; single quotes only when the string
-  contains a double quote
+- Single quotes for strings; double quotes only when the string
+  contains a single quote (`prefer_single_quotes` lint rule)
 - File-private helpers go at file scope with `_` prefix, not as static
   methods
 - Trailing commas are managed by the formatter
