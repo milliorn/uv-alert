@@ -7,7 +7,6 @@ import 'package:uvalert/api/geocoding_api.dart';
 import 'package:uvalert/constants.dart';
 import 'package:uvalert/providers/device_id_provider.dart';
 import 'package:uvalert/providers/location_provider.dart';
-import 'package:uvalert/providers/preferences_provider.dart';
 import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/screens/notification_onboarding_screen.dart';
@@ -18,8 +17,6 @@ import 'package:uvalert/screens/onboarding_progress_dots.dart';
 // ---------------------------------------------------------------------------
 const int _locationScreenIndex = 1;
 
-const double _sectionGap = 24;
-const double _itemGap = 12;
 const double _spinnerSize = 16;
 const double _spinnerStrokeWidth = 2;
 
@@ -230,8 +227,6 @@ class _LocationOnboardingScreenState
 
       if (!mounted) return;
 
-      ref.invalidate(preferencesProvider);
-
       unawaited(
         Navigator.of(context).pushReplacement(
           MaterialPageRoute<void>(
@@ -296,7 +291,7 @@ class _LocationOnboardingScreenState
             vertical: onboardingPaddingVertical,
           ),
           child: Column(
-            spacing: _sectionGap,
+            spacing: onboardingSectionGap,
             children: <Widget>[
               const Spacer(),
 
@@ -361,7 +356,7 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      spacing: _itemGap,
+      spacing: onboardingItemGap,
       children: <Widget>[
         Text(
           'Your Location',
@@ -442,7 +437,7 @@ class _ManualEntryField extends StatelessWidget {
         border: const OutlineInputBorder(),
         suffixIcon: loading
             ? const Padding(
-                padding: EdgeInsets.all(_itemGap),
+                padding: EdgeInsets.all(onboardingItemGap),
                 child: SizedBox.square(
                   dimension: _spinnerSize,
                   child: CircularProgressIndicator.adaptive(
@@ -487,12 +482,12 @@ class _ConfirmCard extends StatelessWidget {
         color: colors.primary.withValues(alpha: onboardingSelectedCardOpacity),
       ),
       child: Column(
-        spacing: _itemGap,
+        spacing: onboardingItemGap,
         children: <Widget>[
           Row(
             children: <Widget>[
               Icon(Icons.location_on, color: colors.primary),
-              const SizedBox(width: _itemGap),
+              const SizedBox(width: onboardingItemGap),
               Expanded(
                 child: Text(
                   displayName,

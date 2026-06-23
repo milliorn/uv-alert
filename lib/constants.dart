@@ -52,3 +52,12 @@ const double onboardingSelectedBorderWidth = 2;
 
 /// Background fill opacity for a selected card on onboarding screens.
 const double onboardingSelectedCardOpacity = 0.08;
+
+/// Gap between major sections within an onboarding screen.
+const double onboardingSectionGap = 24;
+
+/// Gap between items within an onboarding card or section.
+const double onboardingItemGap = 12;
+
+/// Gap between a card's label and its description line.
+const double onboardingLabelGap = 4;
