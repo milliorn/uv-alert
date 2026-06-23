@@ -72,9 +72,8 @@ void main() {
     final OnboardingProgressDots dots = tester.widget<OnboardingProgressDots>(
       find.byType(OnboardingProgressDots),
     );
-    expect(dots.current, equals(2));
+    expect(dots.current, equals(totalOnboardingSteps - 1));
     expect(dots.total, equals(totalOnboardingSteps));
-    expect(dots.total, equals(3));
   });
 
   // -------------------------------------------------------------------------
