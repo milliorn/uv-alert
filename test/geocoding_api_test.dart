@@ -16,42 +16,70 @@ GeocodingApi _makeApi(http.Client client) => GeocodingApi(
   httpClient: client,
 );
 
-// Proxy response shape: { lat, lon, name, country, state? }
+// Proxy response shape: array of { lat, lon, name, country, state? }
 const String _validBodyWithState =
+    '[{"lat":36.75,"lon":-119.65,'
+    '"name":"Fresno","country":"US","state":"California"}]';
+
+const String _validBodyNoState =
+    '[{"lat":48.85,"lon":2.35,"name":"Paris","country":"FR"}]';
+
+const String _validBodyMultiple =
+    '[{"lat":51.5,"lon":-0.1,"name":"London",'
+    '"country":"GB","state":"England"},'
+    '{"lat":42.9,"lon":-81.2,"name":"London",'
+    '"country":"CA","state":"Ontario"}]';
+
+// reverseGeocode uses a single-object response (separate OWM endpoint).
+const String _reverseBodyWithState =
     '{"lat":36.75,"lon":-119.65,'
     '"name":"Fresno","country":"US","state":"California"}';
 
-const String _validBodyNoState =
-    '{"lat":48.85,"lon":2.35,"name":"Paris","country":"FR"}';
-
 // ---------------------------------------------------------------------------
-// geocode
+// geocodeMultiple
 // ---------------------------------------------------------------------------
 
 void main() {
-  group('GeocodingApi.geocode', () {
-    test('returns result on 200 with state field', () async {
+  group('GeocodingApi.geocodeMultiple', () {
+    test('returns single result on 200 with state field', () async {
       final GeocodingApi api = _makeApi(
         mockClientReturning(200, _validBodyWithState),
       );
       addTearDown(api.dispose);
-      final GeocodingResult result = await api.geocode('Fresno, CA');
+      final List<GeocodingResult> results =
+          await api.geocodeMultiple('Fresno, CA');
 
-      expect(result.lat, 36.75);
-      expect(result.lon, -119.65);
-      expect(result.displayName, 'Fresno, California, US');
+      expect(results, hasLength(1));
+      expect(results.first.lat, 36.75);
+      expect(results.first.lon, -119.65);
+      expect(results.first.displayName, 'Fresno, California, US');
     });
 
-    test('returns result on 200 without state field', () async {
+    test('returns single result on 200 without state field', () async {
       final GeocodingApi api = _makeApi(
         mockClientReturning(200, _validBodyNoState),
       );
       addTearDown(api.dispose);
-      final GeocodingResult result = await api.geocode('Paris');
+      final List<GeocodingResult> results = await api.geocodeMultiple('Paris');
 
-      expect(result.lat, 48.85);
-      expect(result.lon, 2.35);
-      expect(result.displayName, 'Paris, FR');
+      expect(results, hasLength(1));
+      expect(results.first.lat, 48.85);
+      expect(results.first.lon, 2.35);
+      expect(results.first.displayName, 'Paris, FR');
+    });
+
+    test('returns multiple results when proxy returns several matches',
+        () async {
+      final GeocodingApi api = _makeApi(
+        mockClientReturning(200, _validBodyMultiple),
+      );
+      addTearDown(api.dispose);
+      final List<GeocodingResult> results =
+          await api.geocodeMultiple('London');
+
+      expect(results, hasLength(2));
+      expect(results[0].displayName, 'London, England, GB');
+      expect(results[1].displayName, 'London, Ontario, CA');
     });
 
     test('throws GeocodingNotFoundException on 404', () async {
@@ -59,7 +87,7 @@ void main() {
       addTearDown(api.dispose);
 
       await expectLater(
-        api.geocode('nowhere'),
+        api.geocodeMultiple('nowhere'),
         throwsA(isA<GeocodingNotFoundException>()),
       );
     });
@@ -69,42 +97,37 @@ void main() {
       addTearDown(api.dispose);
 
       await expectLater(
-        api.geocode('Fresno, CA'),
+        api.geocodeMultiple('Fresno, CA'),
         throwsA(isA<GeocodingException>()),
       );
     });
 
-    test('throws GeocodingException when body is not a JSON object', () async {
+    test('throws GeocodingException when body is not a JSON array', () async {
       final GeocodingApi api = _makeApi(mockClientReturning(200, '"string"'));
       addTearDown(api.dispose);
 
       await expectLater(
-        api.geocode('Fresno, CA'),
+        api.geocodeMultiple('Fresno, CA'),
         throwsA(isA<GeocodingException>()),
       );
     });
 
-    test(
-      'throws GeocodingException when required fields are missing',
-      () async {
-        final GeocodingApi api = _makeApi(
-          mockClientReturning(200, '{"lat":36.75}'),
-        );
-        addTearDown(api.dispose);
+    test('throws GeocodingException when array is empty', () async {
+      final GeocodingApi api = _makeApi(mockClientReturning(200, '[]'));
+      addTearDown(api.dispose);
 
-        await expectLater(
-          api.geocode('Fresno, CA'),
-          throwsA(isA<GeocodingException>()),
-        );
-      },
-    );
+      await expectLater(
+        api.geocodeMultiple('Fresno, CA'),
+        throwsA(isA<GeocodingException>()),
+      );
+    });
 
     test('throws GeocodingException on malformed JSON body', () async {
       final GeocodingApi api = _makeApi(mockClientReturning(200, '{not json}'));
       addTearDown(api.dispose);
 
       await expectLater(
-        api.geocode('Fresno, CA'),
+        api.geocodeMultiple('Fresno, CA'),
         throwsA(isA<GeocodingException>()),
       );
     });
@@ -118,7 +141,7 @@ void main() {
 
       final GeocodingApi api = _makeApi(client);
       addTearDown(api.dispose);
-      await api.geocode('Fresno, CA');
+      await api.geocodeMultiple('Fresno, CA');
 
       expect(captured?.queryParameters['q'], 'Fresno, CA');
     });
@@ -132,7 +155,7 @@ void main() {
 
       final GeocodingApi api = _makeApi(client);
       addTearDown(api.dispose);
-      await api.geocode('Fresno, CA');
+      await api.geocodeMultiple('Fresno, CA');
 
       expect(capturedHeaders?[deviceIdHeader], 'test-device-id');
     });
@@ -150,7 +173,7 @@ void main() {
         httpClient: client,
       );
       addTearDown(api.dispose);
-      await api.geocode('Fresno, CA');
+      await api.geocodeMultiple('Fresno, CA');
 
       expect(captured?.host, 'proxy.test');
       expect(captured?.path, '/api/geocode');
@@ -164,7 +187,7 @@ void main() {
   group('GeocodingApi.reverseGeocode', () {
     test('returns result on 200 with state field', () async {
       final GeocodingApi api = _makeApi(
-        mockClientReturning(200, _validBodyWithState),
+        mockClientReturning(200, _reverseBodyWithState),
       );
       addTearDown(api.dispose);
       final GeocodingResult result = await api.reverseGeocode(
@@ -191,7 +214,7 @@ void main() {
       Uri? captured;
       final MockClient client = MockClient((http.Request req) async {
         captured = req.url;
-        return http.Response(_validBodyWithState, 200);
+        return http.Response(_reverseBodyWithState, 200);
       });
 
       final GeocodingApi api = _makeApi(client);
@@ -207,7 +230,7 @@ void main() {
       Map<String, String>? capturedHeaders;
       final MockClient client = MockClient((http.Request req) async {
         capturedHeaders = req.headers;
-        return http.Response(_validBodyWithState, 200);
+        return http.Response(_reverseBodyWithState, 200);
       });
 
       final GeocodingApi api = _makeApi(client);

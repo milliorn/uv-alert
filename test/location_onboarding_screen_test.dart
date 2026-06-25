@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uvalert/api/geocoding_api.dart';
 import 'package:uvalert/providers/device_id_provider.dart';
@@ -15,7 +17,6 @@ import 'package:uvalert/screens/notification_onboarding_screen.dart';
 import 'package:uvalert/storage/preferences.dart';
 
 import 'fakes/fake_geolocator.dart';
-import 'helpers.dart';
 
 // ---------------------------------------------------------------------------
 // LocationNotifier that succeeds without setting state (covers null-loc path)
@@ -46,20 +47,38 @@ class _ThrowingSettingsNotifier extends SettingsNotifier {
 
 const String _proxyUrl = 'https://proxy.test';
 
-// _parseResult assembles displayName as 'name, state, country'.
+// displayName assembled as 'name, state, country'.
 const String _displayName = 'Fresno, California, US';
-const String _validGeoBody =
+
+// geocodeMultiple (forward, ?q=) returns a JSON array.
+const String _validForwardBody =
+    '[{"lat":36.75,"lon":-119.65,'
+    '"name":"Fresno","state":"California","country":"US"}]';
+
+// reverseGeocode (?lat=&lon=) returns a single JSON object.
+const String _validReverseBody =
     '{"lat":36.75,"lon":-119.65,'
     '"name":"Fresno","state":"California","country":"US"}';
 
-GeocodingApi _fakeGeocodingApi({
-  int status = 200,
-  String body = _validGeoBody,
-}) {
+// Routes to array body for forward (?q=) and object body for reverse (?lat=).
+http.Client _geoClient({int status = 200, String? forwardBody}) {
+  final String fwd = forwardBody ?? _validForwardBody;
+  return MockClient((http.Request req) async {
+    if (req.url.queryParameters.containsKey('q')) {
+      return http.Response(fwd, status);
+    }
+    return http.Response(
+      status == 200 ? _validReverseBody : '',
+      status,
+    );
+  });
+}
+
+GeocodingApi _fakeGeocodingApi({int status = 200, String? forwardBody}) {
   return GeocodingApi(
     proxyBaseUrl: _proxyUrl,
     deviceId: 'test-device-id',
-    httpClient: mockClientReturning(status, body),
+    httpClient: _geoClient(status: status, forwardBody: forwardBody),
   );
 }
 
@@ -215,7 +234,7 @@ void main() {
     await tester.pumpWidget(
       _wrap(
         LocationOnboardingScreen(
-          geocodingApi: _fakeGeocodingApi(status: 404, body: 'not found'),
+          geocodingApi: _fakeGeocodingApi(status: 404, forwardBody: '[]'),
         ),
       ),
     );
@@ -237,7 +256,7 @@ void main() {
     await tester.pumpWidget(
       _wrap(
         LocationOnboardingScreen(
-          geocodingApi: _fakeGeocodingApi(status: 500, body: 'error'),
+          geocodingApi: _fakeGeocodingApi(status: 500, forwardBody: 'error'),
         ),
       ),
     );
@@ -350,7 +369,7 @@ void main() {
     await tester.pumpWidget(
       _wrap(
         LocationOnboardingScreen(
-          geocodingApi: _fakeGeocodingApi(status: 404, body: 'not found'),
+          geocodingApi: _fakeGeocodingApi(status: 404, forwardBody: '[]'),
         ),
         platform: platform,
       ),
