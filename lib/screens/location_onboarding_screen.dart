@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:uvalert/api/geocoding_api.dart';
@@ -140,6 +141,12 @@ class _LocationOnboardingScreenState
       // Permission denied; fall through to manual entry.
       setState(() => _phase = _Phase.manual);
       _manualFocus.requestFocus();
+    } on TimeoutException {
+      if (!mounted) return;
+      _setError(
+        'GPS is not available on this device. '
+        'Try entering your location manually.',
+      );
     } on GeocodingNotFoundException {
       if (!mounted) return;
       _setError('Could not determine your city. Try entering it manually.');
