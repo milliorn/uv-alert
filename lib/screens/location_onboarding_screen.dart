@@ -53,6 +53,9 @@ enum _Phase {
 
   /// Geocoding the manual-entry string.
   geocoding,
+
+  /// Multiple geocoding results returned; user must pick one.
+  picking,
 }
 
 // ---------------------------------------------------------------------------
@@ -81,6 +84,7 @@ class _LocationOnboardingScreenState
   _Phase _phase = _Phase.idle;
   bool _continuing = false;
   _ConfirmResult? _pending;
+  List<GeocodingResult> _candidates = <GeocodingResult>[];
   String _errorMessage = '';
 
   final TextEditingController _manualController = TextEditingController();
@@ -179,17 +183,24 @@ class _LocationOnboardingScreenState
     });
 
     try {
-      final GeocodingResult result = await _geocodingApi(
+      final List<GeocodingResult> results = await _geocodingApi(
         proxyBaseUrl,
         deviceId,
-      ).geocode(query);
+      ).geocodeMultiple(query);
 
       if (!mounted) return;
 
-      setState(() {
-        _pending = (result: result, fromGps: false);
-        _phase = _Phase.confirm;
-      });
+      if (results.length == 1) {
+        setState(() {
+          _pending = (result: results.first, fromGps: false);
+          _phase = _Phase.confirm;
+        });
+      } else {
+        setState(() {
+          _candidates = results;
+          _phase = _Phase.picking;
+        });
+      }
     } on GeocodingNotFoundException {
       if (!mounted) return;
       setState(() {
@@ -206,6 +217,14 @@ class _LocationOnboardingScreenState
         _errorMessage = 'Something went wrong. Please try again.';
       });
     }
+  }
+
+  void _onPickCandidate(GeocodingResult result) {
+    setState(() {
+      _candidates = <GeocodingResult>[];
+      _pending = (result: result, fromGps: false);
+      _phase = _Phase.confirm;
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -318,6 +337,12 @@ class _LocationOnboardingScreenState
                   focusNode: _manualFocus,
                   loading: _phase == _Phase.geocoding,
                   onSearch: onManualSearch,
+                ),
+
+              if (_phase == _Phase.picking)
+                _PickList(
+                  candidates: _candidates,
+                  onPick: _onPickCandidate,
                 ),
 
               if (_phase == _Phase.confirm)
@@ -520,6 +545,33 @@ class _ConfirmCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _PickList extends StatelessWidget {
+  const _PickList({required this.candidates, required this.onPick});
+
+  final List<GeocodingResult> candidates;
+  final void Function(GeocodingResult) onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: onboardingItemGap,
+      children: <Widget>[
+        Text(
+          'Select your location:',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        ...candidates.map(
+          (GeocodingResult r) => OutlinedButton(
+            onPressed: () => onPick(r),
+            child: Text(r.displayName, textAlign: TextAlign.center),
+          ),
+        ),
+      ],
     );
   }
 }

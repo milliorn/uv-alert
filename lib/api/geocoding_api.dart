@@ -48,12 +48,13 @@ class GeocodingApi {
     if (_ownsClient) _httpClient.close();
   }
 
-  /// Resolves a location [query] string (e.g. "Fresno") to coordinates
-  /// and a human-readable display name.
+  /// Resolves a location [query] string (e.g. "Fresno") to a list of
+  /// candidate matches, ordered by relevance.
   ///
-  /// Throws [GeocodingNotFoundException] when the proxy returns 404 (no match).
-  /// Throws [GeocodingException] on any other non-200 response or parse error.
-  Future<GeocodingResult> geocode(String query) async {
+  /// Returns between 1 and 5 results. Throws [GeocodingNotFoundException]
+  /// when the proxy returns 404 (no match). Throws [GeocodingException] on
+  /// any other non-200 response or parse error.
+  Future<List<GeocodingResult>> geocodeMultiple(String query) async {
     final Uri uri = _geocodeUri.replace(
       queryParameters: <String, String>{'q': query},
     );
@@ -62,7 +63,7 @@ class GeocodingApi {
         .get(uri, headers: _headers)
         .timeout(_timeout);
 
-    return _parseResult(response);
+    return _parseResults(response);
   }
 
   /// Resolves GPS [lat]/[lon] coordinates to a human-readable display name.
@@ -87,6 +88,61 @@ class GeocodingApi {
     return _parseResult(response);
   }
 
+  List<GeocodingResult> _parseResults(http.Response response) {
+    if (response.statusCode == httpNotFound) {
+      throw const GeocodingNotFoundException();
+    }
+
+    if (response.statusCode != httpOk) {
+      throw GeocodingException(response.statusCode, response.body);
+    }
+
+    try {
+      final Object? decoded = jsonDecode(response.body);
+
+      if (decoded is! List<Object?>) {
+        throw GeocodingException(response.statusCode, response.body);
+      }
+
+      final List<GeocodingResult> results = <GeocodingResult>[];
+
+      for (final Object? item in decoded) {
+        if (item is! Map<String, Object?>) continue;
+
+        final Object? lat = item['lat'];
+        final Object? lon = item['lon'];
+        final Object? name = item['name'];
+        final Object? country = item['country'];
+        final Object? state = item['state'];
+
+        if (lat is! num ||
+            lon is! num ||
+            name is! String ||
+            country is! String) {
+          continue;
+        }
+
+        final String displayName = state is String
+            ? '$name, $state, $country'
+            : '$name, $country';
+
+        results.add((
+          lat: lat.toDouble(),
+          lon: lon.toDouble(),
+          displayName: displayName,
+        ));
+      }
+
+      if (results.isEmpty) {
+        throw GeocodingException(response.statusCode, response.body);
+      }
+
+      return results;
+    } on FormatException catch (e) {
+      throw GeocodingException(response.statusCode, 'parse error: $e');
+    }
+  }
+
   GeocodingResult _parseResult(http.Response response) {
     if (response.statusCode == httpNotFound) {
       throw const GeocodingNotFoundException();
@@ -109,7 +165,10 @@ class GeocodingApi {
       final Object? country = decoded['country'];
       final Object? state = decoded['state'];
 
-      if (lat is! num || lon is! num || name is! String || country is! String) {
+      if (lat is! num ||
+          lon is! num ||
+          name is! String ||
+          country is! String) {
         throw GeocodingException(response.statusCode, response.body);
       }
 
