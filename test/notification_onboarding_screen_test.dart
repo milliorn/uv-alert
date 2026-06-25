@@ -55,7 +55,10 @@ void main() {
 
   testWidgets('shows settings note text', (WidgetTester tester) async {
     await tester.pumpWidget(_wrap());
-    expect(find.textContaining('Notifications can be enabled'), findsOneWidget);
+    expect(
+      find.textContaining('More notification options can be found in Settings'),
+      findsOneWidget,
+    );
   });
 
   // -------------------------------------------------------------------------
