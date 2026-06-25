@@ -67,10 +67,7 @@ http.Client _geoClient({int status = 200, String? forwardBody}) {
     if (req.url.queryParameters.containsKey('q')) {
       return http.Response(fwd, status);
     }
-    return http.Response(
-      status == 200 ? _validReverseBody : '',
-      status,
-    );
+    return http.Response(status == 200 ? _validReverseBody : '', status);
   });
 }
 
@@ -390,28 +387,26 @@ void main() {
 
   testWidgets(
     'tapping Continue after confirm navigates to NotificationOnboardingScreen',
-    (
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
+      );
+      await _tapContinueAfterManualEntry(tester);
+      expect(find.byType(NotificationOnboardingScreen), findsOneWidget);
+    },
+  );
+
+  testWidgets('tapping Continue after confirm does not clear isFirstLaunch', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
       _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
     );
     await _tapContinueAfterManualEntry(tester);
-    expect(find.byType(NotificationOnboardingScreen), findsOneWidget);
+    final Preferences prefs = await Preferences.load();
+    // setFirstLaunchDone() moved to NotificationOnboardingScreen (issue #15).
+    expect(prefs.isFirstLaunch, isTrue);
   });
-
-  testWidgets(
-    'tapping Continue after confirm does not clear isFirstLaunch',
-    (WidgetTester tester) async {
-      await tester.pumpWidget(
-        _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
-      );
-      await _tapContinueAfterManualEntry(tester);
-      final Preferences prefs = await Preferences.load();
-      // setFirstLaunchDone() moved to NotificationOnboardingScreen (issue #15).
-      expect(prefs.isFirstLaunch, isTrue);
-    },
-  );
 
   // -------------------------------------------------------------------------
   // Owned GeocodingApi creation (line 96: _ownedApi ??= GeocodingApi(...))

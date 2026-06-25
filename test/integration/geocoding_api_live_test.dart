@@ -30,8 +30,9 @@ void main() {
     test(
       'happy path with state - Fresno returns name, state, country',
       () async {
-        final List<GeocodingResult> results =
-            await api.geocodeMultiple('Fresno');
+        final List<GeocodingResult> results = await api.geocodeMultiple(
+          'Fresno',
+        );
 
         expect(results, isNotEmpty);
         final GeocodingResult first = results.first;
@@ -45,8 +46,9 @@ void main() {
     test(
       'international city - Tokyo returns valid coords and displayName',
       () async {
-        final List<GeocodingResult> results =
-            await api.geocodeMultiple('Tokyo, Japan');
+        final List<GeocodingResult> results = await api.geocodeMultiple(
+          'Tokyo, Japan',
+        );
 
         expect(results, isNotEmpty);
         final GeocodingResult first = results.first;
@@ -73,8 +75,9 @@ void main() {
     test(
       'coords round-trip - Fresno lat/lon are in the right ballpark',
       () async {
-        final List<GeocodingResult> results =
-            await api.geocodeMultiple('Fresno');
+        final List<GeocodingResult> results = await api.geocodeMultiple(
+          'Fresno',
+        );
 
         expect(results, isNotEmpty);
         final GeocodingResult first = results.first;

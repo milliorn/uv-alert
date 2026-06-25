@@ -46,8 +46,9 @@ void main() {
         mockClientReturning(200, _validBodyWithState),
       );
       addTearDown(api.dispose);
-      final List<GeocodingResult> results =
-          await api.geocodeMultiple('Fresno, CA');
+      final List<GeocodingResult> results = await api.geocodeMultiple(
+        'Fresno, CA',
+      );
 
       expect(results, hasLength(1));
       expect(results.first.lat, 36.75);
@@ -68,19 +69,22 @@ void main() {
       expect(results.first.displayName, 'Paris, FR');
     });
 
-    test('returns multiple results when proxy returns several matches',
-        () async {
-      final GeocodingApi api = _makeApi(
-        mockClientReturning(200, _validBodyMultiple),
-      );
-      addTearDown(api.dispose);
-      final List<GeocodingResult> results =
-          await api.geocodeMultiple('London');
+    test(
+      'returns multiple results when proxy returns several matches',
+      () async {
+        final GeocodingApi api = _makeApi(
+          mockClientReturning(200, _validBodyMultiple),
+        );
+        addTearDown(api.dispose);
+        final List<GeocodingResult> results = await api.geocodeMultiple(
+          'London',
+        );
 
-      expect(results, hasLength(2));
-      expect(results[0].displayName, 'London, England, GB');
-      expect(results[1].displayName, 'London, Ontario, CA');
-    });
+        expect(results, hasLength(2));
+        expect(results[0].displayName, 'London, England, GB');
+        expect(results[1].displayName, 'London, Ontario, CA');
+      },
+    );
 
     test('throws GeocodingNotFoundException on 404', () async {
       final GeocodingApi api = _makeApi(mockClientReturning(404, 'not found'));

@@ -165,10 +165,7 @@ class GeocodingApi {
       final Object? country = decoded['country'];
       final Object? state = decoded['state'];
 
-      if (lat is! num ||
-          lon is! num ||
-          name is! String ||
-          country is! String) {
+      if (lat is! num || lon is! num || name is! String || country is! String) {
         throw GeocodingException(response.statusCode, response.body);
       }
 

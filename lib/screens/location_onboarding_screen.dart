@@ -153,9 +153,7 @@ class _LocationOnboardingScreenState
       );
     } on GeocodingNotFoundException {
       if (!mounted) return;
-      _setError(
-        'Could not determine your city. Try entering it manually.',
-      );
+      _setError('Could not determine your city. Try entering it manually.');
     } on Object {
       if (!mounted) return;
       _setError('Something went wrong. Please try again.');
@@ -594,10 +592,7 @@ class _PickList extends StatelessWidget {
           ),
           textAlign: TextAlign.center,
         ),
-        TextButton(
-          onPressed: onSearchAgain,
-          child: const Text('Search again'),
-        ),
+        TextButton(onPressed: onSearchAgain, child: const Text('Search again')),
       ],
     );
   }

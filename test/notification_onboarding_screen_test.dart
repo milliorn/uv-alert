@@ -55,10 +55,7 @@ void main() {
 
   testWidgets('shows settings note text', (WidgetTester tester) async {
     await tester.pumpWidget(_wrap());
-    expect(
-      find.textContaining('Notifications can be enabled'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('Notifications can be enabled'), findsOneWidget);
   });
 
   // -------------------------------------------------------------------------
@@ -80,15 +77,14 @@ void main() {
   // Default Notifications path
   // -------------------------------------------------------------------------
 
-  testWidgets(
-    'tapping Default Notifications navigates to DashboardScreen',
-    (WidgetTester tester) async {
-      await tester.pumpWidget(_wrap());
-      await tester.tap(find.text('Default Notifications'));
-      await tester.pumpAndSettle();
-      expect(find.byType(DashboardScreen), findsOneWidget);
-    },
-  );
+  testWidgets('tapping Default Notifications navigates to DashboardScreen', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(_wrap());
+    await tester.tap(find.text('Default Notifications'));
+    await tester.pumpAndSettle();
+    expect(find.byType(DashboardScreen), findsOneWidget);
+  });
 
   testWidgets(
     'tapping Default Notifications sets notificationsEnabled to true',
@@ -101,52 +97,48 @@ void main() {
     },
   );
 
-  testWidgets(
-    'tapping Default Notifications sets isFirstLaunch to false',
-    (WidgetTester tester) async {
-      await tester.pumpWidget(_wrap());
-      await tester.tap(find.text('Default Notifications'));
-      await tester.pumpAndSettle();
-      final Preferences prefs = await Preferences.load();
-      expect(prefs.isFirstLaunch, isFalse);
-    },
-  );
+  testWidgets('tapping Default Notifications sets isFirstLaunch to false', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(_wrap());
+    await tester.tap(find.text('Default Notifications'));
+    await tester.pumpAndSettle();
+    final Preferences prefs = await Preferences.load();
+    expect(prefs.isFirstLaunch, isFalse);
+  });
 
   // -------------------------------------------------------------------------
   // No Notifications path
   // -------------------------------------------------------------------------
 
-  testWidgets(
-    'tapping No Notifications navigates to DashboardScreen',
-    (WidgetTester tester) async {
-      await tester.pumpWidget(_wrap());
-      await tester.tap(find.text('No Notifications'));
-      await tester.pumpAndSettle();
-      expect(find.byType(DashboardScreen), findsOneWidget);
-    },
-  );
+  testWidgets('tapping No Notifications navigates to DashboardScreen', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(_wrap());
+    await tester.tap(find.text('No Notifications'));
+    await tester.pumpAndSettle();
+    expect(find.byType(DashboardScreen), findsOneWidget);
+  });
 
-  testWidgets(
-    'tapping No Notifications leaves notificationsEnabled false',
-    (WidgetTester tester) async {
-      await tester.pumpWidget(_wrap());
-      await tester.tap(find.text('No Notifications'));
-      await tester.pumpAndSettle();
-      final Preferences prefs = await Preferences.load();
-      expect(prefs.notificationsEnabled, isFalse);
-    },
-  );
+  testWidgets('tapping No Notifications leaves notificationsEnabled false', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(_wrap());
+    await tester.tap(find.text('No Notifications'));
+    await tester.pumpAndSettle();
+    final Preferences prefs = await Preferences.load();
+    expect(prefs.notificationsEnabled, isFalse);
+  });
 
-  testWidgets(
-    'tapping No Notifications sets isFirstLaunch to false',
-    (WidgetTester tester) async {
-      await tester.pumpWidget(_wrap());
-      await tester.tap(find.text('No Notifications'));
-      await tester.pumpAndSettle();
-      final Preferences prefs = await Preferences.load();
-      expect(prefs.isFirstLaunch, isFalse);
-    },
-  );
+  testWidgets('tapping No Notifications sets isFirstLaunch to false', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(_wrap());
+    await tester.tap(find.text('No Notifications'));
+    await tester.pumpAndSettle();
+    final Preferences prefs = await Preferences.load();
+    expect(prefs.isFirstLaunch, isFalse);
+  });
 
   // -------------------------------------------------------------------------
   // Error path
