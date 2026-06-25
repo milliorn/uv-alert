@@ -9,6 +9,9 @@ class FakeGeolocatorPlatform extends GeolocatorPlatform {
   LocationPermission checkResult = LocationPermission.always;
   LocationPermission requestResult = LocationPermission.always;
   Position? positionResult;
+  // When set, getCurrentPosition waits this long before resolving, allowing
+  // timeout tests to trigger TimeoutException without real wall-clock delay.
+  Duration? positionDelay;
 
   @override
   Future<LocationPermission> checkPermission() async => checkResult;
@@ -20,6 +23,9 @@ class FakeGeolocatorPlatform extends GeolocatorPlatform {
   Future<Position> getCurrentPosition({
     LocationSettings? locationSettings,
   }) async {
+    if (positionDelay != null) {
+      await Future<void>.delayed(positionDelay!);
+    }
     if (positionResult == null) {
       throw StateError(
         'FakeGeolocatorPlatform: positionResult not set for this test',

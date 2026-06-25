@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:uvalert/constants.dart';
 import 'package:uvalert/providers/location_provider.dart';
 
 import 'fakes/fake_geolocator.dart';
@@ -129,6 +132,25 @@ void main() {
       );
     },
   );
+
+  // -------------------------------------------------------------------------
+  // fetchGps — timeout
+  // -------------------------------------------------------------------------
+
+  test('fetchGps throws TimeoutException when GPS hangs', () async {
+    final FakeGeolocatorPlatform platform = FakeGeolocatorPlatform()
+      ..checkResult = LocationPermission.always
+      ..positionDelay = apiDefaultTimeout + const Duration(milliseconds: 100)
+      ..positionResult = fakePosition();
+
+    final ProviderContainer container = _makeContainer(platform);
+    addTearDown(container.dispose);
+
+    await expectLater(
+      container.read(locationProvider.notifier).fetchGps(),
+      throwsA(isA<TimeoutException>()),
+    );
+  });
 
   // -------------------------------------------------------------------------
   // Default constructor — covers the ?? GeolocatorPlatform.instance fallback

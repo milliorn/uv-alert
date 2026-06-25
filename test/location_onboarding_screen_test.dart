@@ -468,6 +468,35 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
+  // GPS timeout (TimeoutException branch in _onUseMyLocation)
+  // -------------------------------------------------------------------------
+
+  testWidgets('GPS timeout shows not-available error message', (
+    WidgetTester tester,
+  ) async {
+    final FakeGeolocatorPlatform platform = FakeGeolocatorPlatform()
+      ..checkResult = LocationPermission.always
+      ..positionDelay = const Duration(seconds: 11)
+      ..positionResult = fakePosition();
+
+    await tester.pumpWidget(
+      _wrap(
+        LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
+        platform: platform,
+      ),
+    );
+
+    await tester.tap(find.text('Use My Location'));
+    await tester.pump(const Duration(seconds: 11));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('GPS is not available on this device'),
+      findsOneWidget,
+    );
+  });
+
+  // -------------------------------------------------------------------------
   // CircularProgressIndicator during loading (line 300)
   // -------------------------------------------------------------------------
 
