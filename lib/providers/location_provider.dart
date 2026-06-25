@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:uvalert/constants.dart';
 
 /// Latitude/longitude pair; `null` until a location is acquired.
 typedef LocationState = ({double lat, double lon})?;
@@ -33,11 +34,13 @@ class LocationNotifier extends Notifier<LocationState> {
       throw const PermissionDeniedException('Location permission denied.');
     }
 
-    final Position position = await _platform.getCurrentPosition(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.medium,
-      ),
-    );
+    final Position position = await _platform
+        .getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.medium,
+          ),
+        )
+        .timeout(apiDefaultTimeout);
 
     state = (lat: position.latitude, lon: position.longitude);
   }
