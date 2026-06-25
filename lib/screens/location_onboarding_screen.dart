@@ -153,7 +153,9 @@ class _LocationOnboardingScreenState
       );
     } on GeocodingNotFoundException {
       if (!mounted) return;
-      _setError('Could not determine your city. Try entering it manually.');
+      _setError(
+        'Could not determine your city. Try entering it manually.',
+      );
     } on Object {
       if (!mounted) return;
       _setError('Something went wrong. Please try again.');
@@ -206,9 +208,8 @@ class _LocationOnboardingScreenState
       setState(() {
         _phase = _Phase.manual;
         _errorMessage =
-            'Location not found. Try city only'
-            ' (e.g. "London") or with full country name'
-            ' (e.g. "London, England").';
+            'Location not found. Try adding region and country'
+            ' (e.g. "Washington, DC, US" or "London, England, GB").';
       });
     } on Object {
       if (!mounted) return;
@@ -225,6 +226,14 @@ class _LocationOnboardingScreenState
       _pending = (result: result, fromGps: false);
       _phase = _Phase.confirm;
     });
+  }
+
+  void _onSearchAgain() {
+    setState(() {
+      _candidates = <GeocodingResult>[];
+      _phase = _Phase.manual;
+    });
+    _manualFocus.requestFocus();
   }
 
   // -------------------------------------------------------------------------
@@ -343,6 +352,7 @@ class _LocationOnboardingScreenState
                 _PickList(
                   candidates: _candidates,
                   onPick: _onPickCandidate,
+                  onSearchAgain: _onSearchAgain,
                 ),
 
               if (_phase == _Phase.confirm)
@@ -465,7 +475,7 @@ class _ManualEntryField extends StatelessWidget {
       textInputAction: TextInputAction.search,
       onSubmitted: onSearch == null ? null : (_) => onSearch!(),
       decoration: InputDecoration(
-        hintText: 'City, State (e.g. New York, NY)',
+        hintText: 'City, Region, Country (e.g. Washington, DC, US)',
         border: const OutlineInputBorder(),
         suffixIcon: loading
             ? const Padding(
@@ -550,10 +560,15 @@ class _ConfirmCard extends StatelessWidget {
 }
 
 class _PickList extends StatelessWidget {
-  const _PickList({required this.candidates, required this.onPick});
+  const _PickList({
+    required this.candidates,
+    required this.onPick,
+    required this.onSearchAgain,
+  });
 
   final List<GeocodingResult> candidates;
   final void Function(GeocodingResult) onPick;
+  final VoidCallback onSearchAgain;
 
   @override
   Widget build(BuildContext context) {
@@ -570,6 +585,18 @@ class _PickList extends StatelessWidget {
             onPressed: () => onPick(r),
             child: Text(r.displayName, textAlign: TextAlign.center),
           ),
+        ),
+        Text(
+          'Not your city? Try adding region and country'
+          ' (e.g. "Washington, DC, US" or "London, England, GB").',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        TextButton(
+          onPressed: onSearchAgain,
+          child: const Text('Search again'),
         ),
       ],
     );
