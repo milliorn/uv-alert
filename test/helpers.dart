@@ -11,11 +11,9 @@ http.Client mockClientReturning(int status, [String body = '']) =>
 const Duration _splashClearDelay = Duration(milliseconds: 2100);
 
 /// How far past [gpsTimeout] the fake GPS delay is set so the timeout fires.
-// ignore: avoid_unused_field — used in test files that import helpers.dart
 const Duration gpsOvershoot = Duration(milliseconds: 100);
 
 /// Extra buffer added to [gpsTimeout] for the per-test [Timeout] annotation.
-// ignore: avoid_unused_field — used in test files that import helpers.dart
 const Duration gpsTestBuffer = Duration(seconds: 5);
 
 /// Pumps the splash screen and settles all resulting navigation animations.
