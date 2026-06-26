@@ -17,9 +17,6 @@ const Duration _cardAnimationDuration = Duration(milliseconds: 200);
 
 const double _unselectedBorderWidth = 1;
 
-const BorderRadius _cardRadius = BorderRadius.all(
-  Radius.circular(onboardingCardBorderRadius),
-);
 
 const double _cardIconGap = 16;
 
@@ -175,7 +172,7 @@ class _ThemeCard extends StatelessWidget {
       label: label,
       child: InkWell(
         onTap: onTap,
-        borderRadius: _cardRadius,
+        borderRadius: onboardingCardRadius,
 
         child: AnimatedContainer(
           duration: _cardAnimationDuration,
@@ -185,7 +182,7 @@ class _ThemeCard extends StatelessWidget {
           ),
 
           decoration: BoxDecoration(
-            borderRadius: _cardRadius,
+            borderRadius: onboardingCardRadius,
 
             border: Border.all(
               color: selected ? colors.primary : colors.outlineVariant,
