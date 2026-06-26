@@ -232,11 +232,6 @@ class _LocationOnboardingScreenState
     });
   }
 
-  void _onPickCandidate(GeocodingResult result) => _setConfirmed(
-    result,
-    fromGps: false,
-  );
-
   void _onSearchAgain() {
     setState(() {
       _candidates = <GeocodingResult>[];
@@ -363,7 +358,8 @@ class _LocationOnboardingScreenState
               if (_phase == _Phase.picking)
                 _PickList(
                   candidates: _candidates,
-                  onPick: _onPickCandidate,
+                  onPick: (GeocodingResult r) =>
+                      _setConfirmed(r, fromGps: false),
                   onSearchAgain: _onSearchAgain,
                 ),
 
