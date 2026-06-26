@@ -116,13 +116,13 @@ void main() {
       );
     });
 
-    test('throws GeocodingException when array is empty', () async {
+    test('throws GeocodingNotFoundException when array is empty', () async {
       final GeocodingApi api = _makeApi(mockClientReturning(200, '[]'));
       addTearDown(api.dispose);
 
       await expectLater(
         api.geocodeMultiple('Fresno, CA'),
-        throwsA(isA<GeocodingException>()),
+        throwsA(isA<GeocodingNotFoundException>()),
       );
     });
 

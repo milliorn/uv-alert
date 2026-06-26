@@ -137,20 +137,24 @@ void main() {
   // fetchGps — timeout
   // -------------------------------------------------------------------------
 
-  test('fetchGps throws TimeoutException when GPS hangs', () async {
-    final FakeGeolocatorPlatform platform = FakeGeolocatorPlatform()
-      ..checkResult = LocationPermission.always
-      ..positionDelay = apiDefaultTimeout + const Duration(milliseconds: 100)
-      ..positionResult = fakePosition();
+  test(
+    'fetchGps throws TimeoutException when GPS hangs',
+    () async {
+      final FakeGeolocatorPlatform platform = FakeGeolocatorPlatform()
+        ..checkResult = LocationPermission.always
+        ..positionDelay = gpsTimeout + const Duration(milliseconds: 100)
+        ..positionResult = fakePosition();
 
-    final ProviderContainer container = _makeContainer(platform);
-    addTearDown(container.dispose);
+      final ProviderContainer container = _makeContainer(platform);
+      addTearDown(container.dispose);
 
-    await expectLater(
-      container.read(locationProvider.notifier).fetchGps(),
-      throwsA(isA<TimeoutException>()),
-    );
-  });
+      await expectLater(
+        container.read(locationProvider.notifier).fetchGps(),
+        throwsA(isA<TimeoutException>()),
+      );
+    },
+    timeout: Timeout(gpsTimeout + const Duration(seconds: 5)),
+  );
 
   // -------------------------------------------------------------------------
   // Default constructor — covers the ?? GeolocatorPlatform.instance fallback

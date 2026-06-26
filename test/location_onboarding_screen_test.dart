@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uvalert/api/geocoding_api.dart';
+import 'package:uvalert/constants.dart';
 import 'package:uvalert/providers/device_id_provider.dart';
 import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/providers/settings_provider.dart';
@@ -490,7 +491,7 @@ void main() {
   ) async {
     final FakeGeolocatorPlatform platform = FakeGeolocatorPlatform()
       ..checkResult = LocationPermission.always
-      ..positionDelay = const Duration(seconds: 11)
+      ..positionDelay = gpsTimeout + const Duration(milliseconds: 100)
       ..positionResult = fakePosition();
 
     await tester.pumpWidget(
@@ -501,7 +502,7 @@ void main() {
     );
 
     await tester.tap(find.text('Use My Location'));
-    await tester.pump(const Duration(seconds: 11));
+    await tester.pump(gpsTimeout + const Duration(milliseconds: 100));
     await tester.pumpAndSettle();
 
     expect(
