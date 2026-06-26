@@ -7,9 +7,7 @@ import 'package:uvalert/constants.dart';
 import 'package:uvalert/providers/location_provider.dart';
 
 import 'fakes/fake_geolocator.dart';
-
-const Duration _gpsOvershoot = Duration(milliseconds: 100);
-const Duration _gpsTestBuffer = Duration(seconds: 5);
+import 'helpers.dart';
 
 // Builds a ProviderContainer with a LocationNotifier wired to the given fake.
 // Using `overrideWith` lets us inject a custom notifier instance while keeping
@@ -145,7 +143,7 @@ void main() {
     () async {
       final FakeGeolocatorPlatform platform = FakeGeolocatorPlatform()
         ..checkResult = LocationPermission.always
-        ..positionDelay = gpsTimeout + _gpsOvershoot
+        ..positionDelay = gpsTimeout + gpsOvershoot
         ..positionResult = fakePosition();
 
       final ProviderContainer container = _makeContainer(platform);
@@ -156,7 +154,7 @@ void main() {
         throwsA(isA<TimeoutException>()),
       );
     },
-    timeout: Timeout(gpsTimeout + _gpsTestBuffer),
+    timeout: Timeout(gpsTimeout + gpsTestBuffer),
   );
 
   // -------------------------------------------------------------------------

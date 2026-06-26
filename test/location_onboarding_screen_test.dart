@@ -18,9 +18,7 @@ import 'package:uvalert/screens/notification_onboarding_screen.dart';
 import 'package:uvalert/storage/preferences.dart';
 
 import 'fakes/fake_geolocator.dart';
-
-const Duration _gpsOvershoot = Duration(milliseconds: 100);
-const Duration _gpsTestBuffer = Duration(seconds: 5);
+import 'helpers.dart';
 
 // ---------------------------------------------------------------------------
 // LocationNotifier that succeeds without setting state (covers null-loc path)
@@ -494,7 +492,7 @@ void main() {
   ) async {
     final FakeGeolocatorPlatform platform = FakeGeolocatorPlatform()
       ..checkResult = LocationPermission.always
-      ..positionDelay = gpsTimeout + _gpsOvershoot
+      ..positionDelay = gpsTimeout + gpsOvershoot
       ..positionResult = fakePosition();
 
     await tester.pumpWidget(
@@ -505,7 +503,7 @@ void main() {
     );
 
     await tester.tap(find.text('Use My Location'));
-    await tester.pump(gpsTimeout + _gpsOvershoot);
+    await tester.pump(gpsTimeout + gpsOvershoot);
     await tester.pumpAndSettle();
 
     expect(
@@ -513,7 +511,7 @@ void main() {
       findsOneWidget,
     );
   },
-  timeout: Timeout(gpsTimeout + _gpsTestBuffer));
+  timeout: Timeout(gpsTimeout + gpsTestBuffer));
 
   // -------------------------------------------------------------------------
   // CircularProgressIndicator during loading (line 300)
