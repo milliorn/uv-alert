@@ -52,19 +52,21 @@ class Preferences {
       _prefs.setBool(_keyFirstLaunch, false);
 
   /// Whether the theme onboarding step has been completed.
-  bool get isThemeStepDone => _prefs.getBool(_keyThemeStepDone) ?? false;
+  bool get isThemeStepDone => _isStepDone(_keyThemeStepDone);
 
   /// Marks the theme onboarding step as complete.
-  Future<void> setThemeStepDone() async =>
-      _prefs.setBool(_keyThemeStepDone, true);
+  Future<void> setThemeStepDone() async => _setStepDone(_keyThemeStepDone);
 
   /// Whether the location onboarding step has been completed.
-  bool get isLocationStepDone =>
-      _prefs.getBool(_keyLocationStepDone) ?? false;
+  bool get isLocationStepDone => _isStepDone(_keyLocationStepDone);
 
   /// Marks the location onboarding step as complete.
   Future<void> setLocationStepDone() async =>
-      _prefs.setBool(_keyLocationStepDone, true);
+      _setStepDone(_keyLocationStepDone);
+
+  bool _isStepDone(String key) => _prefs.getBool(key) ?? false;
+
+  Future<void> _setStepDone(String key) async => _prefs.setBool(key, true);
 
   /// The stored device UUID, or `null` if not yet set.
   String? get uuid => _prefs.getString(_keyUuid);

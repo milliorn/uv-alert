@@ -139,35 +139,34 @@ class GeocodingApi {
     }
   }
 
-}
-
-void _checkStatus(http.Response response) {
-  if (response.statusCode == httpNotFound) {
-    throw const GeocodingNotFoundException();
-  }
-  if (response.statusCode != httpOk) {
-    throw GeocodingException(response.statusCode, response.body);
-  }
-}
-
-/// Parses one JSON object into a [GeocodingResult], or returns `null` if
-/// required fields are missing or have the wrong type.
-GeocodingResult? _itemToResult(Map<String, Object?> item) {
-  final Object? lat = item['lat'];
-  final Object? lon = item['lon'];
-  final Object? name = item['name'];
-  final Object? country = item['country'];
-  final Object? state = item['state'];
-
-  if (lat is! num || lon is! num || name is! String || country is! String) {
-    return null;
+  static void _checkStatus(http.Response response) {
+    if (response.statusCode == httpNotFound) {
+      throw const GeocodingNotFoundException();
+    }
+    if (response.statusCode != httpOk) {
+      throw GeocodingException(response.statusCode, response.body);
+    }
   }
 
-  final String displayName = state is String
-      ? '$name, $state, $country'
-      : '$name, $country';
+  /// Parses one JSON object into a [GeocodingResult], or returns `null` if
+  /// required fields are missing or have the wrong type.
+  static GeocodingResult? _itemToResult(Map<String, Object?> item) {
+    final Object? lat = item['lat'];
+    final Object? lon = item['lon'];
+    final Object? name = item['name'];
+    final Object? country = item['country'];
+    final Object? state = item['state'];
 
-  return (lat: lat.toDouble(), lon: lon.toDouble(), displayName: displayName);
+    if (lat is! num || lon is! num || name is! String || country is! String) {
+      return null;
+    }
+
+    final String displayName = state is String
+        ? '$name, $state, $country'
+        : '$name, $country';
+
+    return (lat: lat.toDouble(), lon: lon.toDouble(), displayName: displayName);
+  }
 }
 
 /// Thrown when the proxy returns 404 (location not found).

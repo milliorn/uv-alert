@@ -234,7 +234,6 @@ class _LocationOnboardingScreenState
 
   void _onSearchAgain() {
     setState(() {
-      _candidates = <GeocodingResult>[];
       _phase = _Phase.manual;
     });
     _manualFocus.requestFocus();
@@ -581,7 +580,6 @@ class _PickList extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: onboardingItemGap,
       children: <Widget>[
         Text(
