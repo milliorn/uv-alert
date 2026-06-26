@@ -40,18 +40,30 @@ flutter run
 
 ## Commands
 
-```sh
-flutter pub get                       # Install dependencies
-flutter analyze                       # Lint (very_good_analysis)
-flutter test                          # Run all tests
-flutter test test/foo_test.dart       # Run a single test file
-flutter pub global run dartdoc        # Generate and validate API docs
-flutter build apk                     # Android APK
-flutter build appbundle               # Android App Bundle
+```fish
+flutter pub get                                    # Install dependencies
+flutter analyze --fatal-infos                      # Lint (very_good_analysis)
+flutter test --exclude-tags integration            # Run all unit/widget tests
+flutter test test/foo_test.dart                    # Run a single test file
+flutter pub global run dartdoc                     # Generate and validate API docs
+flutter build apk                                  # Android APK
+flutter build appbundle                            # Android App Bundle
 ```
 
-CI runs `flutter analyze --fatal-infos` and `dart doc --validate-links`
-as required gates. Run both locally before any PR.
+Integration tests (require live proxy):
+
+```fish
+flutter test --tags integration test/integration/geocoding_api_live_test.dart
+```
+
+Run `flutter analyze --fatal-infos` and `dart doc --validate-links` locally
+before any PR.
+
+### Full guidance
+
+All architecture, data-flow, provider graph, screen specs, preferences keys,
+CI/CD, and style rules are documented in `.private/CLAUDE.md`. Read it before
+reasoning about any design decision.
 
 ## Architecture
 
@@ -185,11 +197,12 @@ Used for both `hourly` (48 h) and `daily` (8 d) lists.
 
 ## Headless display (Linux)
 
-Required for running the Flutter Linux desktop target under Xvfb
+Required for running the Flutter Linux desktop target under Xvfb:
 
 ```fish
 pgrep -x Xvfb >/dev/null; or (Xvfb :99 -screen 0 1280x1024x24 -ac &; sleep 0.5)
 set -x DISPLAY :99
+flutter run -d linux --dart-define=PROXY_BASE_URL=https://uv-alert-proxy.vercel.app
 ```
 
 ## Running Tests
@@ -244,8 +257,8 @@ Additional style rules:
   (`always_specify_types: true`)
 - All numeric literals must be named constants -- no magic numbers, no
   single-use exemptions
-- Single quotes for strings; double quotes only when the string
-  contains a single quote (`prefer_single_quotes` lint rule)
+- Double quotes for strings; single quotes only when the string
+  contains a double quote
 - File-private helpers go at file scope with `_` prefix, not as static
   methods
 - Trailing commas are managed by the formatter
