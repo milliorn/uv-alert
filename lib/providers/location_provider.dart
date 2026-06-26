@@ -40,7 +40,7 @@ class LocationNotifier extends Notifier<LocationState> {
             accuracy: LocationAccuracy.medium,
           ),
         )
-        .timeout(apiDefaultTimeout);
+        .timeout(gpsTimeout);
 
     state = (lat: position.latitude, lon: position.longitude);
   }
