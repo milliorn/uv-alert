@@ -187,10 +187,9 @@ Used for both `hourly` (48 h) and `daily` (8 d) lists.
 
 Required for running the Flutter Linux desktop target under Xvfb
 
-```sh
-pgrep -x Xvfb >/dev/null || Xvfb :99 -screen 0 1280x1024x24 -ac &
-sleep 0.5
-export DISPLAY=:99
+```fish
+pgrep -x Xvfb >/dev/null; or (Xvfb :99 -screen 0 1280x1024x24 -ac &; sleep 0.5)
+set -x DISPLAY :99
 ```
 
 ## Running Tests
