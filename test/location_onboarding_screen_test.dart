@@ -19,6 +19,9 @@ import 'package:uvalert/storage/preferences.dart';
 
 import 'fakes/fake_geolocator.dart';
 
+const Duration _gpsOvershoot = Duration(milliseconds: 100);
+const Duration _gpsTestBuffer = Duration(seconds: 5);
+
 // ---------------------------------------------------------------------------
 // LocationNotifier that succeeds without setting state (covers null-loc path)
 // ---------------------------------------------------------------------------
@@ -491,7 +494,7 @@ void main() {
   ) async {
     final FakeGeolocatorPlatform platform = FakeGeolocatorPlatform()
       ..checkResult = LocationPermission.always
-      ..positionDelay = gpsTimeout + const Duration(milliseconds: 100)
+      ..positionDelay = gpsTimeout + _gpsOvershoot
       ..positionResult = fakePosition();
 
     await tester.pumpWidget(
@@ -502,14 +505,15 @@ void main() {
     );
 
     await tester.tap(find.text('Use My Location'));
-    await tester.pump(gpsTimeout + const Duration(milliseconds: 100));
+    await tester.pump(gpsTimeout + _gpsOvershoot);
     await tester.pumpAndSettle();
 
     expect(
       find.textContaining('GPS is not available on this device'),
       findsOneWidget,
     );
-  });
+  },
+  timeout: Timeout(gpsTimeout + _gpsTestBuffer));
 
   // -------------------------------------------------------------------------
   // CircularProgressIndicator during loading (line 300)

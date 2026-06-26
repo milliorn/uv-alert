@@ -8,6 +8,9 @@ import 'package:uvalert/providers/location_provider.dart';
 
 import 'fakes/fake_geolocator.dart';
 
+const Duration _gpsOvershoot = Duration(milliseconds: 100);
+const Duration _gpsTestBuffer = Duration(seconds: 5);
+
 // Builds a ProviderContainer with a LocationNotifier wired to the given fake.
 // Using `overrideWith` lets us inject a custom notifier instance while keeping
 // the rest of the Riverpod graph untouched.
@@ -142,7 +145,7 @@ void main() {
     () async {
       final FakeGeolocatorPlatform platform = FakeGeolocatorPlatform()
         ..checkResult = LocationPermission.always
-        ..positionDelay = gpsTimeout + const Duration(milliseconds: 100)
+        ..positionDelay = gpsTimeout + _gpsOvershoot
         ..positionResult = fakePosition();
 
       final ProviderContainer container = _makeContainer(platform);
@@ -153,7 +156,7 @@ void main() {
         throwsA(isA<TimeoutException>()),
       );
     },
-    timeout: Timeout(gpsTimeout + const Duration(seconds: 5)),
+    timeout: Timeout(gpsTimeout + _gpsTestBuffer),
   );
 
   // -------------------------------------------------------------------------
