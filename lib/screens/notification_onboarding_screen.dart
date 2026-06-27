@@ -133,6 +133,7 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+
     return Column(
       spacing: onboardingItemGap,
       children: <Widget>[
@@ -164,6 +165,7 @@ class _OptionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme colors = theme.colorScheme;
+
     return Semantics(
       button: true,
       label: label,
@@ -223,6 +225,7 @@ class _Note extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+
     return Text(
       'More notification options can be found in Settings on the Dashboard.',
       textAlign: TextAlign.center,
