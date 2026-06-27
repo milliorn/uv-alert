@@ -17,7 +17,6 @@ const Duration _cardAnimationDuration = Duration(milliseconds: 200);
 
 const double _unselectedBorderWidth = 1;
 
-
 const double _cardIconGap = 16;
 
 // (label, icon, themeMode) for each selectable theme option.

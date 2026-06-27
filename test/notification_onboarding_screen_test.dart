@@ -158,8 +158,8 @@ void main() {
               AsyncValue<Preferences>.error(
                 Exception('prefs failed'),
                 StackTrace.empty,
-              )
-            )
+              ),
+            ),
           ],
           child: const MaterialApp(home: NotificationOnboardingScreen()),
         ),

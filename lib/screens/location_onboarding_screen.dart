@@ -408,10 +408,7 @@ class _Header extends StatelessWidget {
     return Column(
       spacing: onboardingItemGap,
       children: <Widget>[
-        Text(
-          'Your Location',
-          style: theme.textTheme.headlineMedium,
-        ),
+        Text('Your Location', style: theme.textTheme.headlineMedium),
         Text(
           'UV Alert uses your location to provide accurate UV readings '
           'for your area.',
@@ -582,10 +579,7 @@ class _PickList extends StatelessWidget {
     return Column(
       spacing: onboardingItemGap,
       children: <Widget>[
-        Text(
-          'Select your location:',
-          style: theme.textTheme.bodyMedium,
-        ),
+        Text('Select your location:', style: theme.textTheme.bodyMedium),
         ...candidates.map(
           (GeocodingResult r) => OutlinedButton(
             onPressed: () => onPick(r),
