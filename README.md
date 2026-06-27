@@ -45,7 +45,7 @@ flutter pub get                                    # Install dependencies
 flutter analyze --fatal-infos                      # Lint (very_good_analysis)
 flutter test --exclude-tags integration            # Run all unit/widget tests
 flutter test test/foo_test.dart                    # Run a single test file
-flutter pub global run dartdoc                     # Generate and validate API docs
+dart doc --validate-links                          # Generate and validate API docs
 flutter build apk                                  # Android APK
 flutter build appbundle                            # Android App Bundle
 ```
