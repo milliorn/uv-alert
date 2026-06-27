@@ -20,9 +20,10 @@ const int _notificationScreenIndex = totalOnboardingSteps - 1;
 
 /// Screen 3 of onboarding: lets the user choose notification preferences.
 ///
-/// Scaffold only -- choice UI and OS permission prompt are out of scope for
-/// this issue. Both options ("Default" and "None") advance to DashboardScreen.
-/// This screen owns the `setFirstLaunchDone()` call; it was moved here from
+/// Presents two options ("Default Notifications" and "No Notifications");
+/// the chosen value is persisted via `setNotificationsEnabled()` before
+/// advancing to [DashboardScreen]. This screen also owns the
+/// `setFirstLaunchDone()` call, which was moved here from
 /// `LocationOnboardingScreen` when this screen was inserted as the last
 /// onboarding step.
 class NotificationOnboardingScreen extends ConsumerStatefulWidget {
@@ -163,48 +164,53 @@ class _OptionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme colors = theme.colorScheme;
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: onboardingCardRadius,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(
-          horizontal: onboardingCardPaddingHorizontal,
-          vertical: onboardingCardPaddingVertical,
-        ),
-        decoration: BoxDecoration(
-          borderRadius: onboardingCardRadius,
-          border: Border.all(
-            color: colors.outlineVariant,
-            width: onboardingSelectedBorderWidth,
+    return Semantics(
+      button: true,
+      label: label,
+      hint: description,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: onboardingCardRadius,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(
+            horizontal: onboardingCardPaddingHorizontal,
+            vertical: onboardingCardPaddingVertical,
           ),
-          color: colors.surface,
-        ),
-        child: Row(
-          children: <Widget>[
-            Icon(icon, color: colors.primary),
-            const SizedBox(width: onboardingItemGap),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: onboardingLabelGap,
-                children: <Widget>[
-                  Text(
-                    label,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    description,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
+          decoration: BoxDecoration(
+            borderRadius: onboardingCardRadius,
+            border: Border.all(
+              color: colors.outlineVariant,
+              width: onboardingSelectedBorderWidth,
             ),
-          ],
+            color: colors.surface,
+          ),
+          child: Row(
+            children: <Widget>[
+              Icon(icon, color: colors.primary),
+              const SizedBox(width: onboardingItemGap),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: onboardingLabelGap,
+                  children: <Widget>[
+                    Text(
+                      label,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      description,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

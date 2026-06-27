@@ -51,7 +51,7 @@ class GeocodingApi {
   /// Resolves a location [query] string (e.g. "Fresno") to a list of
   /// candidate matches, ordered by relevance.
   ///
-  /// Returns between 1 and 5 results. Throws [GeocodingNotFoundException]
+  /// Returns one or more results. Throws [GeocodingNotFoundException]
   /// when the proxy returns 404 (no match) or the response contains no
   /// usable results. Throws [GeocodingException] on any other non-200
   /// response or parse error.
