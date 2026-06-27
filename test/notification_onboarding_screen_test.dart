@@ -32,6 +32,7 @@ void main() {
 
   testWidgets('renders with an explicit key', (WidgetTester tester) async {
     final Key key = UniqueKey();
+
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(home: NotificationOnboardingScreen(key: key)),
@@ -158,8 +159,8 @@ void main() {
               AsyncValue<Preferences>.error(
                 Exception('prefs failed'),
                 StackTrace.empty,
-              ),
-            ),
+              )
+            )
           ],
           child: const MaterialApp(home: NotificationOnboardingScreen()),
         ),

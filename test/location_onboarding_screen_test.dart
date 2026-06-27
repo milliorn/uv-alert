@@ -62,6 +62,13 @@ const String _validReverseBody =
     '{"lat":36.75,"lon":-119.65,'
     '"name":"Fresno","state":"California","country":"US"}';
 
+// geocodeMultiple with two results (used by pick-list tests).
+const String _multiResultBody =
+    '[{"lat":51.5,"lon":-0.1,"name":"London",'
+    '"country":"GB","state":"England"},'
+    '{"lat":42.9,"lon":-81.2,"name":"London",'
+    '"country":"CA","state":"Ontario"}]';
+
 // Routes to array body for forward (?q=) and object body for reverse (?lat=).
 http.Client _geoClient({int status = 200, String? forwardBody}) {
   final String fwd = forwardBody ?? _validForwardBody;
@@ -69,7 +76,7 @@ http.Client _geoClient({int status = 200, String? forwardBody}) {
     if (req.url.queryParameters.containsKey('q')) {
       return http.Response(fwd, status);
     }
-    return http.Response(status == 200 ? _validReverseBody : '', status);
+    return http.Response(_validReverseBody, status);
   });
 }
 
@@ -632,16 +639,10 @@ void main() {
   testWidgets(
     'multiple geocode results shows pick list with all candidates',
     (WidgetTester tester) async {
-      const String multiBody =
-          '[{"lat":51.5,"lon":-0.1,"name":"London",'
-          '"country":"GB","state":"England"},'
-          '{"lat":42.9,"lon":-81.2,"name":"London",'
-          '"country":"CA","state":"Ontario"}]';
-
       await tester.pumpWidget(
         _wrap(
           LocationOnboardingScreen(
-            geocodingApi: _fakeGeocodingApi(forwardBody: multiBody),
+            geocodingApi: _fakeGeocodingApi(forwardBody: _multiResultBody),
           ),
         ),
       );
@@ -661,16 +662,10 @@ void main() {
   testWidgets(
     'picking a candidate from pick list shows confirm card',
     (WidgetTester tester) async {
-      const String multiBody =
-          '[{"lat":51.5,"lon":-0.1,"name":"London",'
-          '"country":"GB","state":"England"},'
-          '{"lat":42.9,"lon":-81.2,"name":"London",'
-          '"country":"CA","state":"Ontario"}]';
-
       await tester.pumpWidget(
         _wrap(
           LocationOnboardingScreen(
-            geocodingApi: _fakeGeocodingApi(forwardBody: multiBody),
+            geocodingApi: _fakeGeocodingApi(forwardBody: _multiResultBody),
           ),
         ),
       );
@@ -692,16 +687,10 @@ void main() {
   testWidgets(
     'tapping Search again from pick list returns to manual entry',
     (WidgetTester tester) async {
-      const String multiBody =
-          '[{"lat":51.5,"lon":-0.1,"name":"London",'
-          '"country":"GB","state":"England"},'
-          '{"lat":42.9,"lon":-81.2,"name":"London",'
-          '"country":"CA","state":"Ontario"}]';
-
       await tester.pumpWidget(
         _wrap(
           LocationOnboardingScreen(
-            geocodingApi: _fakeGeocodingApi(forwardBody: multiBody),
+            geocodingApi: _fakeGeocodingApi(forwardBody: _multiResultBody),
           ),
         ),
       );
