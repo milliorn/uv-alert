@@ -9,8 +9,9 @@ class FakeGeolocatorPlatform extends GeolocatorPlatform {
   LocationPermission checkResult = LocationPermission.always;
   LocationPermission requestResult = LocationPermission.always;
   Position? positionResult;
-  // When set, getCurrentPosition waits this long before resolving, allowing
-  // timeout tests to trigger TimeoutException without real wall-clock delay.
+  // When set, getCurrentPosition waits this long before resolving. In widget
+  // tests (fakeAsync), this lets timeout tests trigger TimeoutException by
+  // advancing simulated time via `tester.pump(...)`.
   Duration? positionDelay;
 
   @override
