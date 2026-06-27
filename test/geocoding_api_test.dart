@@ -243,6 +243,41 @@ void main() {
 
       expect(capturedHeaders?[deviceIdHeader], 'test-device-id');
     });
+
+    test('throws GeocodingException when body is not a JSON object', () async {
+      final GeocodingApi api = _makeApi(mockClientReturning(200, '"string"'));
+      addTearDown(api.dispose);
+
+      await expectLater(
+        api.reverseGeocode(lat: 36.75, lon: -119.65),
+        throwsA(isA<GeocodingException>()),
+      );
+    });
+
+    test('throws GeocodingException when required fields are missing',
+        () async {
+      final GeocodingApi api = _makeApi(
+        mockClientReturning(200, '{"lat":36.75,"lon":-119.65}'),
+      );
+      addTearDown(api.dispose);
+
+      await expectLater(
+        api.reverseGeocode(lat: 36.75, lon: -119.65),
+        throwsA(isA<GeocodingException>()),
+      );
+    });
+
+    test('throws GeocodingException on malformed JSON body', () async {
+      final GeocodingApi api = _makeApi(
+        mockClientReturning(200, '{not json}'),
+      );
+      addTearDown(api.dispose);
+
+      await expectLater(
+        api.reverseGeocode(lat: 36.75, lon: -119.65),
+        throwsA(isA<GeocodingException>()),
+      );
+    });
   });
 
   // -------------------------------------------------------------------------
