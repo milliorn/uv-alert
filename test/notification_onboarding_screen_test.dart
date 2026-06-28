@@ -176,8 +176,12 @@ void main() {
       );
 
       // Buttons must be re-enabled so the user can retry.
-      expect(find.text('Default Notifications'), findsOneWidget);
-      expect(find.text('No Notifications'), findsOneWidget);
+      // Check onTap is non-null, not just that label text is present.
+      final List<InkWell> inkWells = tester
+          .widgetList<InkWell>(find.byType(InkWell))
+          .toList();
+      expect(inkWells, isNotEmpty);
+      expect(inkWells.every((InkWell w) => w.onTap != null), isTrue);
     },
   );
 }
