@@ -391,7 +391,7 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  // Continue navigates to Dashboard
+  // Continue navigates to NotificationOnboardingScreen
   // -------------------------------------------------------------------------
 
   testWidgets(

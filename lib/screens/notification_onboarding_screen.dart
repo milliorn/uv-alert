@@ -97,14 +97,14 @@ class _NotificationOnboardingScreenState
                 label: 'Default Notifications',
                 description:
                     'Enable 4 threshold alert notifications for UV changes.',
-                onPressed: () => _onPressed(true),
+                onPressed: _continuing ? null : () => _onPressed(true),
               ),
 
               _OptionButton(
                 icon: Icons.notifications_off,
                 label: 'No Notifications',
                 description: 'Skip notifications for now.',
-                onPressed: () => _onPressed(false),
+                onPressed: _continuing ? null : () => _onPressed(false),
               ),
 
               const _Note(),
@@ -168,6 +168,7 @@ class _OptionButton extends StatelessWidget {
 
     return Semantics(
       button: true,
+      enabled: onPressed != null,
       label: label,
       hint: description,
       child: InkWell(
