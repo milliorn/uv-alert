@@ -30,6 +30,12 @@ const String _validBodyMultiple =
     '{"lat":42.9,"lon":-81.2,"name":"London",'
     '"country":"CA","state":"Ontario"}]';
 
+const String _validArrayMultiple =
+    '[{"lat":34.06,"lon":-117.64,"name":"Ontario",'
+    '"country":"US","state":"California"},'
+    '{"lat":44.02,"lon":-116.96,"name":"Ontario",'
+    '"country":"US","state":"Oregon"}]';
+
 // reverseGeocode uses a single-object response (separate OWM endpoint).
 const String _reverseBodyWithState =
     '{"lat":36.75,"lon":-119.65,'
@@ -86,12 +92,36 @@ void main() {
       },
     );
 
+    test('returns multiple results (Ontario)', () async {
+      final GeocodingApi api = _makeApi(
+        mockClientReturning(200, _validArrayMultiple),
+      );
+      addTearDown(api.dispose);
+      final List<GeocodingResult> results = await api.geocodeMultiple(
+        'Ontario',
+      );
+
+      expect(results, hasLength(2));
+      expect(results[0].displayName, 'Ontario, California, US');
+      expect(results[1].displayName, 'Ontario, Oregon, US');
+    });
+
     test('throws GeocodingNotFoundException on 404', () async {
       final GeocodingApi api = _makeApi(mockClientReturning(404, 'not found'));
       addTearDown(api.dispose);
 
       await expectLater(
         api.geocodeMultiple('nowhere'),
+        throwsA(isA<GeocodingNotFoundException>()),
+      );
+    });
+
+    test('throws GeocodingNotFoundException when array is empty', () async {
+      final GeocodingApi api = _makeApi(mockClientReturning(200, '[]'));
+      addTearDown(api.dispose);
+
+      await expectLater(
+        api.geocodeMultiple('Fresno, CA'),
         throwsA(isA<GeocodingNotFoundException>()),
       );
     });
@@ -113,16 +143,6 @@ void main() {
       await expectLater(
         api.geocodeMultiple('Fresno, CA'),
         throwsA(isA<GeocodingException>()),
-      );
-    });
-
-    test('throws GeocodingNotFoundException when array is empty', () async {
-      final GeocodingApi api = _makeApi(mockClientReturning(200, '[]'));
-      addTearDown(api.dispose);
-
-      await expectLater(
-        api.geocodeMultiple('Fresno, CA'),
-        throwsA(isA<GeocodingNotFoundException>()),
       );
     });
 

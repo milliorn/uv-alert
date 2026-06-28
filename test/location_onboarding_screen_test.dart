@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uvalert/api/geocoding_api.dart';
 import 'package:uvalert/constants.dart';
@@ -49,16 +47,14 @@ class _ThrowingSettingsNotifier extends SettingsNotifier {
 
 const String _proxyUrl = 'https://proxy.test';
 
-// displayName assembled as 'name, state, country'.
+// _parseEntry assembles displayName as 'name, state, country'.
 const String _displayName = 'Fresno, California, US';
 
-// geocodeMultiple (forward, ?q=) returns a JSON array.
-const String _validForwardBody =
+// geocodeMultiple expects an array; reverseGeocode expects a single object.
+const String _validGeoArray =
     '[{"lat":36.75,"lon":-119.65,'
     '"name":"Fresno","state":"California","country":"US"}]';
-
-// reverseGeocode (?lat=&lon=) returns a single JSON object.
-const String _validReverseBody =
+const String _validGeoSingle =
     '{"lat":36.75,"lon":-119.65,'
     '"name":"Fresno","state":"California","country":"US"}';
 
@@ -69,23 +65,28 @@ const String _multiResultBody =
     '{"lat":42.9,"lon":-81.2,"name":"London",'
     '"country":"CA","state":"Ontario"}]';
 
-// Routes to array body for forward (?q=) and object body for reverse (?lat=).
-http.Client _geoClient({int status = 200, String? forwardBody}) {
-  final String fwd = forwardBody ?? _validForwardBody;
-  return MockClient((http.Request req) async {
-    if (req.url.queryParameters.containsKey('q')) {
-      return http.Response(fwd, status);
-    }
-    return http.Response(_validReverseBody, status);
-  });
-}
-
-GeocodingApi _fakeGeocodingApi({int status = 200, String? forwardBody}) {
+GeocodingApi _fakeGeocodingApi({
+  int forwardStatus = 200,
+  String forwardBody = _validGeoArray,
+  int reverseStatus = 200,
+  String reverseBody = _validGeoSingle,
+}) {
   return GeocodingApi(
     proxyBaseUrl: _proxyUrl,
     deviceId: 'test-device-id',
-    httpClient: _geoClient(status: status, forwardBody: forwardBody),
+    httpClient: mockClientByQuery(
+      forwardStatus: forwardStatus,
+      forwardBody: forwardBody,
+      reverseStatus: reverseStatus,
+      reverseBody: reverseBody,
+    ),
   );
+}
+
+/// Picks the first candidate from the _PickList after a manual search.
+Future<void> _pickFirstCandidate(WidgetTester tester) async {
+  await tester.tap(find.text(_displayName));
+  await tester.pumpAndSettle();
 }
 
 /// Drives the screen through manual entry to the confirm phase and taps
@@ -96,6 +97,7 @@ Future<void> _tapContinueAfterManualEntry(WidgetTester tester) async {
   await tester.enterText(find.byType(TextField), 'Fresno, CA');
   await tester.testTextInput.receiveAction(TextInputAction.search);
   await tester.pumpAndSettle();
+  await _pickFirstCandidate(tester);
   await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
   await tester.pumpAndSettle();
 }
@@ -209,6 +211,7 @@ void main() {
       await tester.enterText(find.byType(TextField), 'Fresno, CA');
       await tester.testTextInput.receiveAction(TextInputAction.search);
       await tester.pumpAndSettle();
+      await _pickFirstCandidate(tester);
 
       expect(find.text(_displayName), findsOneWidget);
     },
@@ -227,6 +230,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'Fresno, CA');
     await tester.testTextInput.receiveAction(TextInputAction.search);
     await tester.pumpAndSettle();
+    await _pickFirstCandidate(tester);
 
     final FilledButton btn = tester.widget<FilledButton>(
       find.widgetWithText(FilledButton, 'Continue'),
@@ -240,7 +244,10 @@ void main() {
     await tester.pumpWidget(
       _wrap(
         LocationOnboardingScreen(
-          geocodingApi: _fakeGeocodingApi(status: 404, forwardBody: '[]'),
+          geocodingApi: _fakeGeocodingApi(
+            forwardStatus: 404,
+            forwardBody: 'not found',
+          ),
         ),
       ),
     );
@@ -262,7 +269,10 @@ void main() {
     await tester.pumpWidget(
       _wrap(
         LocationOnboardingScreen(
-          geocodingApi: _fakeGeocodingApi(status: 500, forwardBody: 'error'),
+          geocodingApi: _fakeGeocodingApi(
+            forwardStatus: 500,
+            forwardBody: 'error',
+          ),
         ),
       ),
     );
@@ -294,6 +304,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'Fresno, CA');
     await tester.testTextInput.receiveAction(TextInputAction.search);
     await tester.pumpAndSettle();
+    await _pickFirstCandidate(tester);
 
     await tester.tap(find.text('Change'));
     await tester.pump();
@@ -375,7 +386,10 @@ void main() {
     await tester.pumpWidget(
       _wrap(
         LocationOnboardingScreen(
-          geocodingApi: _fakeGeocodingApi(status: 404, forwardBody: '[]'),
+          geocodingApi: _fakeGeocodingApi(
+            reverseStatus: 404,
+            reverseBody: 'not found',
+          ),
         ),
         platform: platform,
       ),
@@ -566,6 +580,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'Fresno, CA');
     await tester.tap(find.byIcon(Icons.search));
     await tester.pumpAndSettle();
+    await _pickFirstCandidate(tester);
 
     expect(find.text(_displayName), findsOneWidget);
   });
@@ -589,6 +604,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'Fresno, CA');
     await tester.testTextInput.receiveAction(TextInputAction.search);
     await tester.pumpAndSettle();
+    await _pickFirstCandidate(tester);
 
     await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
     await tester.pumpAndSettle();
@@ -726,6 +742,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'Fresno, CA');
     await tester.testTextInput.receiveAction(TextInputAction.search);
     await tester.pumpAndSettle();
+    await _pickFirstCandidate(tester);
 
     await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
     await tester.pumpAndSettle();
@@ -736,6 +753,158 @@ void main() {
     );
     expect(btn.onPressed, isNotNull);
   });
+
+  // -------------------------------------------------------------------------
+  // Autocomplete / debounce (onChanged -> _onDebounced)
+  // -------------------------------------------------------------------------
+
+  testWidgets(
+    'typing shows suggestions after debounce delay fires',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
+      );
+
+      await tester.tap(find.text('Enter location manually'));
+      await tester.pump();
+
+      await tester.enterText(find.byType(TextField), 'Fres');
+      // Debounce has not fired yet - suggestions should not appear.
+      await tester.pump();
+      expect(find.text(_displayName), findsNothing);
+
+      // Advance past the 400 ms debounce window and settle the async geocode.
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+
+      expect(find.text(_displayName), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'typing again before debounce fires resets the timer',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
+      );
+
+      await tester.tap(find.text('Enter location manually'));
+      await tester.pump();
+
+      // First keystroke.
+      await tester.enterText(find.byType(TextField), 'Fr');
+      await tester.pump(const Duration(milliseconds: 200));
+
+      // Second keystroke before debounce fires.
+      await tester.enterText(find.byType(TextField), 'Fres');
+      await tester.pump(const Duration(milliseconds: 200));
+
+      // Still within debounce window from second keystroke - no suggestions.
+      expect(find.text(_displayName), findsNothing);
+
+      // Now let the debounce fire and the geocode settle.
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
+
+      expect(find.text(_displayName), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'tapping a suggestion from autocomplete goes to confirm phase',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
+      );
+
+      await tester.tap(find.text('Enter location manually'));
+      await tester.pump();
+
+      await tester.enterText(find.byType(TextField), 'Fres');
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+
+      // Tap the suggestion.
+      await tester.tap(find.text(_displayName));
+      await tester.pumpAndSettle();
+
+      // Should now be in confirm phase: display name shown, Continue enabled.
+      expect(find.text(_displayName), findsOneWidget);
+      final FilledButton btn = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Continue'),
+      );
+      expect(btn.onPressed, isNotNull);
+    },
+  );
+
+  testWidgets(
+    'autocomplete 404 silently clears suggestions without showing error',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          LocationOnboardingScreen(
+            geocodingApi: _fakeGeocodingApi(
+              forwardStatus: 404,
+              forwardBody: 'not found',
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Enter location manually'));
+      await tester.pump();
+
+      await tester.enterText(find.byType(TextField), 'xyzzy');
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+
+      // No suggestions and no error message shown.
+      expect(find.text(_displayName), findsNothing);
+      expect(find.textContaining('Location not found'), findsNothing);
+      expect(find.textContaining('Something went wrong'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'typing fewer than 2 chars does not trigger autocomplete',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
+      );
+
+      await tester.tap(find.text('Enter location manually'));
+      await tester.pump();
+
+      await tester.enterText(find.byType(TextField), 'F');
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+
+      expect(find.text(_displayName), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'typing clears existing suggestions immediately',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
+      );
+
+      await tester.tap(find.text('Enter location manually'));
+      await tester.pump();
+
+      // Get suggestions showing.
+      await tester.enterText(find.byType(TextField), 'Fres');
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+      expect(find.text(_displayName), findsOneWidget);
+
+      // Type another character - suggestions must clear immediately.
+      await tester.enterText(find.byType(TextField), 'Fresn');
+      await tester.pump();
+      expect(find.text(_displayName), findsNothing);
+    },
+  );
 }
 
 // ---------------------------------------------------------------------------
