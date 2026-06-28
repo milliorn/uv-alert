@@ -28,6 +28,9 @@ class GeocodingApi {
   }) : _geocodeUri = Uri.parse(
          '${stripTrailingSlash(proxyBaseUrl)}/api/geocode',
        ),
+       _autocompleteUri = Uri.parse(
+         '${stripTrailingSlash(proxyBaseUrl)}/api/autocomplete',
+       ),
        _deviceId = deviceId,
        _timeout = timeout,
        _ownsClient = httpClient == null,
@@ -38,6 +41,7 @@ class GeocodingApi {
   final http.Client _httpClient;
   final bool _ownsClient;
   final Uri _geocodeUri;
+  final Uri _autocompleteUri;
 
   late final Map<String, String> _headers = <String, String>{
     deviceIdHeader: _deviceId,
@@ -46,6 +50,23 @@ class GeocodingApi {
   /// Releases the underlying HTTP client if this instance owns it.
   void dispose() {
     if (_ownsClient) _httpClient.close();
+  }
+
+  /// Returns prefix-matched place suggestions for [query] via the autocomplete
+  /// endpoint (Photon/OSM-backed).
+  ///
+  /// Throws [GeocodingNotFoundException] when no suggestions are found (404).
+  /// Throws [GeocodingException] on any other non-200 response or parse error.
+  Future<List<GeocodingResult>> autocomplete(String query) async {
+    final Uri uri = _autocompleteUri.replace(
+      queryParameters: <String, String>{'q': query},
+    );
+
+    final http.Response response = await _httpClient
+        .get(uri, headers: _headers)
+        .timeout(_timeout);
+
+    return _parseResults(response);
   }
 
   /// Resolves a location [query] string (e.g. "Fresno") to a list of

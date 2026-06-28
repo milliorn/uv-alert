@@ -22,6 +22,9 @@ const int _locationScreenIndex = 1;
 
 const double _spinnerSize = 16;
 const double _spinnerStrokeWidth = 2;
+const int _debounceMs = 400;
+const int _minQueryLength = 2;
+const double _appBarElevation = 0;
 
 // ---------------------------------------------------------------------------
 // Confirm result
@@ -87,7 +90,13 @@ class _LocationOnboardingScreenState
   bool _continuing = false;
   _ConfirmResult? _pending;
   List<GeocodingResult> _candidates = <GeocodingResult>[];
+  List<GeocodingResult> _suggestions = <GeocodingResult>[];
   String _errorMessage = '';
+  Timer? _debounce;
+  // Incremented whenever the user navigates away (back, search-again, change).
+  // Async callbacks capture this value before their await and discard their
+  // result if the counter has advanced, preventing stale state overwrites.
+  int _operationId = 0;
 
   final TextEditingController _manualController = TextEditingController();
   final FocusNode _manualFocus = FocusNode();
@@ -103,6 +112,7 @@ class _LocationOnboardingScreenState
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _manualController.dispose();
     _manualFocus.dispose();
     _ownedApi?.dispose();
@@ -181,11 +191,49 @@ class _LocationOnboardingScreenState
     _manualFocus.requestFocus();
   }
 
+  void _onChanged(String value, String proxyBaseUrl, String deviceId) {
+    _debounce?.cancel();
+    setState(() {
+      _suggestions = <GeocodingResult>[];
+      _errorMessage = '';
+    });
+    if (value.trim().length < _minQueryLength) return;
+    _debounce = Timer(
+      const Duration(milliseconds: _debounceMs),
+      () => _onDebounced(value.trim(), proxyBaseUrl, deviceId),
+    );
+  }
+
+  Future<void> _onDebounced(
+    String query,
+    String proxyBaseUrl,
+    String deviceId,
+  ) async {
+    final int opId = _operationId;
+    try {
+      final List<GeocodingResult> results = await _geocodingApi(
+        proxyBaseUrl,
+        deviceId,
+      ).autocomplete(query);
+
+      if (!mounted || _operationId != opId) return;
+      setState(() => _suggestions = results);
+    } on GeocodingNotFoundException {
+      if (!mounted || _operationId != opId) return;
+      setState(() => _suggestions = <GeocodingResult>[]);
+    } on Object catch (e, st) {
+      debugPrint('Autocomplete error: $e\n$st');
+      if (!mounted || _operationId != opId) return;
+      setState(() => _suggestions = <GeocodingResult>[]);
+    }
+  }
+
   Future<void> _onGeocodeManual(String proxyBaseUrl, String deviceId) async {
     final String query = _manualController.text.trim();
 
     if (query.isEmpty) return;
 
+    final int opId = ++_operationId;
     setState(() {
       _phase = _Phase.geocoding;
       _errorMessage = '';
@@ -197,7 +245,7 @@ class _LocationOnboardingScreenState
         deviceId,
       ).geocodeMultiple(query);
 
-      if (!mounted) return;
+      if (!mounted || _operationId != opId) return;
 
       if (results.length == 1) {
         _setConfirmed(results.first, fromGps: false);
@@ -208,33 +256,52 @@ class _LocationOnboardingScreenState
         });
       }
     } on GeocodingNotFoundException {
-      if (!mounted) return;
+      if (!mounted || _operationId != opId) return;
       setState(() {
         _phase = _Phase.manual;
+        _suggestions = <GeocodingResult>[];
         _errorMessage =
             'Location not found. Try adding region and country'
             ' (e.g. "Washington, DC, US" or "London, England, GB").';
       });
-    } on Object {
-      if (!mounted) return;
+    } on Object catch (e, st) {
+      debugPrint('Manual geocoding error: $e\n$st');
+      if (!mounted || _operationId != opId) return;
       setState(() {
         _phase = _Phase.manual;
+        _suggestions = <GeocodingResult>[];
         _errorMessage = 'Something went wrong. Please try again.';
       });
     }
   }
 
+  void _onPick(GeocodingResult result) {
+    _debounce?.cancel();
+    setState(() {
+      _pending = (result: result, fromGps: false);
+      _candidates = <GeocodingResult>[];
+      _suggestions = <GeocodingResult>[];
+      _phase = _Phase.confirm;
+    });
+  }
+
   void _setConfirmed(GeocodingResult result, {required bool fromGps}) {
     setState(() {
       _candidates = <GeocodingResult>[];
+      _suggestions = <GeocodingResult>[];
       _pending = (result: result, fromGps: fromGps);
       _phase = _Phase.confirm;
     });
   }
 
   void _onSearchAgain() {
+    _debounce?.cancel();
+    _operationId++;
     setState(() {
+      _candidates = <GeocodingResult>[];
+      _suggestions = <GeocodingResult>[];
       _phase = _Phase.manual;
+      _errorMessage = '';
     });
     _manualFocus.requestFocus();
   }
@@ -298,6 +365,19 @@ class _LocationOnboardingScreenState
   // Helpers
   // -------------------------------------------------------------------------
 
+  void _onBack() {
+    _debounce?.cancel();
+    _operationId++;
+    _manualController.clear();
+    setState(() {
+      _phase = _Phase.idle;
+      _candidates = <GeocodingResult>[];
+      _suggestions = <GeocodingResult>[];
+      _errorMessage = '';
+      _pending = null;
+    });
+  }
+
   void _setError(String message) {
     setState(() {
       _phase = _Phase.idle;
@@ -324,7 +404,20 @@ class _LocationOnboardingScreenState
         ? null
         : () => _onGeocodeManual(proxyBaseUrl, deviceId);
 
+    final ValueChanged<String>? onChanged = deviceId == null
+        ? null
+        : (String v) => _onChanged(v, proxyBaseUrl, deviceId);
+
+    final bool canGoBack = _phase != _Phase.idle && _phase != _Phase.loading;
+
     return Scaffold(
+      appBar: canGoBack
+          ? AppBar(
+              leading: BackButton(onPressed: _onBack),
+              backgroundColor: Colors.transparent,
+              elevation: _appBarElevation,
+            )
+          : null,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(
@@ -352,13 +445,19 @@ class _LocationOnboardingScreenState
                   focusNode: _manualFocus,
                   loading: _phase == _Phase.geocoding,
                   onSearch: onManualSearch,
+                  onChanged: onChanged,
+                ),
+
+              if (_phase == _Phase.manual && _suggestions.isNotEmpty)
+                _SuggestionList(
+                  suggestions: _suggestions,
+                  onPick: _onPick,
                 ),
 
               if (_phase == _Phase.picking)
                 _PickList(
                   candidates: _candidates,
-                  onPick: (GeocodingResult r) =>
-                      _setConfirmed(r, fromGps: false),
+                  onPick: _onPick,
                   onSearchAgain: _onSearchAgain,
                 ),
 
@@ -461,6 +560,7 @@ class _ManualEntryField extends StatelessWidget {
     required this.focusNode,
     required this.loading,
     required this.onSearch,
+    required this.onChanged,
   });
 
   final TextEditingController controller;
@@ -470,6 +570,7 @@ class _ManualEntryField extends StatelessWidget {
   // which this widget never uses. The adapter (_) => onSearch!() is derived
   // here from onSearch so the caller stays free of that boilerplate.
   final VoidCallback? onSearch;
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -478,6 +579,7 @@ class _ManualEntryField extends StatelessWidget {
       focusNode: focusNode,
       enabled: !loading,
       textInputAction: TextInputAction.search,
+      onChanged: onChanged,
       onSubmitted: onSearch == null ? null : (_) => onSearch!(),
       decoration: InputDecoration(
         hintText: 'City, Region, Country (e.g. Washington, DC, US)',
@@ -610,6 +712,33 @@ class _PickList extends StatelessWidget {
         ),
         TextButton(onPressed: onSearchAgain, child: const Text('Search again')),
       ],
+    );
+  }
+}
+
+class _SuggestionList extends StatelessWidget {
+  const _SuggestionList({required this.suggestions, required this.onPick});
+
+  final List<GeocodingResult> suggestions;
+  final ValueChanged<GeocodingResult> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: suggestions.length,
+      separatorBuilder: (_, _) => const SizedBox(height: onboardingItemGap),
+      itemBuilder: (_, int i) => SizedBox(
+        width: double.infinity,
+        child: OutlinedButton(
+          onPressed: () => onPick(suggestions[i]),
+          child: Text(
+            suggestions[i].displayName,
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
     );
   }
 }
