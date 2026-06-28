@@ -68,6 +68,10 @@ const double onboardingItemGap = 12;
 /// Gap between a card's label and its description line.
 const double onboardingLabelGap = 4;
 
+/// Maximum fraction of screen height the pick-list candidate scroll area
+/// may occupy.
+const double onboardingPickListMaxHeightFraction = 0.35;
+
 /// Card corner radius used across all onboarding screens.
 ///
 /// Derived from [onboardingCardBorderRadius].

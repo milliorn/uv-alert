@@ -580,10 +580,24 @@ class _PickList extends StatelessWidget {
       spacing: onboardingItemGap,
       children: <Widget>[
         Text('Select your location:', style: theme.textTheme.bodyMedium),
-        ...candidates.map(
-          (GeocodingResult r) => OutlinedButton(
-            onPressed: () => onPick(r),
-            child: Text(r.displayName, textAlign: TextAlign.center),
+        ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height *
+                onboardingPickListMaxHeightFraction,
+          ),
+          child: ListView(
+            shrinkWrap: true,
+            children: candidates
+                .map(
+                  (GeocodingResult r) => Padding(
+                    padding: const EdgeInsets.only(bottom: onboardingItemGap),
+                    child: OutlinedButton(
+                      onPressed: () => onPick(r),
+                      child: Text(r.displayName, textAlign: TextAlign.center),
+                    ),
+                  ),
+                )
+                .toList(),
           ),
         ),
         Text(
