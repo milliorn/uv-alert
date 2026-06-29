@@ -70,6 +70,10 @@ GeocodingApi _fakeGeocodingApi({
   String forwardBody = _validGeoArray,
   int reverseStatus = 200,
   String reverseBody = _validGeoSingle,
+  // Autocomplete defaults to 404 to avoid suggestions interfering with tests
+  // that use forwardBody for geocodeMultiple only.
+  int autocompleteStatus = 404,
+  String autocompleteBody = 'not found',
 }) {
   return GeocodingApi(
     proxyBaseUrl: _proxyUrl,
@@ -79,6 +83,8 @@ GeocodingApi _fakeGeocodingApi({
       forwardBody: forwardBody,
       reverseStatus: reverseStatus,
       reverseBody: reverseBody,
+      autocompleteStatus: autocompleteStatus,
+      autocompleteBody: autocompleteBody,
     ),
   );
 }
@@ -717,8 +723,9 @@ void main() {
       await tester.testTextInput.receiveAction(TextInputAction.search);
       await tester.pumpAndSettle();
 
+      await tester.ensureVisible(find.text('Search again'));
       await tester.tap(find.text('Search again'));
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       expect(find.byType(TextField), findsOneWidget);
       expect(find.text('Select your location:'), findsNothing);
@@ -762,7 +769,14 @@ void main() {
     'typing shows suggestions after debounce delay fires',
     (WidgetTester tester) async {
       await tester.pumpWidget(
-        _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
+        _wrap(
+          LocationOnboardingScreen(
+            geocodingApi: _fakeGeocodingApi(
+              autocompleteStatus: 200,
+              autocompleteBody: _validGeoArray,
+            ),
+          ),
+        ),
       );
 
       await tester.tap(find.text('Enter location manually'));
@@ -785,7 +799,14 @@ void main() {
     'typing again before debounce fires resets the timer',
     (WidgetTester tester) async {
       await tester.pumpWidget(
-        _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
+        _wrap(
+          LocationOnboardingScreen(
+            geocodingApi: _fakeGeocodingApi(
+              autocompleteStatus: 200,
+              autocompleteBody: _validGeoArray,
+            ),
+          ),
+        ),
       );
 
       await tester.tap(find.text('Enter location manually'));
@@ -814,7 +835,14 @@ void main() {
     'tapping a suggestion from autocomplete goes to confirm phase',
     (WidgetTester tester) async {
       await tester.pumpWidget(
-        _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
+        _wrap(
+          LocationOnboardingScreen(
+            geocodingApi: _fakeGeocodingApi(
+              autocompleteStatus: 200,
+              autocompleteBody: _validGeoArray,
+            ),
+          ),
+        ),
       );
 
       await tester.tap(find.text('Enter location manually'));
@@ -887,7 +915,14 @@ void main() {
     'typing clears existing suggestions immediately',
     (WidgetTester tester) async {
       await tester.pumpWidget(
-        _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
+        _wrap(
+          LocationOnboardingScreen(
+            geocodingApi: _fakeGeocodingApi(
+              autocompleteStatus: 200,
+              autocompleteBody: _validGeoArray,
+            ),
+          ),
+        ),
       );
 
       await tester.tap(find.text('Enter location manually'));
@@ -937,7 +972,11 @@ void main() {
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
-      _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
+      _wrap(
+        LocationOnboardingScreen(
+          geocodingApi: _fakeGeocodingApi(forwardBody: _multiResultBody),
+        ),
+      ),
     );
 
     await tester.tap(find.text('Enter location manually'));
@@ -948,6 +987,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Now in picking phase - tap Search again.
+    await tester.ensureVisible(find.text('Search again'));
     await tester.tap(find.text('Search again'));
     await tester.pump();
 
@@ -1001,7 +1041,10 @@ void main() {
       await tester.pumpWidget(
         _wrap(
           LocationOnboardingScreen(
-            geocodingApi: _fakeGeocodingApi(forwardBody: twoResults),
+            geocodingApi: _fakeGeocodingApi(
+              autocompleteStatus: 200,
+              autocompleteBody: twoResults,
+            ),
           ),
         ),
       );

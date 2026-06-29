@@ -7,6 +7,27 @@ import 'package:uvalert/constants.dart';
 http.Client mockClientReturning(int status, [String body = '']) =>
     MockClient((_) async => http.Response(body, status));
 
+/// Returns a [MockClient] that dispatches by path and query parameter:
+/// - `/api/autocomplete?q=` → [autocompleteStatus]/[autocompleteBody]
+/// - `/api/geocode?q=`      → [forwardStatus]/[forwardBody]
+/// - `/api/geocode?lat=`    → [reverseStatus]/[reverseBody]
+http.Client mockClientByQuery({
+  int forwardStatus = 200,
+  String forwardBody = '',
+  int reverseStatus = 200,
+  String reverseBody = '',
+  int autocompleteStatus = 200,
+  String? autocompleteBody,
+}) => MockClient((http.Request req) async {
+  if (req.url.path.contains('autocomplete')) {
+    return http.Response(autocompleteBody ?? forwardBody, autocompleteStatus);
+  }
+  if (req.url.queryParameters.containsKey('q')) {
+    return http.Response(forwardBody, forwardStatus);
+  }
+  return http.Response(reverseBody, reverseStatus);
+});
+
 // 100 ms past the 2-second minimum splash floor in OnboardingScreen.
 const Duration _splashClearDelay = Duration(milliseconds: 2100);
 

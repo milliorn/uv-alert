@@ -355,9 +355,12 @@ class _LocationOnboardingScreenState
   }
 
   void _onChangeLocation() {
+    _debounce?.cancel();
+    _operationId++;
     setState(() {
       _phase = _Phase.manual;
       _pending = null;
+      _suggestions = <GeocodingResult>[];
       _errorMessage = '';
     });
     _manualFocus.requestFocus();
@@ -427,51 +430,61 @@ class _LocationOnboardingScreenState
             vertical: onboardingPaddingVertical,
           ),
           child: Column(
-            spacing: onboardingSectionGap,
             children: <Widget>[
-              const Spacer(),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    spacing: onboardingSectionGap,
+                    children: <Widget>[
+                      const SizedBox(height: onboardingSectionGap),
 
-              const _Header(),
+                      const _Header(),
 
-              if (_phase == _Phase.idle) ...<Widget>[
-                _GpsButton(onPressed: onGpsPressed),
-                _ManualButton(onPressed: _onEnterManually),
-              ],
+                      if (_phase == _Phase.idle) ...<Widget>[
+                        _GpsButton(onPressed: onGpsPressed),
+                        _ManualButton(onPressed: _onEnterManually),
+                      ],
 
-              if (_phase == _Phase.loading)
-                const CircularProgressIndicator.adaptive(),
+                      if (_phase == _Phase.loading)
+                        const CircularProgressIndicator.adaptive(),
 
-              if (_phase == _Phase.manual || _phase == _Phase.geocoding)
-                _ManualEntryField(
-                  controller: _manualController,
-                  focusNode: _manualFocus,
-                  loading: _phase == _Phase.geocoding,
-                  onSearch: onManualSearch,
-                  onChanged: onChanged,
+                      if (_phase == _Phase.manual ||
+                          _phase == _Phase.geocoding)
+                        _ManualEntryField(
+                          controller: _manualController,
+                          focusNode: _manualFocus,
+                          loading: _phase == _Phase.geocoding,
+                          onSearch: onManualSearch,
+                          onChanged: onChanged,
+                        ),
+
+                      if (_phase == _Phase.manual && _suggestions.isNotEmpty)
+                        _SuggestionList(
+                          suggestions: _suggestions,
+                          onPick: _onPick,
+                        ),
+
+                      if (_phase == _Phase.picking)
+                        _PickList(
+                          candidates: _candidates,
+                          onPick: _onPick,
+                          onSearchAgain: _onSearchAgain,
+                        ),
+
+                      if (_phase == _Phase.confirm)
+                        _ConfirmCard(
+                          displayName: _pending!.result.displayName,
+                          onChange: _onChangeLocation,
+                        ),
+
+                      if (_errorMessage.isNotEmpty)
+                        _ErrorText(message: _errorMessage),
+
+                      const SizedBox(height: onboardingSectionGap),
+                    ],
+                  ),
                 ),
-
-              if (_phase == _Phase.manual && _suggestions.isNotEmpty)
-                _SuggestionList(
-                  suggestions: _suggestions,
-                  onPick: _onPick,
-                ),
-
-              if (_phase == _Phase.picking)
-                _PickList(
-                  candidates: _candidates,
-                  onPick: _onPick,
-                  onSearchAgain: _onSearchAgain,
-                ),
-
-              if (_phase == _Phase.confirm)
-                _ConfirmCard(
-                  displayName: _pending!.result.displayName,
-                  onChange: _onChangeLocation,
-                ),
-
-              if (_errorMessage.isNotEmpty) _ErrorText(message: _errorMessage),
-
-              const Spacer(),
+              ),
 
               const OnboardingProgressDots(
                 current: _locationScreenIndex,
@@ -690,7 +703,6 @@ class _PickList extends StatelessWidget {
                 onboardingPickListMaxHeightFraction,
           ),
           child: ListView(
-            shrinkWrap: true,
             children: candidates
                 .map(
                   (GeocodingResult r) => Padding(
