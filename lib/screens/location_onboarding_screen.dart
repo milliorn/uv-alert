@@ -193,11 +193,14 @@ class _LocationOnboardingScreenState
 
   void _onChanged(String value, String proxyBaseUrl, String deviceId) {
     _debounce?.cancel();
+
     setState(() {
       _suggestions = <GeocodingResult>[];
       _errorMessage = '';
     });
+
     if (value.trim().length < _minQueryLength) return;
+
     _debounce = Timer(
       const Duration(milliseconds: _debounceMs),
       () => _onDebounced(value.trim(), proxyBaseUrl, deviceId),
@@ -210,6 +213,7 @@ class _LocationOnboardingScreenState
     String deviceId,
   ) async {
     final int opId = _operationId;
+
     try {
       final List<GeocodingResult> results = await _geocodingApi(
         proxyBaseUrl,
@@ -217,13 +221,17 @@ class _LocationOnboardingScreenState
       ).autocomplete(query);
 
       if (!mounted || _operationId != opId) return;
+      
       setState(() => _suggestions = results);
     } on GeocodingNotFoundException {
       if (!mounted || _operationId != opId) return;
+
       setState(() => _suggestions = <GeocodingResult>[]);
     } on Object catch (e, st) {
       debugPrint('Autocomplete error: $e\n$st');
+
       if (!mounted || _operationId != opId) return;
+
       setState(() => _suggestions = <GeocodingResult>[]);
     }
   }
@@ -234,6 +242,7 @@ class _LocationOnboardingScreenState
     if (query.isEmpty) return;
 
     final int opId = ++_operationId;
+
     setState(() {
       _phase = _Phase.geocoding;
       _errorMessage = '';
@@ -257,6 +266,7 @@ class _LocationOnboardingScreenState
       }
     } on GeocodingNotFoundException {
       if (!mounted || _operationId != opId) return;
+
       setState(() {
         _phase = _Phase.manual;
         _suggestions = <GeocodingResult>[];
@@ -264,9 +274,12 @@ class _LocationOnboardingScreenState
             'Location not found. Try adding region and country'
             ' (e.g. "Washington, DC, US" or "London, England, GB").';
       });
+
     } on Object catch (e, st) {
       debugPrint('Manual geocoding error: $e\n$st');
+
       if (!mounted || _operationId != opId) return;
+
       setState(() {
         _phase = _Phase.manual;
         _suggestions = <GeocodingResult>[];
@@ -277,12 +290,8 @@ class _LocationOnboardingScreenState
 
   void _onPick(GeocodingResult result) {
     _debounce?.cancel();
-    setState(() {
-      _pending = (result: result, fromGps: false);
-      _candidates = <GeocodingResult>[];
-      _suggestions = <GeocodingResult>[];
-      _phase = _Phase.confirm;
-    });
+
+    _setConfirmed(result, fromGps: false);
   }
 
   void _setConfirmed(GeocodingResult result, {required bool fromGps}) {
@@ -302,6 +311,7 @@ class _LocationOnboardingScreenState
       _suggestions = <GeocodingResult>[];
       _phase = _Phase.manual;
       _errorMessage = '';
+      _continuing = false;
     });
     _manualFocus.requestFocus();
   }
@@ -332,6 +342,7 @@ class _LocationOnboardingScreenState
           .setManual(lat: confirmed.result.lat, lon: confirmed.result.lon);
 
       final Preferences prefs = await ref.read(preferencesProvider.future);
+
       await prefs.setLocationStepDone();
 
       if (!mounted) return;
@@ -345,7 +356,9 @@ class _LocationOnboardingScreenState
       );
     } on Object catch (e, st) {
       debugPrint('Confirm error: $e\n$st');
+
       if (!mounted || _operationId != opId) return;
+
       setState(() {
         _continuing = false;
         _phase = _Phase.confirm;
@@ -357,12 +370,15 @@ class _LocationOnboardingScreenState
   void _onChangeLocation() {
     _debounce?.cancel();
     _operationId++;
+
     setState(() {
       _phase = _Phase.manual;
       _pending = null;
       _suggestions = <GeocodingResult>[];
       _errorMessage = '';
+      _continuing = false;
     });
+
     _manualFocus.requestFocus();
   }
 
@@ -374,12 +390,14 @@ class _LocationOnboardingScreenState
     _debounce?.cancel();
     _operationId++;
     _manualController.clear();
+    
     setState(() {
       _phase = _Phase.idle;
       _candidates = <GeocodingResult>[];
       _suggestions = <GeocodingResult>[];
       _errorMessage = '';
       _pending = null;
+      _continuing = false;
     });
   }
 
@@ -430,6 +448,7 @@ class _LocationOnboardingScreenState
             vertical: onboardingPaddingVertical,
           ),
           child: Column(
+            spacing: onboardingSectionGap,
             children: <Widget>[
               Expanded(
                 child: SingleChildScrollView(
@@ -702,18 +721,21 @@ class _PickList extends StatelessWidget {
             maxHeight: MediaQuery.sizeOf(context).height *
                 onboardingPickListMaxHeightFraction,
           ),
-          child: ListView(
-            children: candidates
-                .map(
-                  (GeocodingResult r) => Padding(
-                    padding: const EdgeInsets.only(bottom: onboardingItemGap),
-                    child: OutlinedButton(
-                      onPressed: () => onPick(r),
-                      child: Text(r.displayName, textAlign: TextAlign.center),
-                    ),
-                  ),
-                )
-                .toList(),
+          child: ListView.separated(
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: candidates.length,
+            separatorBuilder: (_, _) =>
+                const SizedBox(height: onboardingItemGap),
+            itemBuilder: (_, int i) => SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => onPick(candidates[i]),
+                child: Text(
+                  candidates[i].displayName,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
           ),
         ),
         Text(

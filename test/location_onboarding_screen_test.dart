@@ -65,6 +65,13 @@ const String _multiResultBody =
     '{"lat":42.9,"lon":-81.2,"name":"London",'
     '"country":"CA","state":"Ontario"}]';
 
+// Two Fresno results used by separator rendering tests.
+const String _twoFresnoResults =
+    '[{"lat":36.75,"lon":-119.65,'
+    '"name":"Fresno","state":"California","country":"US"},'
+    '{"lat":34.06,"lon":-117.64,'
+    '"name":"Fresno","state":"Texas","country":"US"}]';
+
 GeocodingApi _fakeGeocodingApi({
   int forwardStatus = 200,
   String forwardBody = _validGeoArray,
@@ -92,6 +99,17 @@ GeocodingApi _fakeGeocodingApi({
 /// Picks the first candidate from the _PickList after a manual search.
 Future<void> _pickFirstCandidate(WidgetTester tester) async {
   await tester.tap(find.text(_displayName));
+  await tester.pumpAndSettle();
+}
+
+/// Drives the screen to the pick-list phase via manual entry of 'London'.
+/// Assumes the widget was pumped with a [GeocodingApi] that returns multiple
+/// results for a forward geocode.
+Future<void> _pumpToPickList(WidgetTester tester) async {
+  await tester.tap(find.text('Enter location manually'));
+  await tester.pump();
+  await tester.enterText(find.byType(TextField), 'London');
+  await tester.testTextInput.receiveAction(TextInputAction.search);
   await tester.pumpAndSettle();
 }
 
@@ -669,11 +687,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('Enter location manually'));
-      await tester.pump();
-      await tester.enterText(find.byType(TextField), 'London');
-      await tester.testTextInput.receiveAction(TextInputAction.search);
-      await tester.pumpAndSettle();
+      await _pumpToPickList(tester);
 
       expect(find.text('Select your location:'), findsOneWidget);
       expect(find.text('London, England, GB'), findsOneWidget);
@@ -692,11 +706,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('Enter location manually'));
-      await tester.pump();
-      await tester.enterText(find.byType(TextField), 'London');
-      await tester.testTextInput.receiveAction(TextInputAction.search);
-      await tester.pumpAndSettle();
+      await _pumpToPickList(tester);
 
       await tester.tap(find.text('London, England, GB'));
       await tester.pumpAndSettle();
@@ -717,11 +727,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('Enter location manually'));
-      await tester.pump();
-      await tester.enterText(find.byType(TextField), 'London');
-      await tester.testTextInput.receiveAction(TextInputAction.search);
-      await tester.pumpAndSettle();
+      await _pumpToPickList(tester);
 
       await tester.ensureVisible(find.text('Search again'));
       await tester.tap(find.text('Search again'));
@@ -1032,18 +1038,12 @@ void main() {
   testWidgets(
     'autocomplete with multiple results renders suggestion separators',
     (WidgetTester tester) async {
-      const String twoResults =
-          '[{"lat":36.75,"lon":-119.65,'
-          '"name":"Fresno","state":"California","country":"US"},'
-          '{"lat":34.06,"lon":-117.64,'
-          '"name":"Fresno","state":"Texas","country":"US"}]';
-
       await tester.pumpWidget(
         _wrap(
           LocationOnboardingScreen(
             geocodingApi: _fakeGeocodingApi(
               autocompleteStatus: 200,
-              autocompleteBody: twoResults,
+              autocompleteBody: _twoFresnoResults,
             ),
           ),
         ),
@@ -1068,16 +1068,10 @@ void main() {
   testWidgets(
     'pick list with multiple candidates renders separators',
     (WidgetTester tester) async {
-      const String twoResults =
-          '[{"lat":36.75,"lon":-119.65,'
-          '"name":"Fresno","state":"California","country":"US"},'
-          '{"lat":34.06,"lon":-117.64,'
-          '"name":"Fresno","state":"Texas","country":"US"}]';
-
       await tester.pumpWidget(
         _wrap(
           LocationOnboardingScreen(
-            geocodingApi: _fakeGeocodingApi(forwardBody: twoResults),
+            geocodingApi: _fakeGeocodingApi(forwardBody: _twoFresnoResults),
           ),
         ),
       );
