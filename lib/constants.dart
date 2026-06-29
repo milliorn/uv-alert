@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 const int msPerSecond = 1000;
 
 /// Total number of onboarding steps shown in the progress indicator.
-const int totalOnboardingSteps = 2;
+const int totalOnboardingSteps = 3;
 
 /// Brand periwinkle drawn from the logo's actual color (#9498ED).
 const Color logoPurple = Color(0xFF9498ED);
@@ -17,6 +17,12 @@ const String deviceIdHeader = 'X-Device-ID';
 
 /// Default HTTP request timeout for all API clients.
 const Duration apiDefaultTimeout = Duration(seconds: 10);
+
+/// Timeout for GPS hardware acquisition.
+///
+/// Separate from [apiDefaultTimeout] because GPS cold-start can legitimately
+/// take longer than a network roundtrip (weak signal, first fix indoors).
+const Duration gpsTimeout = Duration(seconds: 30);
 
 /// HTTP 200 OK status code.
 const int httpOk = 200;
@@ -52,3 +58,23 @@ const double onboardingSelectedBorderWidth = 2;
 
 /// Background fill opacity for a selected card on onboarding screens.
 const double onboardingSelectedCardOpacity = 0.08;
+
+/// Gap between major sections within an onboarding screen.
+const double onboardingSectionGap = 24;
+
+/// Gap between items within an onboarding card or section.
+const double onboardingItemGap = 12;
+
+/// Gap between a card's label and its description line.
+const double onboardingLabelGap = 4;
+
+/// Maximum fraction of screen height the pick-list candidate scroll area
+/// may occupy.
+const double onboardingPickListMaxHeightFraction = 0.35;
+
+/// Card corner radius used across all onboarding screens.
+///
+/// Derived from [onboardingCardBorderRadius].
+const BorderRadius onboardingCardRadius = BorderRadius.all(
+  Radius.circular(onboardingCardBorderRadius),
+);

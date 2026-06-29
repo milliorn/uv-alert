@@ -6,6 +6,7 @@ import 'package:uvalert/providers/preferences_provider.dart';
 import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/screens/dashboard_screen.dart';
 import 'package:uvalert/screens/location_onboarding_screen.dart';
+import 'package:uvalert/screens/notification_onboarding_screen.dart';
 import 'package:uvalert/screens/onboarding_screen.dart';
 import 'package:uvalert/screens/theme_onboarding_screen.dart';
 import 'package:uvalert/storage/preferences.dart';
@@ -89,6 +90,22 @@ void main() {
       );
       await pumpSplash(tester);
       expect(find.byType(LocationOnboardingScreen), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'routes to NotificationOnboardingScreen when location step done',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          prefs: <String, Object>{
+            Preferences.keyThemeStepDoneForTesting: true,
+            Preferences.keyLocationStepDoneForTesting: true,
+          },
+        ),
+      );
+      await pumpSplash(tester, hasSplashFloor: false);
+      expect(find.byType(NotificationOnboardingScreen), findsOneWidget);
     },
   );
 

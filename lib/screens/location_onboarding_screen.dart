@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:uvalert/api/geocoding_api.dart';
@@ -10,7 +11,7 @@ import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/providers/preferences_provider.dart';
 import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
-import 'package:uvalert/screens/dashboard_screen.dart';
+import 'package:uvalert/screens/notification_onboarding_screen.dart';
 import 'package:uvalert/screens/onboarding_progress_dots.dart';
 import 'package:uvalert/storage/preferences.dart';
 
@@ -19,8 +20,6 @@ import 'package:uvalert/storage/preferences.dart';
 // ---------------------------------------------------------------------------
 const int _locationScreenIndex = 1;
 
-const double _sectionGap = 24;
-const double _itemGap = 12;
 const double _spinnerSize = 16;
 const double _spinnerStrokeWidth = 2;
 
@@ -56,6 +55,9 @@ enum _Phase {
 
   /// Geocoding the manual-entry string.
   geocoding,
+
+  /// Multiple geocoding results returned; user must pick one.
+  picking,
 }
 
 // ---------------------------------------------------------------------------
@@ -84,6 +86,7 @@ class _LocationOnboardingScreenState
   _Phase _phase = _Phase.idle;
   bool _continuing = false;
   _ConfirmResult? _pending;
+  List<GeocodingResult> _candidates = <GeocodingResult>[];
   String _errorMessage = '';
 
   final TextEditingController _manualController = TextEditingController();
@@ -128,22 +131,35 @@ class _LocationOnboardingScreenState
         return;
       }
 
-      final GeocodingResult result = await _geocodingApi(
-        proxyBaseUrl,
-        deviceId,
-      ).reverseGeocode(lat: loc.lat, lon: loc.lon);
+      // Inner try/catch isolates the HTTP timeout from the GPS timeout above.
+      // Both throw TimeoutException but require different error messages.
+      GeocodingResult result;
+
+      try {
+        result = await _geocodingApi(
+          proxyBaseUrl,
+          deviceId,
+        ).reverseGeocode(lat: loc.lat, lon: loc.lon);
+      } on TimeoutException {
+        if (!mounted) return;
+        _setError('Could not determine your city. Try entering it manually.');
+        return;
+      }
 
       if (!mounted) return;
 
-      setState(() {
-        _pending = (result: result, fromGps: true);
-        _phase = _Phase.confirm;
-      });
+      _setConfirmed(result, fromGps: true);
     } on PermissionDeniedException {
       if (!mounted) return;
       // Permission denied; fall through to manual entry.
       setState(() => _phase = _Phase.manual);
       _manualFocus.requestFocus();
+    } on TimeoutException {
+      if (!mounted) return;
+      _setError(
+        'GPS is not available on this device. '
+        'Try entering your location manually.',
+      );
     } on GeocodingNotFoundException {
       if (!mounted) return;
       _setError('Could not determine your city. Try entering it manually.');
@@ -176,25 +192,28 @@ class _LocationOnboardingScreenState
     });
 
     try {
-      final GeocodingResult result = await _geocodingApi(
+      final List<GeocodingResult> results = await _geocodingApi(
         proxyBaseUrl,
         deviceId,
-      ).geocode(query);
+      ).geocodeMultiple(query);
 
       if (!mounted) return;
 
-      setState(() {
-        _pending = (result: result, fromGps: false);
-        _phase = _Phase.confirm;
-      });
+      if (results.length == 1) {
+        _setConfirmed(results.first, fromGps: false);
+      } else {
+        setState(() {
+          _candidates = results;
+          _phase = _Phase.picking;
+        });
+      }
     } on GeocodingNotFoundException {
       if (!mounted) return;
       setState(() {
         _phase = _Phase.manual;
         _errorMessage =
-            'Location not found. Try city only'
-            ' (e.g. "London") or with full country name'
-            ' (e.g. "London, England").';
+            'Location not found. Try adding region and country'
+            ' (e.g. "Washington, DC, US" or "London, England, GB").';
       });
     } on Object {
       if (!mounted) return;
@@ -203,6 +222,21 @@ class _LocationOnboardingScreenState
         _errorMessage = 'Something went wrong. Please try again.';
       });
     }
+  }
+
+  void _setConfirmed(GeocodingResult result, {required bool fromGps}) {
+    setState(() {
+      _candidates = <GeocodingResult>[];
+      _pending = (result: result, fromGps: fromGps);
+      _phase = _Phase.confirm;
+    });
+  }
+
+  void _onSearchAgain() {
+    setState(() {
+      _phase = _Phase.manual;
+    });
+    _manualFocus.requestFocus();
   }
 
   // -------------------------------------------------------------------------
@@ -229,22 +263,16 @@ class _LocationOnboardingScreenState
           .read(locationProvider.notifier)
           .setManual(lat: confirmed.result.lat, lon: confirmed.result.lon);
 
-      if (!mounted) return;
-
       final Preferences prefs = await ref.read(preferencesProvider.future);
-      // Mark onboarding complete only after all data is written; this is the
-      // last onboarding step until the notifications screen (issue #15) is
-      // added, at which point setFirstLaunchDone() moves there.
-      await prefs.setFirstLaunchDone();
+      await prefs.setLocationStepDone();
 
       if (!mounted) return;
 
-      ref.invalidate(preferencesProvider);
-
-      // TODO(onboarding): navigate to notifications screen (issue #15).
       unawaited(
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute<void>(builder: (_) => const DashboardScreen()),
+          MaterialPageRoute<void>(
+            builder: (_) => const NotificationOnboardingScreen(),
+          ),
         ),
       );
     } on Object {
@@ -304,7 +332,7 @@ class _LocationOnboardingScreenState
             vertical: onboardingPaddingVertical,
           ),
           child: Column(
-            spacing: _sectionGap,
+            spacing: onboardingSectionGap,
             children: <Widget>[
               const Spacer(),
 
@@ -324,6 +352,14 @@ class _LocationOnboardingScreenState
                   focusNode: _manualFocus,
                   loading: _phase == _Phase.geocoding,
                   onSearch: onManualSearch,
+                ),
+
+              if (_phase == _Phase.picking)
+                _PickList(
+                  candidates: _candidates,
+                  onPick: (GeocodingResult r) =>
+                      _setConfirmed(r, fromGps: false),
+                  onSearchAgain: _onSearchAgain,
                 ),
 
               if (_phase == _Phase.confirm)
@@ -368,18 +404,16 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
     return Column(
-      spacing: _itemGap,
+      spacing: onboardingItemGap,
       children: <Widget>[
-        Text(
-          'Your Location',
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
+        Text('Your Location', style: theme.textTheme.headlineMedium),
         Text(
           'UV Alert uses your location to provide accurate UV readings '
           'for your area.',
           textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyMedium,
+          style: theme.textTheme.bodyMedium,
         ),
       ],
     );
@@ -446,11 +480,11 @@ class _ManualEntryField extends StatelessWidget {
       textInputAction: TextInputAction.search,
       onSubmitted: onSearch == null ? null : (_) => onSearch!(),
       decoration: InputDecoration(
-        hintText: 'City, State (e.g. New York, NY)',
+        hintText: 'City, Region, Country (e.g. Washington, DC, US)',
         border: const OutlineInputBorder(),
         suffixIcon: loading
             ? const Padding(
-                padding: EdgeInsets.all(_itemGap),
+                padding: EdgeInsets.all(onboardingItemGap),
                 child: SizedBox.square(
                   dimension: _spinnerSize,
                   child: CircularProgressIndicator.adaptive(
@@ -476,10 +510,8 @@ class _ConfirmCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme colors = Theme.of(context).colorScheme;
-    final BorderRadius radius = BorderRadius.circular(
-      onboardingCardBorderRadius,
-    );
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colors = theme.colorScheme;
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -487,7 +519,7 @@ class _ConfirmCard extends StatelessWidget {
         vertical: onboardingCardPaddingVertical,
       ),
       decoration: BoxDecoration(
-        borderRadius: radius,
+        borderRadius: onboardingCardRadius,
         border: Border.all(
           color: colors.primary,
           width: onboardingSelectedBorderWidth,
@@ -495,18 +527,18 @@ class _ConfirmCard extends StatelessWidget {
         color: colors.primary.withValues(alpha: onboardingSelectedCardOpacity),
       ),
       child: Column(
-        spacing: _itemGap,
+        spacing: onboardingItemGap,
         children: <Widget>[
           Row(
             children: <Widget>[
               Icon(Icons.location_on, color: colors.primary),
-              const SizedBox(width: _itemGap),
+              const SizedBox(width: onboardingItemGap),
               Expanded(
                 child: Text(
                   displayName,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
@@ -514,9 +546,9 @@ class _ConfirmCard extends StatelessWidget {
           Text(
             'Location is approximate and may vary based on device GPS '
             'accuracy, network conditions, or other factors.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
@@ -530,6 +562,58 @@ class _ConfirmCard extends StatelessWidget {
   }
 }
 
+class _PickList extends StatelessWidget {
+  const _PickList({
+    required this.candidates,
+    required this.onPick,
+    required this.onSearchAgain,
+  });
+
+  final List<GeocodingResult> candidates;
+  final void Function(GeocodingResult) onPick;
+  final VoidCallback onSearchAgain;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return Column(
+      spacing: onboardingItemGap,
+      children: <Widget>[
+        Text('Select your location:', style: theme.textTheme.bodyMedium),
+        ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height *
+                onboardingPickListMaxHeightFraction,
+          ),
+          child: ListView(
+            shrinkWrap: true,
+            children: candidates
+                .map(
+                  (GeocodingResult r) => Padding(
+                    padding: const EdgeInsets.only(bottom: onboardingItemGap),
+                    child: OutlinedButton(
+                      onPressed: () => onPick(r),
+                      child: Text(r.displayName, textAlign: TextAlign.center),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+        ),
+        Text(
+          'Not your city? Try adding region and country'
+          ' (e.g. "Washington, DC, US" or "London, England, GB").',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        TextButton(onPressed: onSearchAgain, child: const Text('Search again')),
+      ],
+    );
+  }
+}
+
 class _ErrorText extends StatelessWidget {
   const _ErrorText({required this.message});
 
@@ -537,10 +621,11 @@ class _ErrorText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
     return Text(
       message,
-      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-        color: Theme.of(context).colorScheme.error,
+      style: theme.textTheme.bodyMedium?.copyWith(
+        color: theme.colorScheme.error,
       ),
       textAlign: TextAlign.center,
     );

@@ -7,6 +7,7 @@ import 'package:uvalert/providers/preferences_provider.dart';
 import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/screens/dashboard_screen.dart';
 import 'package:uvalert/screens/location_onboarding_screen.dart';
+import 'package:uvalert/screens/notification_onboarding_screen.dart';
 import 'package:uvalert/screens/theme_onboarding_screen.dart';
 import 'package:uvalert/storage/preferences.dart';
 
@@ -36,6 +37,7 @@ enum _SplashStep {
 /// Returns the first screen the user should see based on [prefs].
 Widget _onboardingDestination(Preferences prefs) {
   if (!prefs.isFirstLaunch) return const DashboardScreen();
+  if (prefs.isLocationStepDone) return const NotificationOnboardingScreen();
   if (prefs.isThemeStepDone) return const LocationOnboardingScreen();
   return const ThemeOnboardingScreen();
 }

@@ -9,6 +9,10 @@ class FakeGeolocatorPlatform extends GeolocatorPlatform {
   LocationPermission checkResult = LocationPermission.always;
   LocationPermission requestResult = LocationPermission.always;
   Position? positionResult;
+  // When set, getCurrentPosition waits this long before resolving.
+  // In testWidgets (fakeAsync), advance simulated time with tester.pump(...) to
+  // avoid real wall-clock delay. In plain test() calls the delay is real time.
+  Duration? positionDelay;
 
   @override
   Future<LocationPermission> checkPermission() async => checkResult;
@@ -20,6 +24,9 @@ class FakeGeolocatorPlatform extends GeolocatorPlatform {
   Future<Position> getCurrentPosition({
     LocationSettings? locationSettings,
   }) async {
+    if (positionDelay != null) {
+      await Future<void>.delayed(positionDelay!);
+    }
     if (positionResult == null) {
       throw StateError(
         'FakeGeolocatorPlatform: positionResult not set for this test',

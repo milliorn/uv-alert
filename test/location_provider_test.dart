@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:uvalert/constants.dart';
 import 'package:uvalert/providers/location_provider.dart';
 
 import 'fakes/fake_geolocator.dart';
+import 'helpers.dart';
 
 // Builds a ProviderContainer with a LocationNotifier wired to the given fake.
 // Using `overrideWith` lets us inject a custom notifier instance while keeping
@@ -128,6 +132,29 @@ void main() {
         throwsA(isA<PermissionDeniedException>()),
       );
     },
+  );
+
+  // -------------------------------------------------------------------------
+  // fetchGps — timeout
+  // -------------------------------------------------------------------------
+
+  test(
+    'fetchGps throws TimeoutException when GPS hangs',
+    () async {
+      final FakeGeolocatorPlatform platform = FakeGeolocatorPlatform()
+        ..checkResult = LocationPermission.always
+        ..positionDelay = gpsTimeout + gpsOvershoot
+        ..positionResult = fakePosition();
+
+      final ProviderContainer container = _makeContainer(platform);
+      addTearDown(container.dispose);
+
+      await expectLater(
+        container.read(locationProvider.notifier).fetchGps(),
+        throwsA(isA<TimeoutException>()),
+      );
+    },
+    timeout: Timeout(gpsTimeout + gpsTestBuffer),
   );
 
   // -------------------------------------------------------------------------

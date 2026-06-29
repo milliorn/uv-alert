@@ -4,14 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uvalert/api/geocoding_api.dart';
+import 'package:uvalert/constants.dart';
 import 'package:uvalert/providers/device_id_provider.dart';
 import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
-import 'package:uvalert/screens/dashboard_screen.dart';
 import 'package:uvalert/screens/location_onboarding_screen.dart';
+import 'package:uvalert/screens/notification_onboarding_screen.dart';
 import 'package:uvalert/storage/preferences.dart';
 
 import 'fakes/fake_geolocator.dart';
@@ -46,20 +49,42 @@ class _ThrowingSettingsNotifier extends SettingsNotifier {
 
 const String _proxyUrl = 'https://proxy.test';
 
-// _parseResult assembles displayName as 'name, state, country'.
+// displayName assembled as 'name, state, country'.
 const String _displayName = 'Fresno, California, US';
-const String _validGeoBody =
+
+// geocodeMultiple (forward, ?q=) returns a JSON array.
+const String _validForwardBody =
+    '[{"lat":36.75,"lon":-119.65,'
+    '"name":"Fresno","state":"California","country":"US"}]';
+
+// reverseGeocode (?lat=&lon=) returns a single JSON object.
+const String _validReverseBody =
     '{"lat":36.75,"lon":-119.65,'
     '"name":"Fresno","state":"California","country":"US"}';
 
-GeocodingApi _fakeGeocodingApi({
-  int status = 200,
-  String body = _validGeoBody,
-}) {
+// geocodeMultiple with two results (used by pick-list tests).
+const String _multiResultBody =
+    '[{"lat":51.5,"lon":-0.1,"name":"London",'
+    '"country":"GB","state":"England"},'
+    '{"lat":42.9,"lon":-81.2,"name":"London",'
+    '"country":"CA","state":"Ontario"}]';
+
+// Routes to array body for forward (?q=) and object body for reverse (?lat=).
+http.Client _geoClient({int status = 200, String? forwardBody}) {
+  final String fwd = forwardBody ?? _validForwardBody;
+  return MockClient((http.Request req) async {
+    if (req.url.queryParameters.containsKey('q')) {
+      return http.Response(fwd, status);
+    }
+    return http.Response(_validReverseBody, status);
+  });
+}
+
+GeocodingApi _fakeGeocodingApi({int status = 200, String? forwardBody}) {
   return GeocodingApi(
     proxyBaseUrl: _proxyUrl,
     deviceId: 'test-device-id',
-    httpClient: mockClientReturning(status, body),
+    httpClient: _geoClient(status: status, forwardBody: forwardBody),
   );
 }
 
@@ -215,7 +240,7 @@ void main() {
     await tester.pumpWidget(
       _wrap(
         LocationOnboardingScreen(
-          geocodingApi: _fakeGeocodingApi(status: 404, body: 'not found'),
+          geocodingApi: _fakeGeocodingApi(status: 404, forwardBody: '[]'),
         ),
       ),
     );
@@ -237,7 +262,7 @@ void main() {
     await tester.pumpWidget(
       _wrap(
         LocationOnboardingScreen(
-          geocodingApi: _fakeGeocodingApi(status: 500, body: 'error'),
+          geocodingApi: _fakeGeocodingApi(status: 500, forwardBody: 'error'),
         ),
       ),
     );
@@ -350,7 +375,7 @@ void main() {
     await tester.pumpWidget(
       _wrap(
         LocationOnboardingScreen(
-          geocodingApi: _fakeGeocodingApi(status: 404, body: 'not found'),
+          geocodingApi: _fakeGeocodingApi(status: 404, forwardBody: '[]'),
         ),
         platform: platform,
       ),
@@ -366,30 +391,31 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  // Continue navigates to Dashboard
+  // Continue navigates to NotificationOnboardingScreen
   // -------------------------------------------------------------------------
 
-  testWidgets('tapping Continue after confirm navigates to DashboardScreen', (
+  testWidgets(
+    'tapping Continue after confirm navigates to NotificationOnboardingScreen',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
+      );
+      await _tapContinueAfterManualEntry(tester);
+      expect(find.byType(NotificationOnboardingScreen), findsOneWidget);
+    },
+  );
+
+  testWidgets('tapping Continue after confirm does not clear isFirstLaunch', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
       _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
     );
     await _tapContinueAfterManualEntry(tester);
-    expect(find.byType(DashboardScreen), findsOneWidget);
+    final Preferences prefs = await Preferences.load();
+    // setFirstLaunchDone() moved to NotificationOnboardingScreen (issue #15).
+    expect(prefs.isFirstLaunch, isTrue);
   });
-
-  testWidgets(
-    'tapping Continue after confirm persists isFirstLaunch as false',
-    (WidgetTester tester) async {
-      await tester.pumpWidget(
-        _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
-      );
-      await _tapContinueAfterManualEntry(tester);
-      final Preferences prefs = await Preferences.load();
-      expect(prefs.isFirstLaunch, isFalse);
-    },
-  );
 
   // -------------------------------------------------------------------------
   // Owned GeocodingApi creation (line 96: _ownedApi ??= GeocodingApi(...))
@@ -463,6 +489,37 @@ void main() {
       findsOneWidget,
     );
   });
+
+  // -------------------------------------------------------------------------
+  // GPS timeout (TimeoutException branch in _onUseMyLocation)
+  // -------------------------------------------------------------------------
+
+  testWidgets(
+    'GPS timeout shows not-available error message',
+    (WidgetTester tester) async {
+      final FakeGeolocatorPlatform platform = FakeGeolocatorPlatform()
+        ..checkResult = LocationPermission.always
+        ..positionDelay = gpsTimeout + gpsOvershoot
+        ..positionResult = fakePosition();
+
+      await tester.pumpWidget(
+        _wrap(
+          LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
+          platform: platform,
+        ),
+      );
+
+      await tester.tap(find.text('Use My Location'));
+      await tester.pump(gpsTimeout + gpsOvershoot);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('GPS is not available on this device'),
+        findsOneWidget,
+      );
+    },
+    timeout: Timeout(gpsTimeout + gpsTestBuffer),
+  );
 
   // -------------------------------------------------------------------------
   // CircularProgressIndicator during loading (line 300)
@@ -540,8 +597,119 @@ void main() {
       find.text('Something went wrong. Please try again.'),
       findsOneWidget,
     );
-    expect(find.byType(DashboardScreen), findsNothing);
+    expect(find.byType(NotificationOnboardingScreen), findsNothing);
   });
+
+  // -------------------------------------------------------------------------
+  // GPS reverseGeocode timeout (inner TimeoutException, lines 144-145)
+  // -------------------------------------------------------------------------
+
+  testWidgets(
+    'GPS reverseGeocode timeout shows city-not-determined error',
+    (WidgetTester tester) async {
+      final FakeGeolocatorPlatform platform = FakeGeolocatorPlatform()
+        ..checkResult = LocationPermission.always
+        ..positionResult = fakePosition(lat: 36.75, lon: -119.65);
+
+      await tester.pumpWidget(
+        _wrap(
+          LocationOnboardingScreen(
+            geocodingApi: _ReverseTimeoutGeocodingApi(),
+          ),
+          platform: platform,
+        ),
+      );
+
+      await tester.tap(find.text('Use My Location'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'Could not determine your city. Try entering it manually.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // Multiple geocoding results: _Phase.picking (lines 205-208, 358-362, 566+)
+  // -------------------------------------------------------------------------
+
+  testWidgets(
+    'multiple geocode results shows pick list with all candidates',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          LocationOnboardingScreen(
+            geocodingApi: _fakeGeocodingApi(forwardBody: _multiResultBody),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Enter location manually'));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'London');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Select your location:'), findsOneWidget);
+      expect(find.text('London, England, GB'), findsOneWidget);
+      expect(find.text('London, Ontario, CA'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'picking a candidate from pick list shows confirm card',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          LocationOnboardingScreen(
+            geocodingApi: _fakeGeocodingApi(forwardBody: _multiResultBody),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Enter location manually'));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'London');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('London, England, GB'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('London, England, GB'), findsOneWidget);
+      expect(find.text('Select your location:'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'tapping Search again from pick list returns to manual entry',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          LocationOnboardingScreen(
+            geocodingApi: _fakeGeocodingApi(forwardBody: _multiResultBody),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Enter location manually'));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'London');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Search again'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TextField), findsOneWidget);
+      expect(find.text('Select your location:'), findsNothing);
+    },
+  );
+
+  // -------------------------------------------------------------------------
 
   testWidgets('_onConfirm error re-enables Continue button so user can retry', (
     WidgetTester tester,
@@ -582,4 +750,25 @@ class _SlowGeolocatorPlatform extends FakeGeolocatorPlatform {
   @override
   Future<Position> getCurrentPosition({LocationSettings? locationSettings}) =>
       _positionFuture;
+}
+
+// ---------------------------------------------------------------------------
+// GeocodingApi that times out only on reverseGeocode
+// ---------------------------------------------------------------------------
+
+class _ReverseTimeoutGeocodingApi extends GeocodingApi {
+  _ReverseTimeoutGeocodingApi()
+    : super(
+        proxyBaseUrl: _proxyUrl,
+        deviceId: 'test-device-id',
+      );
+
+  @override
+  Future<GeocodingResult> reverseGeocode({
+    required double lat,
+    required double lon,
+  }) =>
+      Future<GeocodingResult>.error(
+        TimeoutException('reverseGeocode timed out'),
+      );
 }

@@ -48,12 +48,14 @@ class GeocodingApi {
     if (_ownsClient) _httpClient.close();
   }
 
-  /// Resolves a location [query] string (e.g. "Fresno") to coordinates
-  /// and a human-readable display name.
+  /// Resolves a location [query] string (e.g. "Fresno") to a list of
+  /// candidate matches, ordered by relevance.
   ///
-  /// Throws [GeocodingNotFoundException] when the proxy returns 404 (no match).
-  /// Throws [GeocodingException] on any other non-200 response or parse error.
-  Future<GeocodingResult> geocode(String query) async {
+  /// Returns one or more results. Throws [GeocodingNotFoundException]
+  /// when the proxy returns 404 (no match) or the response contains no
+  /// usable results. Throws [GeocodingException] on any other non-200
+  /// response or parse error.
+  Future<List<GeocodingResult>> geocodeMultiple(String query) async {
     final Uri uri = _geocodeUri.replace(
       queryParameters: <String, String>{'q': query},
     );
@@ -62,7 +64,7 @@ class GeocodingApi {
         .get(uri, headers: _headers)
         .timeout(_timeout);
 
-    return _parseResult(response);
+    return _parseResults(response);
   }
 
   /// Resolves GPS [lat]/[lon] coordinates to a human-readable display name.
@@ -87,14 +89,37 @@ class GeocodingApi {
     return _parseResult(response);
   }
 
-  GeocodingResult _parseResult(http.Response response) {
-    if (response.statusCode == httpNotFound) {
-      throw const GeocodingNotFoundException();
-    }
+  List<GeocodingResult> _parseResults(http.Response response) {
+    _checkStatus(response);
 
-    if (response.statusCode != httpOk) {
-      throw GeocodingException(response.statusCode, response.body);
+    try {
+      final Object? decoded = jsonDecode(response.body);
+
+      if (decoded is! List<Object?>) {
+        throw GeocodingException(response.statusCode, response.body);
+      }
+
+      final List<GeocodingResult> results = <GeocodingResult>[];
+
+      for (final Object? item in decoded) {
+        if (item is! Map<String, Object?>) continue;
+
+        final GeocodingResult? result = _itemToResult(item);
+        if (result != null) results.add(result);
+      }
+
+      if (results.isEmpty) {
+        throw const GeocodingNotFoundException();
+      }
+
+      return results;
+    } on FormatException catch (e) {
+      throw GeocodingException(response.statusCode, 'parse error: $e');
     }
+  }
+
+  GeocodingResult _parseResult(http.Response response) {
+    _checkStatus(response);
 
     try {
       final Object? decoded = jsonDecode(response.body);
@@ -103,28 +128,44 @@ class GeocodingApi {
         throw GeocodingException(response.statusCode, response.body);
       }
 
-      final Object? lat = decoded['lat'];
-      final Object? lon = decoded['lon'];
-      final Object? name = decoded['name'];
-      final Object? country = decoded['country'];
-      final Object? state = decoded['state'];
-
-      if (lat is! num || lon is! num || name is! String || country is! String) {
+      final GeocodingResult? result = _itemToResult(decoded);
+      if (result == null) {
         throw GeocodingException(response.statusCode, response.body);
       }
 
-      final String displayName = state is String
-          ? '$name, $state, $country'
-          : '$name, $country';
-
-      return (
-        lat: lat.toDouble(),
-        lon: lon.toDouble(),
-        displayName: displayName,
-      );
+      return result;
     } on FormatException catch (e) {
       throw GeocodingException(response.statusCode, 'parse error: $e');
     }
+  }
+
+  static void _checkStatus(http.Response response) {
+    if (response.statusCode == httpNotFound) {
+      throw const GeocodingNotFoundException();
+    }
+    if (response.statusCode != httpOk) {
+      throw GeocodingException(response.statusCode, response.body);
+    }
+  }
+
+  /// Parses one JSON object into a [GeocodingResult], or returns `null` if
+  /// required fields are missing or have the wrong type.
+  static GeocodingResult? _itemToResult(Map<String, Object?> item) {
+    final Object? lat = item['lat'];
+    final Object? lon = item['lon'];
+    final Object? name = item['name'];
+    final Object? country = item['country'];
+    final Object? state = item['state'];
+
+    if (lat is! num || lon is! num || name is! String || country is! String) {
+      return null;
+    }
+
+    final String displayName = state is String
+        ? '$name, $state, $country'
+        : '$name, $country';
+
+    return (lat: lat.toDouble(), lon: lon.toDouble(), displayName: displayName);
   }
 }
 

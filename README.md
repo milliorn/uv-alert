@@ -40,18 +40,30 @@ flutter run
 
 ## Commands
 
-```sh
-flutter pub get                       # Install dependencies
-flutter analyze                       # Lint (very_good_analysis)
-flutter test                          # Run all tests
-flutter test test/foo_test.dart       # Run a single test file
-flutter pub global run dartdoc        # Generate and validate API docs
-flutter build apk                     # Android APK
-flutter build appbundle               # Android App Bundle
+```fish
+flutter pub get                                    # Install dependencies
+flutter analyze --fatal-infos                      # Lint (very_good_analysis)
+flutter test --exclude-tags integration            # Run all unit/widget tests
+flutter test test/foo_test.dart                    # Run a single test file
+dart doc --validate-links                          # Generate and validate API docs
+flutter build apk                                  # Android APK
+flutter build appbundle                            # Android App Bundle
 ```
 
-CI runs `flutter analyze --fatal-infos` and `dart doc --validate-links`
-as required gates. Run both locally before any PR.
+Integration tests (require live proxy):
+
+```fish
+flutter test --tags integration test/integration/geocoding_api_live_test.dart
+```
+
+Run `flutter analyze --fatal-infos` and `dart doc --validate-links` locally
+before any PR.
+
+### Full guidance
+
+All architecture, data-flow, provider graph, screen specs, preferences keys,
+CI/CD, and style rules are documented in `.private/CLAUDE.md`. Read it before
+reasoning about any design decision.
 
 ## Architecture
 
@@ -134,6 +146,9 @@ without mocks leaking across boundaries.
   kick off async initialization.
 - Unawaited `Navigator` push calls must be wrapped in `unawaited()`
   (required by `unawaited_futures` + `discarded_futures` lint rules).
+- `setFirstLaunchDone()` is owned by the **last** onboarding screen
+  (`NotificationOnboardingScreen`); move it forward when a new screen
+  is appended.
 
 ### Screens (`lib/screens/`)
 
@@ -143,14 +158,15 @@ without mocks leaking across boundaries.
 - `theme_onboarding_screen.dart` -- step 1: theme selection; calls
   `prefs.setThemeStepDone()`; does NOT call `setFirstLaunchDone()`
 - `location_onboarding_screen.dart` -- step 2: GPS or manual entry via
-  geocoding; calls `setFirstLaunchDone()` after all data is written
+  geocoding; navigates to `NotificationOnboardingScreen`
+- `notification_onboarding_screen.dart` -- step 3: notification
+  preference (Default or None); calls `setFirstLaunchDone()` then
+  navigates to `DashboardScreen`
 - `dashboard_screen.dart` -- placeholder only
 - `onboarding_progress_dots.dart` -- shared progress indicator widget
 
 ### Not yet implemented
 
-- Onboarding step 3 (notifications, issue #15) -- when added, move
-  `setFirstLaunchDone()` there and bump `totalOnboardingSteps` to 3
 - Real dashboard screen and settings screen
 - `lib/services/` (background polling via `workmanager`, local
   notifications via `flutter_local_notifications`)
@@ -178,6 +194,16 @@ Used for both `hourly` (48 h) and `daily` (8 d) lists.
 | `notifications_enabled` | `bool` | `false` |
 | `cached_payload` | `String?` | -- |
 | `cached_payload_at` | `String?` | -- |
+
+## Headless display (Linux)
+
+Required for running the Flutter Linux desktop target under Xvfb:
+
+```fish
+pgrep -x Xvfb >/dev/null; or (Xvfb :99 -screen 0 1280x1024x24 -ac &; sleep 0.5)
+set -x DISPLAY :99
+flutter run -d linux --dart-define=PROXY_BASE_URL=https://uv-alert-proxy.vercel.app
+```
 
 ## Running Tests
 
