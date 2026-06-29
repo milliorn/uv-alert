@@ -315,6 +315,7 @@ class _LocationOnboardingScreenState
 
     assert(_pending != null, '_onConfirm called outside confirm phase');
 
+    final int opId = ++_operationId;
     final _ConfirmResult confirmed = _pending!;
 
     try {
@@ -342,8 +343,9 @@ class _LocationOnboardingScreenState
           ),
         ),
       );
-    } on Object {
-      if (!mounted) return;
+    } on Object catch (e, st) {
+      debugPrint('Confirm error: $e\n$st');
+      if (!mounted || _operationId != opId) return;
       setState(() {
         _continuing = false;
         _phase = _Phase.confirm;
