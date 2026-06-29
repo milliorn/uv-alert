@@ -264,6 +264,18 @@ void main() {
       expect(capturedHeaders?[deviceIdHeader], 'test-device-id');
     });
 
+    test('throws GeocodingException on non-200/404 status', () async {
+      final GeocodingApi api = _makeApi(
+        mockClientReturning(500, 'server error'),
+      );
+      addTearDown(api.dispose);
+
+      await expectLater(
+        api.reverseGeocode(lat: 36.75, lon: -119.65),
+        throwsA(isA<GeocodingException>()),
+      );
+    });
+
     test('throws GeocodingException when body is not a JSON object', () async {
       final GeocodingApi api = _makeApi(mockClientReturning(200, '"string"'));
       addTearDown(api.dispose);

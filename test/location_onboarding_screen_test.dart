@@ -905,6 +905,152 @@ void main() {
       expect(find.text(_displayName), findsNothing);
     },
   );
+  // -------------------------------------------------------------------------
+  // _onBack via AppBar back button (lines 342-350)
+  // -------------------------------------------------------------------------
+
+  testWidgets('back button from manual phase returns to idle phase', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
+    );
+
+    await tester.tap(find.text('Enter location manually'));
+    await tester.pump();
+
+    // Back button is visible while in manual phase.
+    await tester.tap(find.byType(BackButton));
+    await tester.pump();
+
+    // Returned to idle: both option buttons visible again.
+    expect(find.text('Use My Location'), findsOneWidget);
+    expect(find.text('Enter location manually'), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);
+  });
+
+  // -------------------------------------------------------------------------
+  // _onSearchAgain via Search again button in _PickList (lines 265-273)
+  // -------------------------------------------------------------------------
+
+  testWidgets('Search again from pick list returns to manual entry', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
+    );
+
+    await tester.tap(find.text('Enter location manually'));
+    await tester.pump();
+
+    await tester.enterText(find.byType(TextField), 'Fresno, CA');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    // Now in picking phase - tap Search again.
+    await tester.tap(find.text('Search again'));
+    await tester.pump();
+
+    expect(find.byType(TextField), findsOneWidget);
+    expect(find.text('Search again'), findsNothing);
+  });
+
+  // -------------------------------------------------------------------------
+  // Autocomplete generic error (lines 208-210 in _onDebounced)
+  // -------------------------------------------------------------------------
+
+  testWidgets('autocomplete generic error silently clears suggestions', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        LocationOnboardingScreen(
+          geocodingApi: _fakeGeocodingApi(
+            forwardStatus: 500,
+            forwardBody: 'server error',
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Enter location manually'));
+    await tester.pump();
+
+    await tester.enterText(find.byType(TextField), 'Fres');
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+
+    // No suggestions and no error banner shown for autocomplete failures.
+    expect(find.text(_displayName), findsNothing);
+    expect(find.textContaining('Something went wrong'), findsNothing);
+  });
+
+  // -------------------------------------------------------------------------
+  // _SuggestionList separator (line 706) — needs 2+ suggestions
+  // -------------------------------------------------------------------------
+
+  testWidgets(
+    'autocomplete with multiple results renders suggestion separators',
+    (WidgetTester tester) async {
+      const String twoResults =
+          '[{"lat":36.75,"lon":-119.65,'
+          '"name":"Fresno","state":"California","country":"US"},'
+          '{"lat":34.06,"lon":-117.64,'
+          '"name":"Fresno","state":"Texas","country":"US"}]';
+
+      await tester.pumpWidget(
+        _wrap(
+          LocationOnboardingScreen(
+            geocodingApi: _fakeGeocodingApi(forwardBody: twoResults),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Enter location manually'));
+      await tester.pump();
+
+      await tester.enterText(find.byType(TextField), 'Fres');
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Fresno, California, US'), findsOneWidget);
+      expect(find.text('Fresno, Texas, US'), findsOneWidget);
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // _PickList separator (line 673) — needs 2+ candidates from geocodeMultiple
+  // -------------------------------------------------------------------------
+
+  testWidgets(
+    'pick list with multiple candidates renders separators',
+    (WidgetTester tester) async {
+      const String twoResults =
+          '[{"lat":36.75,"lon":-119.65,'
+          '"name":"Fresno","state":"California","country":"US"},'
+          '{"lat":34.06,"lon":-117.64,'
+          '"name":"Fresno","state":"Texas","country":"US"}]';
+
+      await tester.pumpWidget(
+        _wrap(
+          LocationOnboardingScreen(
+            geocodingApi: _fakeGeocodingApi(forwardBody: twoResults),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Enter location manually'));
+      await tester.pump();
+
+      await tester.enterText(find.byType(TextField), 'Fresno, CA');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Fresno, California, US'), findsOneWidget);
+      expect(find.text('Fresno, Texas, US'), findsOneWidget);
+      expect(find.text('Search again'), findsOneWidget);
+    },
+  );
 }
 
 // ---------------------------------------------------------------------------
