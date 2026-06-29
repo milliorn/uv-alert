@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/milliorn/uv-alert/compare/v1.7.0...v1.8.0) (2026-06-29)
+
+
+### Features
+
+* **onboarding:** add notification onboarding screen and update routing ([#81](https://github.com/milliorn/uv-alert/issues/81)) ([eac43a8](https://github.com/milliorn/uv-alert/commit/eac43a8715e98ba4c7eccdc1ce68f4c71b413472))
+
 ## [1.7.0](https://github.com/milliorn/uv-alert/compare/v1.6.0...v1.7.0) (2026-06-20)
 
 
