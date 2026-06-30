@@ -286,23 +286,23 @@ void main() {
       );
     });
 
-    test('throws GeocodingException when required fields are missing',
-        () async {
-      final GeocodingApi api = _makeApi(
-        mockClientReturning(200, '{"lat":36.75,"lon":-119.65}'),
-      );
-      addTearDown(api.dispose);
+    test(
+      'throws GeocodingException when required fields are missing',
+      () async {
+        final GeocodingApi api = _makeApi(
+          mockClientReturning(200, '{"lat":36.75,"lon":-119.65}'),
+        );
+        addTearDown(api.dispose);
 
-      await expectLater(
-        api.reverseGeocode(lat: 36.75, lon: -119.65),
-        throwsA(isA<GeocodingException>()),
-      );
-    });
+        await expectLater(
+          api.reverseGeocode(lat: 36.75, lon: -119.65),
+          throwsA(isA<GeocodingException>()),
+        );
+      },
+    );
 
     test('throws GeocodingException on malformed JSON body', () async {
-      final GeocodingApi api = _makeApi(
-        mockClientReturning(200, '{not json}'),
-      );
+      final GeocodingApi api = _makeApi(mockClientReturning(200, '{not json}'));
       addTearDown(api.dispose);
 
       await expectLater(

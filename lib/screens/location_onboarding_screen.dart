@@ -221,7 +221,7 @@ class _LocationOnboardingScreenState
       ).autocomplete(query);
 
       if (!mounted || _operationId != opId) return;
-      
+
       setState(() => _suggestions = results);
     } on GeocodingNotFoundException {
       if (!mounted || _operationId != opId) return;
@@ -274,7 +274,6 @@ class _LocationOnboardingScreenState
             'Location not found. Try adding region and country'
             ' (e.g. "Washington, DC, US" or "London, England, GB").';
       });
-
     } on Object catch (e, st) {
       debugPrint('Manual geocoding error: $e\n$st');
 
@@ -390,7 +389,7 @@ class _LocationOnboardingScreenState
     _debounce?.cancel();
     _operationId++;
     _manualController.clear();
-    
+
     setState(() {
       _phase = _Phase.idle;
       _candidates = <GeocodingResult>[];
@@ -467,8 +466,7 @@ class _LocationOnboardingScreenState
                       if (_phase == _Phase.loading)
                         const CircularProgressIndicator.adaptive(),
 
-                      if (_phase == _Phase.manual ||
-                          _phase == _Phase.geocoding)
+                      if (_phase == _Phase.manual || _phase == _Phase.geocoding)
                         _ManualEntryField(
                           controller: _manualController,
                           focusNode: _manualFocus,
@@ -718,7 +716,8 @@ class _PickList extends StatelessWidget {
         Text('Select your location:', style: theme.textTheme.bodyMedium),
         ConstrainedBox(
           constraints: BoxConstraints(
-            maxHeight: MediaQuery.sizeOf(context).height *
+            maxHeight:
+                MediaQuery.sizeOf(context).height *
                 onboardingPickListMaxHeightFraction,
           ),
           child: ListView.separated(
@@ -769,10 +768,7 @@ class _SuggestionList extends StatelessWidget {
         width: double.infinity,
         child: OutlinedButton(
           onPressed: () => onPick(suggestions[i]),
-          child: Text(
-            suggestions[i].displayName,
-            textAlign: TextAlign.center,
-          ),
+          child: Text(suggestions[i].displayName, textAlign: TextAlign.center),
         ),
       ),
     );
