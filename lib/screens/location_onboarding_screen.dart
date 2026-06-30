@@ -193,6 +193,7 @@ class _LocationOnboardingScreenState
 
   void _onChanged(String value, String proxyBaseUrl, String deviceId) {
     _debounce?.cancel();
+    _operationId++;
 
     setState(() {
       _suggestions = <GeocodingResult>[];
@@ -237,6 +238,8 @@ class _LocationOnboardingScreenState
   }
 
   Future<void> _onGeocodeManual(String proxyBaseUrl, String deviceId) async {
+    _debounce?.cancel();
+
     final String query = _manualController.text.trim();
 
     if (query.isEmpty) return;
@@ -344,7 +347,7 @@ class _LocationOnboardingScreenState
 
       await prefs.setLocationStepDone();
 
-      if (!mounted) return;
+      if (!mounted || _operationId != opId) return;
 
       unawaited(
         Navigator.of(context).pushReplacement(
@@ -721,7 +724,6 @@ class _PickList extends StatelessWidget {
                 onboardingPickListMaxHeightFraction,
           ),
           child: ListView.separated(
-            physics: const NeverScrollableScrollPhysics(),
             itemCount: candidates.length,
             separatorBuilder: (_, _) =>
                 const SizedBox(height: onboardingItemGap),
