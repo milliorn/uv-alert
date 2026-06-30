@@ -1012,8 +1012,8 @@ void main() {
       _wrap(
         LocationOnboardingScreen(
           geocodingApi: _fakeGeocodingApi(
-            forwardStatus: 500,
-            forwardBody: 'server error',
+            autocompleteStatus: 500,
+            autocompleteBody: 'server error',
           ),
         ),
       ),
