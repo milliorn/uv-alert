@@ -208,6 +208,7 @@ class _LocationOnboardingScreenState
     }
 
     final String trimmed = value.trim();
+
     if (trimmed.length < _minQueryLength) return;
 
     _debounce = Timer(
