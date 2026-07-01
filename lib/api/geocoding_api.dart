@@ -28,6 +28,9 @@ class GeocodingApi {
   }) : _geocodeUri = Uri.parse(
          '${stripTrailingSlash(proxyBaseUrl)}/api/geocode',
        ),
+       _autocompleteUri = Uri.parse(
+         '${stripTrailingSlash(proxyBaseUrl)}/api/autocomplete',
+       ),
        _deviceId = deviceId,
        _timeout = timeout,
        _ownsClient = httpClient == null,
@@ -38,6 +41,7 @@ class GeocodingApi {
   final http.Client _httpClient;
   final bool _ownsClient;
   final Uri _geocodeUri;
+  final Uri _autocompleteUri;
 
   late final Map<String, String> _headers = <String, String>{
     deviceIdHeader: _deviceId,
@@ -48,6 +52,15 @@ class GeocodingApi {
     if (_ownsClient) _httpClient.close();
   }
 
+  /// Returns prefix-matched place suggestions for [query] via the autocomplete
+  /// endpoint (Photon/OSM-backed).
+  ///
+  /// Throws [GeocodingNotFoundException] when no suggestions are found (404 or
+  /// a 200 response with an empty array).
+  /// Throws [GeocodingException] on any other non-200 response or parse error.
+  Future<List<GeocodingResult>> autocomplete(String query) =>
+      _getResults(_autocompleteUri, query);
+
   /// Resolves a location [query] string (e.g. "Fresno") to a list of
   /// candidate matches, ordered by relevance.
   ///
@@ -55,10 +68,11 @@ class GeocodingApi {
   /// when the proxy returns 404 (no match) or the response contains no
   /// usable results. Throws [GeocodingException] on any other non-200
   /// response or parse error.
-  Future<List<GeocodingResult>> geocodeMultiple(String query) async {
-    final Uri uri = _geocodeUri.replace(
-      queryParameters: <String, String>{'q': query},
-    );
+  Future<List<GeocodingResult>> geocodeMultiple(String query) =>
+      _getResults(_geocodeUri, query);
+
+  Future<List<GeocodingResult>> _getResults(Uri base, String query) async {
+    final Uri uri = base.replace(queryParameters: <String, String>{'q': query});
 
     final http.Response response = await _httpClient
         .get(uri, headers: _headers)
@@ -99,6 +113,10 @@ class GeocodingApi {
         throw GeocodingException(response.statusCode, response.body);
       }
 
+      if (decoded.isEmpty) {
+        throw const GeocodingNotFoundException();
+      }
+
       final List<GeocodingResult> results = <GeocodingResult>[];
 
       for (final Object? item in decoded) {
@@ -108,8 +126,10 @@ class GeocodingApi {
         if (result != null) results.add(result);
       }
 
+      // decoded was non-empty but every item failed field validation —
+      // this is a proxy schema change, not a "location not found" result.
       if (results.isEmpty) {
-        throw const GeocodingNotFoundException();
+        throw GeocodingException(response.statusCode, response.body);
       }
 
       return results;
@@ -138,35 +158,35 @@ class GeocodingApi {
       throw GeocodingException(response.statusCode, 'parse error: $e');
     }
   }
+}
 
-  static void _checkStatus(http.Response response) {
-    if (response.statusCode == httpNotFound) {
-      throw const GeocodingNotFoundException();
-    }
-    if (response.statusCode != httpOk) {
-      throw GeocodingException(response.statusCode, response.body);
-    }
+void _checkStatus(http.Response response) {
+  if (response.statusCode == httpNotFound) {
+    throw const GeocodingNotFoundException();
+  }
+  if (response.statusCode != httpOk) {
+    throw GeocodingException(response.statusCode, response.body);
+  }
+}
+
+/// Parses one JSON object into a [GeocodingResult], or returns `null` if
+/// required fields are missing or have the wrong type.
+GeocodingResult? _itemToResult(Map<String, Object?> item) {
+  final Object? lat = item['lat'];
+  final Object? lon = item['lon'];
+  final Object? name = item['name'];
+  final Object? country = item['country'];
+  final Object? state = item['state'];
+
+  if (lat is! num || lon is! num || name is! String || country is! String) {
+    return null;
   }
 
-  /// Parses one JSON object into a [GeocodingResult], or returns `null` if
-  /// required fields are missing or have the wrong type.
-  static GeocodingResult? _itemToResult(Map<String, Object?> item) {
-    final Object? lat = item['lat'];
-    final Object? lon = item['lon'];
-    final Object? name = item['name'];
-    final Object? country = item['country'];
-    final Object? state = item['state'];
+  final String displayName = state is String
+      ? '$name, $state, $country'
+      : '$name, $country';
 
-    if (lat is! num || lon is! num || name is! String || country is! String) {
-      return null;
-    }
-
-    final String displayName = state is String
-        ? '$name, $state, $country'
-        : '$name, $country';
-
-    return (lat: lat.toDouble(), lon: lon.toDouble(), displayName: displayName);
-  }
+  return (lat: lat.toDouble(), lon: lon.toDouble(), displayName: displayName);
 }
 
 /// Thrown when the proxy returns 404 (location not found).

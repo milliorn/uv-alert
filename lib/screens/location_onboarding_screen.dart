@@ -22,6 +22,9 @@ const int _locationScreenIndex = 1;
 
 const double _spinnerSize = 16;
 const double _spinnerStrokeWidth = 2;
+const int _debounceMs = 400;
+const int _minQueryLength = 2;
+const double _appBarElevation = 0;
 
 // ---------------------------------------------------------------------------
 // Confirm result
@@ -87,7 +90,13 @@ class _LocationOnboardingScreenState
   bool _continuing = false;
   _ConfirmResult? _pending;
   List<GeocodingResult> _candidates = <GeocodingResult>[];
+  List<GeocodingResult> _suggestions = <GeocodingResult>[];
   String _errorMessage = '';
+  Timer? _debounce;
+  // Incremented whenever the user navigates away (back, search-again, change).
+  // Async callbacks capture this value before their await and discard their
+  // result if the counter has advanced, preventing stale state overwrites.
+  int _operationId = 0;
 
   final TextEditingController _manualController = TextEditingController();
   final FocusNode _manualFocus = FocusNode();
@@ -103,6 +112,7 @@ class _LocationOnboardingScreenState
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _manualController.dispose();
     _manualFocus.dispose();
     _ownedApi?.dispose();
@@ -114,6 +124,9 @@ class _LocationOnboardingScreenState
   // -------------------------------------------------------------------------
 
   Future<void> _onUseMyLocation(String proxyBaseUrl, String deviceId) async {
+    _debounce?.cancel();
+    final int opId = ++_operationId;
+
     setState(() {
       _phase = _Phase.loading;
       _errorMessage = '';
@@ -122,7 +135,7 @@ class _LocationOnboardingScreenState
     try {
       await ref.read(locationProvider.notifier).fetchGps();
 
-      if (!mounted) return;
+      if (!mounted || _operationId != opId) return;
 
       final LocationState loc = ref.read(locationProvider);
 
@@ -141,30 +154,32 @@ class _LocationOnboardingScreenState
           deviceId,
         ).reverseGeocode(lat: loc.lat, lon: loc.lon);
       } on TimeoutException {
-        if (!mounted) return;
+        if (!mounted || _operationId != opId) return;
         _setError('Could not determine your city. Try entering it manually.');
         return;
       }
 
-      if (!mounted) return;
+      if (!mounted || _operationId != opId) return;
 
       _setConfirmed(result, fromGps: true);
     } on PermissionDeniedException {
-      if (!mounted) return;
+      if (!mounted || _operationId != opId) return;
       // Permission denied; fall through to manual entry.
       setState(() => _phase = _Phase.manual);
       _manualFocus.requestFocus();
     } on TimeoutException {
-      if (!mounted) return;
+      if (!mounted || _operationId != opId) return;
+      // TimeoutException fires when GPS cannot acquire a fix within gpsTimeout.
+      // This covers both "no GPS hardware" and "weak signal / indoors".
       _setError(
-        'GPS is not available on this device. '
-        'Try entering your location manually.',
+        'Could not get a GPS fix. '
+        'Move outdoors or enter your location manually.',
       );
     } on GeocodingNotFoundException {
-      if (!mounted) return;
+      if (!mounted || _operationId != opId) return;
       _setError('Could not determine your city. Try entering it manually.');
     } on Object {
-      if (!mounted) return;
+      if (!mounted || _operationId != opId) return;
       _setError('Something went wrong. Please try again.');
     }
   }
@@ -181,10 +196,64 @@ class _LocationOnboardingScreenState
     _manualFocus.requestFocus();
   }
 
+  void _onChanged(String value, String proxyBaseUrl, String deviceId) {
+    _debounce?.cancel();
+    _operationId++;
+
+    if (_suggestions.isNotEmpty || _errorMessage.isNotEmpty) {
+      setState(() {
+        _suggestions = <GeocodingResult>[];
+        _errorMessage = '';
+      });
+    }
+
+    final String trimmed = value.trim();
+
+    if (trimmed.length < _minQueryLength) return;
+
+    _debounce = Timer(
+      const Duration(milliseconds: _debounceMs),
+      () => _onDebounced(trimmed, proxyBaseUrl, deviceId),
+    );
+  }
+
+  Future<void> _onDebounced(
+    String query,
+    String proxyBaseUrl,
+    String deviceId,
+  ) async {
+    final int opId = _operationId;
+
+    try {
+      final List<GeocodingResult> results = await _geocodingApi(
+        proxyBaseUrl,
+        deviceId,
+      ).autocomplete(query);
+
+      if (!mounted || _operationId != opId) return;
+
+      setState(() => _suggestions = results);
+    } on GeocodingNotFoundException {
+      if (!mounted || _operationId != opId) return;
+
+      setState(() => _suggestions = <GeocodingResult>[]);
+    } on Object catch (e, st) {
+      debugPrint('Autocomplete error: $e\n$st');
+
+      if (!mounted || _operationId != opId) return;
+
+      setState(() => _suggestions = <GeocodingResult>[]);
+    }
+  }
+
   Future<void> _onGeocodeManual(String proxyBaseUrl, String deviceId) async {
+    _debounce?.cancel();
+
     final String query = _manualController.text.trim();
 
     if (query.isEmpty) return;
+
+    final int opId = ++_operationId;
 
     setState(() {
       _phase = _Phase.geocoding;
@@ -197,7 +266,7 @@ class _LocationOnboardingScreenState
         deviceId,
       ).geocodeMultiple(query);
 
-      if (!mounted) return;
+      if (!mounted || _operationId != opId) return;
 
       if (results.length == 1) {
         _setConfirmed(results.first, fromGps: false);
@@ -208,33 +277,52 @@ class _LocationOnboardingScreenState
         });
       }
     } on GeocodingNotFoundException {
-      if (!mounted) return;
+      if (!mounted || _operationId != opId) return;
+
       setState(() {
         _phase = _Phase.manual;
+        _suggestions = <GeocodingResult>[];
         _errorMessage =
             'Location not found. Try adding region and country'
             ' (e.g. "Washington, DC, US" or "London, England, GB").';
       });
-    } on Object {
-      if (!mounted) return;
+    } on Object catch (e, st) {
+      debugPrint('Manual geocoding error: $e\n$st');
+
+      if (!mounted || _operationId != opId) return;
+
       setState(() {
         _phase = _Phase.manual;
+        _suggestions = <GeocodingResult>[];
         _errorMessage = 'Something went wrong. Please try again.';
       });
     }
   }
 
+  void _onPick(GeocodingResult result) {
+    _debounce?.cancel();
+
+    _setConfirmed(result, fromGps: false);
+  }
+
   void _setConfirmed(GeocodingResult result, {required bool fromGps}) {
     setState(() {
       _candidates = <GeocodingResult>[];
+      _suggestions = <GeocodingResult>[];
       _pending = (result: result, fromGps: fromGps);
       _phase = _Phase.confirm;
     });
   }
 
   void _onSearchAgain() {
+    _debounce?.cancel();
+    _operationId++;
     setState(() {
+      _candidates = <GeocodingResult>[];
+      _suggestions = <GeocodingResult>[];
       _phase = _Phase.manual;
+      _errorMessage = '';
+      _continuing = false;
     });
     _manualFocus.requestFocus();
   }
@@ -248,6 +336,7 @@ class _LocationOnboardingScreenState
 
     assert(_pending != null, '_onConfirm called outside confirm phase');
 
+    final int opId = ++_operationId;
     final _ConfirmResult confirmed = _pending!;
 
     try {
@@ -264,9 +353,10 @@ class _LocationOnboardingScreenState
           .setManual(lat: confirmed.result.lat, lon: confirmed.result.lon);
 
       final Preferences prefs = await ref.read(preferencesProvider.future);
+
       await prefs.setLocationStepDone();
 
-      if (!mounted) return;
+      if (!mounted || _operationId != opId) return;
 
       unawaited(
         Navigator.of(context).pushReplacement(
@@ -275,8 +365,11 @@ class _LocationOnboardingScreenState
           ),
         ),
       );
-    } on Object {
-      if (!mounted) return;
+    } on Object catch (e, st) {
+      debugPrint('Confirm error: $e\n$st');
+
+      if (!mounted || _operationId != opId) return;
+
       setState(() {
         _continuing = false;
         _phase = _Phase.confirm;
@@ -286,17 +379,38 @@ class _LocationOnboardingScreenState
   }
 
   void _onChangeLocation() {
+    _debounce?.cancel();
+    _operationId++;
+
     setState(() {
       _phase = _Phase.manual;
       _pending = null;
+      _suggestions = <GeocodingResult>[];
       _errorMessage = '';
+      _continuing = false;
     });
+
     _manualFocus.requestFocus();
   }
 
   // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
+
+  void _onBack() {
+    _debounce?.cancel();
+    _operationId++;
+    _manualController.clear();
+
+    setState(() {
+      _phase = _Phase.idle;
+      _candidates = <GeocodingResult>[];
+      _suggestions = <GeocodingResult>[];
+      _errorMessage = '';
+      _pending = null;
+      _continuing = false;
+    });
+  }
 
   void _setError(String message) {
     setState(() {
@@ -324,7 +438,20 @@ class _LocationOnboardingScreenState
         ? null
         : () => _onGeocodeManual(proxyBaseUrl, deviceId);
 
+    final ValueChanged<String>? onChanged = deviceId == null
+        ? null
+        : (String v) => _onChanged(v, proxyBaseUrl, deviceId);
+
+    final bool canGoBack = _phase != _Phase.idle && _phase != _Phase.loading;
+
     return Scaffold(
+      appBar: canGoBack
+          ? AppBar(
+              leading: BackButton(onPressed: _onBack),
+              backgroundColor: Colors.transparent,
+              elevation: _appBarElevation,
+            )
+          : null,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(
@@ -334,43 +461,59 @@ class _LocationOnboardingScreenState
           child: Column(
             spacing: onboardingSectionGap,
             children: <Widget>[
-              const Spacer(),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    spacing: onboardingSectionGap,
+                    children: <Widget>[
+                      const SizedBox(height: onboardingSectionGap),
 
-              const _Header(),
+                      const _Header(),
 
-              if (_phase == _Phase.idle) ...<Widget>[
-                _GpsButton(onPressed: onGpsPressed),
-                _ManualButton(onPressed: _onEnterManually),
-              ],
+                      if (_phase == _Phase.idle) ...<Widget>[
+                        _GpsButton(onPressed: onGpsPressed),
+                        _ManualButton(onPressed: _onEnterManually),
+                      ],
 
-              if (_phase == _Phase.loading)
-                const CircularProgressIndicator.adaptive(),
+                      if (_phase == _Phase.loading)
+                        const CircularProgressIndicator.adaptive(),
 
-              if (_phase == _Phase.manual || _phase == _Phase.geocoding)
-                _ManualEntryField(
-                  controller: _manualController,
-                  focusNode: _manualFocus,
-                  loading: _phase == _Phase.geocoding,
-                  onSearch: onManualSearch,
+                      if (_phase == _Phase.manual || _phase == _Phase.geocoding)
+                        _ManualEntryField(
+                          controller: _manualController,
+                          focusNode: _manualFocus,
+                          loading: _phase == _Phase.geocoding,
+                          onSearch: onManualSearch,
+                          onChanged: onChanged,
+                        ),
+
+                      if (_phase == _Phase.manual && _suggestions.isNotEmpty)
+                        _SuggestionList(
+                          suggestions: _suggestions,
+                          onPick: _onPick,
+                        ),
+
+                      if (_phase == _Phase.picking)
+                        _PickList(
+                          candidates: _candidates,
+                          onPick: _onPick,
+                          onSearchAgain: _onSearchAgain,
+                        ),
+
+                      if (_phase == _Phase.confirm)
+                        _ConfirmCard(
+                          displayName: _pending!.result.displayName,
+                          onChange: _onChangeLocation,
+                        ),
+
+                      if (_errorMessage.isNotEmpty)
+                        _ErrorText(message: _errorMessage),
+
+                      const SizedBox(height: onboardingSectionGap),
+                    ],
+                  ),
                 ),
-
-              if (_phase == _Phase.picking)
-                _PickList(
-                  candidates: _candidates,
-                  onPick: (GeocodingResult r) =>
-                      _setConfirmed(r, fromGps: false),
-                  onSearchAgain: _onSearchAgain,
-                ),
-
-              if (_phase == _Phase.confirm)
-                _ConfirmCard(
-                  displayName: _pending!.result.displayName,
-                  onChange: _onChangeLocation,
-                ),
-
-              if (_errorMessage.isNotEmpty) _ErrorText(message: _errorMessage),
-
-              const Spacer(),
+              ),
 
               const OnboardingProgressDots(
                 current: _locationScreenIndex,
@@ -461,6 +604,7 @@ class _ManualEntryField extends StatelessWidget {
     required this.focusNode,
     required this.loading,
     required this.onSearch,
+    required this.onChanged,
   });
 
   final TextEditingController controller;
@@ -470,6 +614,7 @@ class _ManualEntryField extends StatelessWidget {
   // which this widget never uses. The adapter (_) => onSearch!() is derived
   // here from onSearch so the caller stays free of that boilerplate.
   final VoidCallback? onSearch;
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -478,6 +623,7 @@ class _ManualEntryField extends StatelessWidget {
       focusNode: focusNode,
       enabled: !loading,
       textInputAction: TextInputAction.search,
+      onChanged: onChanged,
       onSubmitted: onSearch == null ? null : (_) => onSearch!(),
       decoration: InputDecoration(
         hintText: 'City, Region, Country (e.g. Washington, DC, US)',
@@ -562,6 +708,35 @@ class _ConfirmCard extends StatelessWidget {
   }
 }
 
+class _ResultListView extends StatelessWidget {
+  const _ResultListView({required this.items, required this.onPick});
+
+  final List<GeocodingResult> items;
+  final ValueChanged<GeocodingResult> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight:
+            MediaQuery.sizeOf(context).height *
+            onboardingPickListMaxHeightFraction,
+      ),
+      child: ListView.separated(
+        itemCount: items.length,
+        separatorBuilder: (_, _) => const SizedBox(height: onboardingItemGap),
+        itemBuilder: (_, int i) => SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: () => onPick(items[i]),
+            child: Text(items[i].displayName, textAlign: TextAlign.center),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _PickList extends StatelessWidget {
   const _PickList({
     required this.candidates,
@@ -580,26 +755,7 @@ class _PickList extends StatelessWidget {
       spacing: onboardingItemGap,
       children: <Widget>[
         Text('Select your location:', style: theme.textTheme.bodyMedium),
-        ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.sizeOf(context).height *
-                onboardingPickListMaxHeightFraction,
-          ),
-          child: ListView(
-            shrinkWrap: true,
-            children: candidates
-                .map(
-                  (GeocodingResult r) => Padding(
-                    padding: const EdgeInsets.only(bottom: onboardingItemGap),
-                    child: OutlinedButton(
-                      onPressed: () => onPick(r),
-                      child: Text(r.displayName, textAlign: TextAlign.center),
-                    ),
-                  ),
-                )
-                .toList(),
-          ),
-        ),
+        _ResultListView(items: candidates, onPick: onPick),
         Text(
           'Not your city? Try adding region and country'
           ' (e.g. "Washington, DC, US" or "London, England, GB").',
@@ -612,6 +768,17 @@ class _PickList extends StatelessWidget {
       ],
     );
   }
+}
+
+class _SuggestionList extends StatelessWidget {
+  const _SuggestionList({required this.suggestions, required this.onPick});
+
+  final List<GeocodingResult> suggestions;
+  final ValueChanged<GeocodingResult> onPick;
+
+  @override
+  Widget build(BuildContext context) =>
+      _ResultListView(items: suggestions, onPick: onPick);
 }
 
 class _ErrorText extends StatelessWidget {
