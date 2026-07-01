@@ -19,7 +19,7 @@ http.Client mockClientByQuery({
   int autocompleteStatus = 200,
   String? autocompleteBody,
 }) => MockClient((http.Request req) async {
-  if (req.url.path.contains('autocomplete')) {
+  if (req.url.path == '/api/autocomplete') {
     return http.Response(autocompleteBody ?? forwardBody, autocompleteStatus);
   }
   if (req.url.queryParameters.containsKey('q')) {

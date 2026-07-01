@@ -200,16 +200,20 @@ class _LocationOnboardingScreenState
     _debounce?.cancel();
     _operationId++;
 
-    setState(() {
-      _suggestions = <GeocodingResult>[];
-      _errorMessage = '';
-    });
+    if (_suggestions.isNotEmpty || _errorMessage.isNotEmpty) {
+      setState(() {
+        _suggestions = <GeocodingResult>[];
+        _errorMessage = '';
+      });
+    }
 
-    if (value.trim().length < _minQueryLength) return;
+    final String trimmed = value.trim();
+    
+    if (trimmed.length < _minQueryLength) return;
 
     _debounce = Timer(
       const Duration(milliseconds: _debounceMs),
-      () => _onDebounced(value.trim(), proxyBaseUrl, deviceId),
+      () => _onDebounced(trimmed, proxyBaseUrl, deviceId),
     );
   }
 
@@ -704,6 +708,35 @@ class _ConfirmCard extends StatelessWidget {
   }
 }
 
+class _ResultListView extends StatelessWidget {
+  const _ResultListView({required this.items, required this.onPick});
+
+  final List<GeocodingResult> items;
+  final ValueChanged<GeocodingResult> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight:
+            MediaQuery.sizeOf(context).height *
+            onboardingPickListMaxHeightFraction,
+      ),
+      child: ListView.separated(
+        itemCount: items.length,
+        separatorBuilder: (_, _) => const SizedBox(height: onboardingItemGap),
+        itemBuilder: (_, int i) => SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: () => onPick(items[i]),
+            child: Text(items[i].displayName, textAlign: TextAlign.center),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _PickList extends StatelessWidget {
   const _PickList({
     required this.candidates,
@@ -722,28 +755,7 @@ class _PickList extends StatelessWidget {
       spacing: onboardingItemGap,
       children: <Widget>[
         Text('Select your location:', style: theme.textTheme.bodyMedium),
-        ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight:
-                MediaQuery.sizeOf(context).height *
-                onboardingPickListMaxHeightFraction,
-          ),
-          child: ListView.separated(
-            itemCount: candidates.length,
-            separatorBuilder: (_, _) =>
-                const SizedBox(height: onboardingItemGap),
-            itemBuilder: (_, int i) => SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () => onPick(candidates[i]),
-                child: Text(
-                  candidates[i].displayName,
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-          ),
-        ),
+        _ResultListView(items: candidates, onPick: onPick),
         Text(
           'Not your city? Try adding region and country'
           ' (e.g. "Washington, DC, US" or "London, England, GB").',
@@ -765,29 +777,8 @@ class _SuggestionList extends StatelessWidget {
   final ValueChanged<GeocodingResult> onPick;
 
   @override
-  Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        maxHeight:
-            MediaQuery.sizeOf(context).height *
-            onboardingPickListMaxHeightFraction,
-      ),
-      child: ListView.separated(
-        itemCount: suggestions.length,
-        separatorBuilder: (_, _) => const SizedBox(height: onboardingItemGap),
-        itemBuilder: (_, int i) => SizedBox(
-          width: double.infinity,
-          child: OutlinedButton(
-            onPressed: () => onPick(suggestions[i]),
-            child: Text(
-              suggestions[i].displayName,
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      _ResultListView(items: suggestions, onPick: onPick);
 }
 
 class _ErrorText extends StatelessWidget {

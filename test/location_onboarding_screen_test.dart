@@ -113,6 +113,20 @@ Future<void> _pumpToPickList(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+/// Opens the manual-entry field, types [query], fires the debounce, and
+/// settles. Leaves the tester in the state after autocomplete completes.
+Future<void> _pumpToAutocomplete(
+  WidgetTester tester,
+  String query, {
+  Duration delay = debounceFired,
+}) async {
+  await tester.tap(find.text('Enter location manually'));
+  await tester.pump();
+  await tester.enterText(find.byType(TextField), query);
+  await tester.pump(delay);
+  await tester.pumpAndSettle();
+}
+
 /// Drives the screen through manual entry to the confirm phase and taps
 /// Continue. Leaves the tester settled at the post-navigation state.
 Future<void> _tapContinueAfterManualEntry(WidgetTester tester) async {
@@ -841,12 +855,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Enter location manually'));
-    await tester.pump();
-
-    await tester.enterText(find.byType(TextField), 'Fres');
-    await tester.pump(debounceFired);
-    await tester.pumpAndSettle();
+    await _pumpToAutocomplete(tester, 'Fres');
 
     // Tap the suggestion.
     await tester.tap(find.text(_displayName));
@@ -871,12 +880,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('Enter location manually'));
-      await tester.pump();
-
-      await tester.enterText(find.byType(TextField), 'xyzzy');
-      await tester.pump(debounceFired);
-      await tester.pumpAndSettle();
+      await _pumpToAutocomplete(tester, 'xyzzy');
 
       // No suggestions and no error message shown.
       expect(find.text(_displayName), findsNothing);
@@ -892,12 +896,7 @@ void main() {
       _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
     );
 
-    await tester.tap(find.text('Enter location manually'));
-    await tester.pump();
-
-    await tester.enterText(find.byType(TextField), 'F');
-    await tester.pump(debounceFired);
-    await tester.pumpAndSettle();
+    await _pumpToAutocomplete(tester, 'F');
 
     expect(find.text(_displayName), findsNothing);
   });
@@ -916,13 +915,8 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Enter location manually'));
-    await tester.pump();
-
     // Get suggestions showing.
-    await tester.enterText(find.byType(TextField), 'Fres');
-    await tester.pump(debounceFired);
-    await tester.pumpAndSettle();
+    await _pumpToAutocomplete(tester, 'Fres');
     expect(find.text(_displayName), findsOneWidget);
 
     // Type another character - suggestions must clear immediately.

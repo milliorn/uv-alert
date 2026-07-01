@@ -57,17 +57,8 @@ class GeocodingApi {
   ///
   /// Throws [GeocodingNotFoundException] when no suggestions are found (404).
   /// Throws [GeocodingException] on any other non-200 response or parse error.
-  Future<List<GeocodingResult>> autocomplete(String query) async {
-    final Uri uri = _autocompleteUri.replace(
-      queryParameters: <String, String>{'q': query},
-    );
-
-    final http.Response response = await _httpClient
-        .get(uri, headers: _headers)
-        .timeout(_timeout);
-
-    return _parseResults(response);
-  }
+  Future<List<GeocodingResult>> autocomplete(String query) =>
+      _getResults(_autocompleteUri, query);
 
   /// Resolves a location [query] string (e.g. "Fresno") to a list of
   /// candidate matches, ordered by relevance.
@@ -76,8 +67,11 @@ class GeocodingApi {
   /// when the proxy returns 404 (no match) or the response contains no
   /// usable results. Throws [GeocodingException] on any other non-200
   /// response or parse error.
-  Future<List<GeocodingResult>> geocodeMultiple(String query) async {
-    final Uri uri = _geocodeUri.replace(
+  Future<List<GeocodingResult>> geocodeMultiple(String query) =>
+      _getResults(_geocodeUri, query);
+
+  Future<List<GeocodingResult>> _getResults(Uri base, String query) async {
+    final Uri uri = base.replace(
       queryParameters: <String, String>{'q': query},
     );
 
