@@ -565,10 +565,7 @@ void main() {
       await tester.pump(gpsTimeout + gpsOvershoot);
       await tester.pumpAndSettle();
 
-      expect(
-        find.textContaining('Could not get a GPS fix'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('Could not get a GPS fix'), findsOneWidget);
     },
     timeout: Timeout(gpsTimeout + gpsTestBuffer),
   );
@@ -873,11 +870,7 @@ void main() {
     'autocomplete 404 silently clears suggestions without showing error',
     (WidgetTester tester) async {
       await tester.pumpWidget(
-        _wrap(
-          LocationOnboardingScreen(
-            geocodingApi: _fakeGeocodingApi(),
-          ),
-        ),
+        _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
       );
 
       await _pumpToAutocomplete(tester, 'xyzzy');

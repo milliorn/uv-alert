@@ -72,9 +72,7 @@ class GeocodingApi {
       _getResults(_geocodeUri, query);
 
   Future<List<GeocodingResult>> _getResults(Uri base, String query) async {
-    final Uri uri = base.replace(
-      queryParameters: <String, String>{'q': query},
-    );
+    final Uri uri = base.replace(queryParameters: <String, String>{'q': query});
 
     final http.Response response = await _httpClient
         .get(uri, headers: _headers)
@@ -160,7 +158,6 @@ class GeocodingApi {
       throw GeocodingException(response.statusCode, 'parse error: $e');
     }
   }
-
 }
 
 void _checkStatus(http.Response response) {
