@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.0](https://github.com/milliorn/uv-alert/compare/v1.8.0...v1.9.0) (2026-07-01)
+
+
+### Features
+
+* **geocoding:** add autocomplete and geocodeMultiple with debounced suggestion UI ([#82](https://github.com/milliorn/uv-alert/issues/82)) ([60dac0b](https://github.com/milliorn/uv-alert/commit/60dac0b0d6dd9d528e06fdffa1713806744bac7b))
+
 ## [1.8.0](https://github.com/milliorn/uv-alert/compare/v1.7.0...v1.8.0) (2026-06-29)
 
 
