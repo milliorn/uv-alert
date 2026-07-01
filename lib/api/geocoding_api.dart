@@ -55,7 +55,8 @@ class GeocodingApi {
   /// Returns prefix-matched place suggestions for [query] via the autocomplete
   /// endpoint (Photon/OSM-backed).
   ///
-  /// Throws [GeocodingNotFoundException] when no suggestions are found (404).
+  /// Throws [GeocodingNotFoundException] when no suggestions are found (404 or
+  /// a 200 response with an empty array).
   /// Throws [GeocodingException] on any other non-200 response or parse error.
   Future<List<GeocodingResult>> autocomplete(String query) =>
       _getResults(_autocompleteUri, query);

@@ -17,10 +17,10 @@ http.Client mockClientByQuery({
   int reverseStatus = 200,
   String reverseBody = '',
   int autocompleteStatus = 200,
-  String? autocompleteBody,
+  String autocompleteBody = '',
 }) => MockClient((http.Request req) async {
   if (req.url.path == '/api/autocomplete') {
-    return http.Response(autocompleteBody ?? forwardBody, autocompleteStatus);
+    return http.Response(autocompleteBody, autocompleteStatus);
   }
   if (req.url.queryParameters.containsKey('q')) {
     return http.Response(forwardBody, forwardStatus);
