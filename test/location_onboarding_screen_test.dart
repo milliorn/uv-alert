@@ -552,7 +552,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.textContaining('GPS is not available on this device'),
+        find.textContaining('Could not get a GPS fix'),
         findsOneWidget,
       );
     },
@@ -786,7 +786,7 @@ void main() {
     expect(find.text(_displayName), findsNothing);
 
     // Advance past the 400 ms debounce window and settle the async geocode.
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(debounceFired);
     await tester.pumpAndSettle();
 
     expect(find.text(_displayName), findsOneWidget);
@@ -811,17 +811,17 @@ void main() {
 
     // First keystroke.
     await tester.enterText(find.byType(TextField), 'Fr');
-    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump(withinDebounce);
 
     // Second keystroke before debounce fires.
     await tester.enterText(find.byType(TextField), 'Fres');
-    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump(withinDebounce);
 
     // Still within debounce window from second keystroke - no suggestions.
     expect(find.text(_displayName), findsNothing);
 
     // Now let the debounce fire and the geocode settle.
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(debounceRemainder);
     await tester.pumpAndSettle();
 
     expect(find.text(_displayName), findsOneWidget);
@@ -845,7 +845,7 @@ void main() {
     await tester.pump();
 
     await tester.enterText(find.byType(TextField), 'Fres');
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(debounceFired);
     await tester.pumpAndSettle();
 
     // Tap the suggestion.
@@ -878,7 +878,7 @@ void main() {
       await tester.pump();
 
       await tester.enterText(find.byType(TextField), 'xyzzy');
-      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(debounceFired);
       await tester.pumpAndSettle();
 
       // No suggestions and no error message shown.
@@ -899,7 +899,7 @@ void main() {
     await tester.pump();
 
     await tester.enterText(find.byType(TextField), 'F');
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(debounceFired);
     await tester.pumpAndSettle();
 
     expect(find.text(_displayName), findsNothing);
@@ -924,7 +924,7 @@ void main() {
 
     // Get suggestions showing.
     await tester.enterText(find.byType(TextField), 'Fres');
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(debounceFired);
     await tester.pumpAndSettle();
     expect(find.text(_displayName), findsOneWidget);
 
@@ -1010,7 +1010,7 @@ void main() {
     await tester.pump();
 
     await tester.enterText(find.byType(TextField), 'Fres');
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(debounceFired);
     await tester.pumpAndSettle();
 
     // No suggestions and no error banner shown for autocomplete failures.
@@ -1040,7 +1040,7 @@ void main() {
       await tester.pump();
 
       await tester.enterText(find.byType(TextField), 'Fres');
-      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(debounceFired);
       await tester.pumpAndSettle();
 
       expect(find.text('Fresno, California, US'), findsOneWidget);

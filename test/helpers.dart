@@ -37,6 +37,18 @@ const Duration gpsOvershoot = Duration(milliseconds: 100);
 /// Extra buffer added to [gpsTimeout] for the per-test [Timeout] annotation.
 const Duration gpsTestBuffer = Duration(seconds: 5);
 
+/// Duration past the autocomplete debounce window; enough for the timer to
+/// fire and the async geocode to complete before the next pump.
+const Duration debounceFired = Duration(milliseconds: 500);
+
+/// Duration within the debounce window; a pump this short must not trigger
+/// autocomplete.
+const Duration withinDebounce = Duration(milliseconds: 200);
+
+/// Remaining debounce time after two [withinDebounce] pumps; ensures the
+/// timer fires on the third pump.
+const Duration debounceRemainder = Duration(milliseconds: 300);
+
 /// Pumps the splash screen and settles all resulting navigation animations.
 ///
 /// Pass [hasSplashFloor]: true (default) when the test triggers the 2-second

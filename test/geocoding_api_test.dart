@@ -156,6 +156,21 @@ void main() {
       );
     });
 
+    test(
+      'throws GeocodingException when all items have missing required fields',
+      () async {
+        final GeocodingApi api = _makeApi(
+          mockClientReturning(200, '[{"lat":36.75,"lon":-119.65}]'),
+        );
+        addTearDown(api.dispose);
+
+        await expectLater(
+          api.geocodeMultiple('Fresno, CA'),
+          throwsA(isA<GeocodingException>()),
+        );
+      },
+    );
+
     test('sends query as q parameter', () async {
       Uri? captured;
       final MockClient client = MockClient((http.Request req) async {

@@ -44,7 +44,10 @@ class _NotificationOnboardingScreenState
     unawaited(_advance(notificationsEnabled: notificationsEnabled));
   }
 
+  int _operationId = 0;
+
   Future<void> _advance({required bool notificationsEnabled}) async {
+    final int opId = ++_operationId;
     setState(() => _continuing = true);
 
     try {
@@ -52,11 +55,13 @@ class _NotificationOnboardingScreenState
           .read(settingsProvider.notifier)
           .setNotificationsEnabled(value: notificationsEnabled);
 
+      if (!mounted || _operationId != opId) return;
+
       final Preferences prefs = await ref.read(preferencesProvider.future);
 
       await prefs.setFirstLaunchDone();
 
-      if (!mounted) return;
+      if (!mounted || _operationId != opId) return;
 
       unawaited(
         Navigator.of(context).pushReplacement(
@@ -64,7 +69,7 @@ class _NotificationOnboardingScreenState
         ),
       );
     } on Object {
-      if (!mounted) return;
+      if (!mounted || _operationId != opId) return;
 
       setState(() => _continuing = false);
 

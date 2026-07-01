@@ -124,6 +124,8 @@ class _LocationOnboardingScreenState
   // -------------------------------------------------------------------------
 
   Future<void> _onUseMyLocation(String proxyBaseUrl, String deviceId) async {
+    final int opId = ++_operationId;
+
     setState(() {
       _phase = _Phase.loading;
       _errorMessage = '';
@@ -132,7 +134,7 @@ class _LocationOnboardingScreenState
     try {
       await ref.read(locationProvider.notifier).fetchGps();
 
-      if (!mounted) return;
+      if (!mounted || _operationId != opId) return;
 
       final LocationState loc = ref.read(locationProvider);
 
@@ -151,30 +153,32 @@ class _LocationOnboardingScreenState
           deviceId,
         ).reverseGeocode(lat: loc.lat, lon: loc.lon);
       } on TimeoutException {
-        if (!mounted) return;
+        if (!mounted || _operationId != opId) return;
         _setError('Could not determine your city. Try entering it manually.');
         return;
       }
 
-      if (!mounted) return;
+      if (!mounted || _operationId != opId) return;
 
       _setConfirmed(result, fromGps: true);
     } on PermissionDeniedException {
-      if (!mounted) return;
+      if (!mounted || _operationId != opId) return;
       // Permission denied; fall through to manual entry.
       setState(() => _phase = _Phase.manual);
       _manualFocus.requestFocus();
     } on TimeoutException {
-      if (!mounted) return;
+      if (!mounted || _operationId != opId) return;
+      // TimeoutException fires when GPS cannot acquire a fix within gpsTimeout.
+      // This covers both "no GPS hardware" and "weak signal / indoors".
       _setError(
-        'GPS is not available on this device. '
-        'Try entering your location manually.',
+        'Could not get a GPS fix. '
+        'Move outdoors or enter your location manually.',
       );
     } on GeocodingNotFoundException {
-      if (!mounted) return;
+      if (!mounted || _operationId != opId) return;
       _setError('Could not determine your city. Try entering it manually.');
     } on Object {
-      if (!mounted) return;
+      if (!mounted || _operationId != opId) return;
       _setError('Something went wrong. Please try again.');
     }
   }
@@ -193,7 +197,6 @@ class _LocationOnboardingScreenState
 
   void _onChanged(String value, String proxyBaseUrl, String deviceId) {
     _debounce?.cancel();
-    _operationId++;
 
     setState(() {
       _suggestions = <GeocodingResult>[];
@@ -201,6 +204,8 @@ class _LocationOnboardingScreenState
     });
 
     if (value.trim().length < _minQueryLength) return;
+
+    _operationId++;
 
     _debounce = Timer(
       const Duration(milliseconds: _debounceMs),
@@ -761,16 +766,26 @@ class _SuggestionList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: suggestions.length,
-      separatorBuilder: (_, _) => const SizedBox(height: onboardingItemGap),
-      itemBuilder: (_, int i) => SizedBox(
-        width: double.infinity,
-        child: OutlinedButton(
-          onPressed: () => onPick(suggestions[i]),
-          child: Text(suggestions[i].displayName, textAlign: TextAlign.center),
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight:
+            MediaQuery.sizeOf(context).height *
+            onboardingPickListMaxHeightFraction,
+      ),
+      child: ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: suggestions.length,
+        separatorBuilder: (_, _) => const SizedBox(height: onboardingItemGap),
+        itemBuilder: (_, int i) => SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: () => onPick(suggestions[i]),
+            child: Text(
+              suggestions[i].displayName,
+              textAlign: TextAlign.center,
+            ),
+          ),
         ),
       ),
     );

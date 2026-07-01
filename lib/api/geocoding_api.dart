@@ -120,6 +120,10 @@ class GeocodingApi {
         throw GeocodingException(response.statusCode, response.body);
       }
 
+      if (decoded.isEmpty) {
+        throw const GeocodingNotFoundException();
+      }
+
       final List<GeocodingResult> results = <GeocodingResult>[];
 
       for (final Object? item in decoded) {
@@ -129,8 +133,10 @@ class GeocodingApi {
         if (result != null) results.add(result);
       }
 
+      // decoded was non-empty but every item failed field validation —
+      // this is a proxy schema change, not a "location not found" result.
       if (results.isEmpty) {
-        throw const GeocodingNotFoundException();
+        throw GeocodingException(response.statusCode, response.body);
       }
 
       return results;
@@ -160,34 +166,35 @@ class GeocodingApi {
     }
   }
 
-  static void _checkStatus(http.Response response) {
-    if (response.statusCode == httpNotFound) {
-      throw const GeocodingNotFoundException();
-    }
-    if (response.statusCode != httpOk) {
-      throw GeocodingException(response.statusCode, response.body);
-    }
+}
+
+void _checkStatus(http.Response response) {
+  if (response.statusCode == httpNotFound) {
+    throw const GeocodingNotFoundException();
+  }
+  if (response.statusCode != httpOk) {
+    throw GeocodingException(response.statusCode, response.body);
+  }
+}
+
+/// Parses one JSON object into a [GeocodingResult], or returns `null` if
+/// required fields are missing or have the wrong type.
+GeocodingResult? _itemToResult(Map<String, Object?> item) {
+  final Object? lat = item['lat'];
+  final Object? lon = item['lon'];
+  final Object? name = item['name'];
+  final Object? country = item['country'];
+  final Object? state = item['state'];
+
+  if (lat is! num || lon is! num || name is! String || country is! String) {
+    return null;
   }
 
-  /// Parses one JSON object into a [GeocodingResult], or returns `null` if
-  /// required fields are missing or have the wrong type.
-  static GeocodingResult? _itemToResult(Map<String, Object?> item) {
-    final Object? lat = item['lat'];
-    final Object? lon = item['lon'];
-    final Object? name = item['name'];
-    final Object? country = item['country'];
-    final Object? state = item['state'];
+  final String displayName = state is String
+      ? '$name, $state, $country'
+      : '$name, $country';
 
-    if (lat is! num || lon is! num || name is! String || country is! String) {
-      return null;
-    }
-
-    final String displayName = state is String
-        ? '$name, $state, $country'
-        : '$name, $country';
-
-    return (lat: lat.toDouble(), lon: lon.toDouble(), displayName: displayName);
-  }
+  return (lat: lat.toDouble(), lon: lon.toDouble(), displayName: displayName);
 }
 
 /// Thrown when the proxy returns 404 (location not found).
