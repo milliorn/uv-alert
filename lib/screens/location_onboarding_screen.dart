@@ -124,6 +124,7 @@ class _LocationOnboardingScreenState
   // -------------------------------------------------------------------------
 
   Future<void> _onUseMyLocation(String proxyBaseUrl, String deviceId) async {
+    _debounce?.cancel();
     final int opId = ++_operationId;
 
     setState(() {
@@ -197,6 +198,7 @@ class _LocationOnboardingScreenState
 
   void _onChanged(String value, String proxyBaseUrl, String deviceId) {
     _debounce?.cancel();
+    _operationId++;
 
     setState(() {
       _suggestions = <GeocodingResult>[];
@@ -204,8 +206,6 @@ class _LocationOnboardingScreenState
     });
 
     if (value.trim().length < _minQueryLength) return;
-
-    _operationId++;
 
     _debounce = Timer(
       const Duration(milliseconds: _debounceMs),
@@ -773,8 +773,6 @@ class _SuggestionList extends StatelessWidget {
             onboardingPickListMaxHeightFraction,
       ),
       child: ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
         itemCount: suggestions.length,
         separatorBuilder: (_, _) => const SizedBox(height: onboardingItemGap),
         itemBuilder: (_, int i) => SizedBox(

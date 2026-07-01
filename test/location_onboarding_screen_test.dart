@@ -866,10 +866,7 @@ void main() {
       await tester.pumpWidget(
         _wrap(
           LocationOnboardingScreen(
-            geocodingApi: _fakeGeocodingApi(
-              forwardStatus: 404,
-              forwardBody: 'not found',
-            ),
+            geocodingApi: _fakeGeocodingApi(),
           ),
         ),
       );

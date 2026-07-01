@@ -220,6 +220,97 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
+  // autocomplete
+  // -------------------------------------------------------------------------
+
+  group('GeocodingApi.autocomplete', () {
+    test('returns results on 200', () async {
+      final GeocodingApi api = _makeApi(
+        mockClientReturning(200, _validBodyWithState),
+      );
+      addTearDown(api.dispose);
+      final List<GeocodingResult> results = await api.autocomplete('Fres');
+
+      expect(results, hasLength(1));
+      expect(results.first.displayName, 'Fresno, California, US');
+    });
+
+    test('throws GeocodingNotFoundException on 404', () async {
+      final GeocodingApi api = _makeApi(mockClientReturning(404, 'not found'));
+      addTearDown(api.dispose);
+
+      await expectLater(
+        api.autocomplete('xyzzy'),
+        throwsA(isA<GeocodingNotFoundException>()),
+      );
+    });
+
+    test('throws GeocodingNotFoundException when array is empty', () async {
+      final GeocodingApi api = _makeApi(mockClientReturning(200, '[]'));
+      addTearDown(api.dispose);
+
+      await expectLater(
+        api.autocomplete('xyzzy'),
+        throwsA(isA<GeocodingNotFoundException>()),
+      );
+    });
+
+    test('throws GeocodingException on 500', () async {
+      final GeocodingApi api = _makeApi(mockClientReturning(500, 'error'));
+      addTearDown(api.dispose);
+
+      await expectLater(
+        api.autocomplete('Fres'),
+        throwsA(isA<GeocodingException>()),
+      );
+    });
+
+    test(
+      'throws GeocodingException when all items have missing required fields',
+      () async {
+        final GeocodingApi api = _makeApi(
+          mockClientReturning(200, '[{"lat":36.75,"lon":-119.65}]'),
+        );
+        addTearDown(api.dispose);
+
+        await expectLater(
+          api.autocomplete('Fres'),
+          throwsA(isA<GeocodingException>()),
+        );
+      },
+    );
+
+    test('sends query as q parameter', () async {
+      Uri? captured;
+      final MockClient client = MockClient((http.Request req) async {
+        captured = req.url;
+        return http.Response(_validBodyWithState, 200);
+      });
+
+      final GeocodingApi api = _makeApi(client);
+      addTearDown(api.dispose);
+      await api.autocomplete('Fres');
+
+      expect(captured?.path, '/api/autocomplete');
+      expect(captured?.queryParameters['q'], 'Fres');
+    });
+
+    test('sends X-Device-ID header', () async {
+      Map<String, String>? capturedHeaders;
+      final MockClient client = MockClient((http.Request req) async {
+        capturedHeaders = req.headers;
+        return http.Response(_validBodyWithState, 200);
+      });
+
+      final GeocodingApi api = _makeApi(client);
+      addTearDown(api.dispose);
+      await api.autocomplete('Fres');
+
+      expect(capturedHeaders?[deviceIdHeader], 'test-device-id');
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // reverseGeocode
   // -------------------------------------------------------------------------
 
