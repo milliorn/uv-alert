@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.0](https://github.com/milliorn/uv-alert/compare/v1.9.0...v1.10.0) (2026-07-04)
+
+
+### Features
+
+* **onboarding:** add back navigation across location and notification screens ([#86](https://github.com/milliorn/uv-alert/issues/86)) ([6557ef8](https://github.com/milliorn/uv-alert/commit/6557ef82b9a51e22b1c09769f6f4247c0389aeaf))
+
 ## [1.9.0](https://github.com/milliorn/uv-alert/compare/v1.8.0...v1.9.0) (2026-07-01)
 
 
