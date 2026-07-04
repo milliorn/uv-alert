@@ -6,6 +6,8 @@ import 'package:uvalert/constants.dart';
 import 'package:uvalert/providers/preferences_provider.dart';
 import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/screens/dashboard_screen.dart';
+import 'package:uvalert/screens/location_onboarding_screen.dart';
+import 'package:uvalert/screens/onboarding_back_app_bar.dart';
 import 'package:uvalert/screens/onboarding_progress_dots.dart';
 import 'package:uvalert/storage/preferences.dart';
 
@@ -46,6 +48,17 @@ class _NotificationOnboardingScreenState
 
   int _operationId = 0;
 
+  void _onBack() {
+    unawaited(
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) =>
+              const LocationOnboardingScreen(restoreConfirmedLocation: true),
+        ),
+      ),
+    );
+  }
+
   Future<void> _advance({required bool notificationsEnabled}) async {
     final int opId = ++_operationId;
     setState(() => _continuing = true);
@@ -84,6 +97,7 @@ class _NotificationOnboardingScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: OnboardingBackAppBar(onBack: _continuing ? null : _onBack),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(

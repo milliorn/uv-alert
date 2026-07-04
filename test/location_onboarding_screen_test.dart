@@ -13,8 +13,10 @@ import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/screens/location_onboarding_screen.dart';
 import 'package:uvalert/screens/notification_onboarding_screen.dart';
+import 'package:uvalert/screens/theme_onboarding_screen.dart';
 import 'package:uvalert/storage/preferences.dart';
 
+import 'fakes/fake_fixed_location_notifier.dart';
 import 'fakes/fake_geolocator.dart';
 import 'helpers.dart';
 
@@ -940,6 +942,92 @@ void main() {
     expect(find.text('Enter location manually'), findsOneWidget);
     expect(find.byType(TextField), findsNothing);
   });
+
+  testWidgets('back button is shown on the idle phase', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
+    );
+    expect(find.byType(BackButton), findsOneWidget);
+  });
+
+  testWidgets(
+    'back button from idle phase navigates to ThemeOnboardingScreen',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _wrap(LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi())),
+      );
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ThemeOnboardingScreen), findsOneWidget);
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // Restoring confirm phase from settings (back-navigation from
+  // NotificationOnboardingScreen)
+  // -------------------------------------------------------------------------
+
+  testWidgets(
+    'restoreConfirmedLocation: true restores confirm phase from settings',
+    (WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'uvalert_manual_location': _displayName,
+        'uvalert_use_gps': false,
+      });
+
+      await tester.pumpWidget(
+        _wrap(
+          const LocationOnboardingScreen(restoreConfirmedLocation: true),
+          locationFactory: FakeFixedLocationNotifier.new,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(_displayName), findsOneWidget);
+      expect(find.widgetWithText(TextButton, 'Change'), findsOneWidget);
+      expect(find.text('Use My Location'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'restoreConfirmedLocation: false ignores settings and shows idle picker '
+    'even when a location was previously confirmed',
+    (WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'uvalert_manual_location': _displayName,
+        'uvalert_use_gps': false,
+      });
+
+      await tester.pumpWidget(
+        _wrap(
+          LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
+          locationFactory: FakeFixedLocationNotifier.new,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Use My Location'), findsOneWidget);
+      expect(find.text('Enter location manually'), findsOneWidget);
+      expect(find.text(_displayName), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'does not restore confirm phase when no location has been confirmed yet',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _wrap(const LocationOnboardingScreen(restoreConfirmedLocation: true)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Use My Location'), findsOneWidget);
+      expect(find.text('Enter location manually'), findsOneWidget);
+    },
+  );
 
   // -------------------------------------------------------------------------
   // _onSearchAgain via Search again button in _PickList (lines 265-273)

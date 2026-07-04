@@ -12,7 +12,9 @@ import 'package:uvalert/providers/preferences_provider.dart';
 import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/screens/notification_onboarding_screen.dart';
+import 'package:uvalert/screens/onboarding_back_app_bar.dart';
 import 'package:uvalert/screens/onboarding_progress_dots.dart';
+import 'package:uvalert/screens/theme_onboarding_screen.dart';
 import 'package:uvalert/storage/preferences.dart';
 
 // ---------------------------------------------------------------------------
@@ -24,7 +26,6 @@ const double _spinnerSize = 16;
 const double _spinnerStrokeWidth = 2;
 const int _debounceMs = 400;
 const int _minQueryLength = 2;
-const double _appBarElevation = 0;
 
 // ---------------------------------------------------------------------------
 // Confirm result
@@ -74,10 +75,20 @@ class LocationOnboardingScreen extends ConsumerStatefulWidget {
   ///
   /// [geocodingApi] is injected for testing; defaults to a real instance
   /// constructed from the stored proxy URL when omitted.
-  const LocationOnboardingScreen({super.key, GeocodingApi? geocodingApi})
-    : _geocodingApi = geocodingApi;
+  ///
+  /// [restoreConfirmedLocation] should be `true` only when navigating back
+  /// from [NotificationOnboardingScreen], so the screen reopens on the
+  /// previously confirmed location instead of the idle picker. Forward
+  /// navigation from [ThemeOnboardingScreen] always leaves it `false`.
+  const LocationOnboardingScreen({
+    super.key,
+    GeocodingApi? geocodingApi,
+    bool restoreConfirmedLocation = false,
+  }) : _geocodingApi = geocodingApi,
+       _restoreConfirmedLocation = restoreConfirmedLocation;
 
   final GeocodingApi? _geocodingApi;
+  final bool _restoreConfirmedLocation;
 
   @override
   ConsumerState<LocationOnboardingScreen> createState() =>
@@ -102,6 +113,36 @@ class _LocationOnboardingScreenState
   final FocusNode _manualFocus = FocusNode();
 
   GeocodingApi? _ownedApi;
+
+  // True once the confirm phase has been restored from persisted settings
+  // (see _restoreConfirmedLocation), so it only happens once even though
+  // settingsProvider/locationProvider are watched (they may still be
+  // resolving on the first build).
+  bool _restoredFromSettings = false;
+
+  // Called only when this screen was opened with
+  // widget._restoreConfirmedLocation set (i.e. navigating back from
+  // NotificationOnboardingScreen). Reconstructs the previously confirmed
+  // location from settingsProvider.manualLocation and locationProvider so the
+  // screen reopens on the confirm card instead of the idle picker. Uses
+  // ref.watch (called from build) rather than ref.read because
+  // settingsProvider may still be loading on the very first build.
+  void _restoreConfirmedLocation() {
+    if (_restoredFromSettings) return;
+
+    final SettingsState? settings = ref.watch(settingsProvider).value;
+    final LocationState location = ref.watch(locationProvider);
+    final String? displayName = settings?.manualLocation;
+
+    if (settings == null || location == null || displayName == null) return;
+
+    _restoredFromSettings = true;
+    _pending = (
+      result: (lat: location.lat, lon: location.lon, displayName: displayName),
+      fromGps: settings.useGps,
+    );
+    _phase = _Phase.confirm;
+  }
 
   GeocodingApi _geocodingApi(String proxyBaseUrl, String deviceId) =>
       widget._geocodingApi ??
@@ -398,6 +439,17 @@ class _LocationOnboardingScreenState
   // -------------------------------------------------------------------------
 
   void _onBack() {
+    if (_phase == _Phase.idle) {
+      unawaited(
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute<void>(
+            builder: (_) => const ThemeOnboardingScreen(),
+          ),
+        ),
+      );
+      return;
+    }
+
     _debounce?.cancel();
     _operationId++;
     _manualController.clear();
@@ -425,6 +477,10 @@ class _LocationOnboardingScreenState
 
   @override
   Widget build(BuildContext context) {
+    if (widget._restoreConfirmedLocation && !_restoredFromSettings) {
+      _restoreConfirmedLocation();
+    }
+
     final String proxyBaseUrl = ref.watch(proxyBaseUrlProvider);
     // Null until deviceIdProvider resolves; callbacks that trigger network
     // calls are disabled while null to prevent an empty X-Device-ID header.
@@ -442,16 +498,10 @@ class _LocationOnboardingScreenState
         ? null
         : (String v) => _onChanged(v, proxyBaseUrl, deviceId);
 
-    final bool canGoBack = _phase != _Phase.idle && _phase != _Phase.loading;
+    final bool canGoBack = _phase != _Phase.loading;
 
     return Scaffold(
-      appBar: canGoBack
-          ? AppBar(
-              leading: BackButton(onPressed: _onBack),
-              backgroundColor: Colors.transparent,
-              elevation: _appBarElevation,
-            )
-          : null,
+      appBar: canGoBack ? OnboardingBackAppBar(onBack: _onBack) : null,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(

@@ -3,11 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uvalert/constants.dart';
+import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/providers/preferences_provider.dart';
 import 'package:uvalert/screens/dashboard_screen.dart';
+import 'package:uvalert/screens/location_onboarding_screen.dart';
 import 'package:uvalert/screens/notification_onboarding_screen.dart';
 import 'package:uvalert/screens/onboarding_progress_dots.dart';
 import 'package:uvalert/storage/preferences.dart';
+
+import 'fakes/fake_fixed_location_notifier.dart';
 
 // ---------------------------------------------------------------------------
 // Widget helper
@@ -142,6 +146,48 @@ void main() {
     await tester.pumpAndSettle();
     final Preferences prefs = await Preferences.load();
     expect(prefs.isFirstLaunch, isFalse);
+  });
+
+  // -------------------------------------------------------------------------
+  // Back navigation
+  // -------------------------------------------------------------------------
+
+  testWidgets('shows a back button', (WidgetTester tester) async {
+    await tester.pumpWidget(_wrap());
+    expect(find.byType(BackButton), findsOneWidget);
+  });
+
+  testWidgets('tapping back navigates to LocationOnboardingScreen', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(_wrap());
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(find.byType(LocationOnboardingScreen), findsOneWidget);
+  });
+
+  testWidgets('tapping back restores the confirm phase when a location was '
+      'already confirmed', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'uvalert_manual_location': 'Fresno, California, US',
+      'uvalert_use_gps': false,
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        // ignore: always_specify_types (overrides list type not in flutter_riverpod public API)
+        overrides: [
+          locationProvider.overrideWith(FakeFixedLocationNotifier.new),
+        ],
+        child: const MaterialApp(home: NotificationOnboardingScreen()),
+      ),
+    );
+
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Fresno, California, US'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Change'), findsOneWidget);
   });
 
   // -------------------------------------------------------------------------
