@@ -11,19 +11,7 @@ import 'package:uvalert/screens/notification_onboarding_screen.dart';
 import 'package:uvalert/screens/onboarding_progress_dots.dart';
 import 'package:uvalert/storage/preferences.dart';
 
-import 'fakes/fake_geolocator.dart';
-
-// ---------------------------------------------------------------------------
-// LocationNotifier with a fixed starting lat/lon, mirroring a location that
-// was already confirmed during a prior visit to LocationOnboardingScreen.
-// ---------------------------------------------------------------------------
-
-class _FixedLocationNotifier extends LocationNotifier {
-  _FixedLocationNotifier() : super(platform: FakeGeolocatorPlatform());
-
-  @override
-  LocationState build() => (lat: 36.75, lon: -119.65);
-}
+import 'fakes/fake_fixed_location_notifier.dart';
 
 // ---------------------------------------------------------------------------
 // Widget helper
@@ -188,7 +176,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         // ignore: always_specify_types (overrides list type not in flutter_riverpod public API)
-        overrides: [locationProvider.overrideWith(_FixedLocationNotifier.new)],
+        overrides: [
+          locationProvider.overrideWith(FakeFixedLocationNotifier.new),
+        ],
         child: const MaterialApp(home: NotificationOnboardingScreen()),
       ),
     );

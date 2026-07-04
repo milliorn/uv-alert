@@ -12,6 +12,7 @@ import 'package:uvalert/providers/preferences_provider.dart';
 import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/screens/notification_onboarding_screen.dart';
+import 'package:uvalert/screens/onboarding_back_app_bar.dart';
 import 'package:uvalert/screens/onboarding_progress_dots.dart';
 import 'package:uvalert/screens/theme_onboarding_screen.dart';
 import 'package:uvalert/storage/preferences.dart';
@@ -25,7 +26,6 @@ const double _spinnerSize = 16;
 const double _spinnerStrokeWidth = 2;
 const int _debounceMs = 400;
 const int _minQueryLength = 2;
-const double _appBarElevation = 0;
 
 // ---------------------------------------------------------------------------
 // Confirm result
@@ -477,7 +477,9 @@ class _LocationOnboardingScreenState
 
   @override
   Widget build(BuildContext context) {
-    if (widget._restoreConfirmedLocation) _restoreConfirmedLocation();
+    if (widget._restoreConfirmedLocation && !_restoredFromSettings) {
+      _restoreConfirmedLocation();
+    }
 
     final String proxyBaseUrl = ref.watch(proxyBaseUrlProvider);
     // Null until deviceIdProvider resolves; callbacks that trigger network
@@ -499,13 +501,7 @@ class _LocationOnboardingScreenState
     final bool canGoBack = _phase != _Phase.loading;
 
     return Scaffold(
-      appBar: canGoBack
-          ? AppBar(
-              leading: BackButton(onPressed: _onBack),
-              backgroundColor: Colors.transparent,
-              elevation: _appBarElevation,
-            )
-          : null,
+      appBar: canGoBack ? OnboardingBackAppBar(onBack: _onBack) : null,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(

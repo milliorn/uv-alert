@@ -7,6 +7,7 @@ import 'package:uvalert/providers/preferences_provider.dart';
 import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/screens/dashboard_screen.dart';
 import 'package:uvalert/screens/location_onboarding_screen.dart';
+import 'package:uvalert/screens/onboarding_back_app_bar.dart';
 import 'package:uvalert/screens/onboarding_progress_dots.dart';
 import 'package:uvalert/storage/preferences.dart';
 
@@ -14,7 +15,6 @@ import 'package:uvalert/storage/preferences.dart';
 // Layout constants
 // ---------------------------------------------------------------------------
 const int _notificationScreenIndex = totalOnboardingSteps - 1;
-const double _appBarElevation = 0;
 
 // ---------------------------------------------------------------------------
 // Screen
@@ -97,11 +97,7 @@ class _NotificationOnboardingScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: BackButton(onPressed: _continuing ? null : _onBack),
-        backgroundColor: Colors.transparent,
-        elevation: _appBarElevation,
-      ),
+      appBar: OnboardingBackAppBar(onBack: _continuing ? null : _onBack),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(

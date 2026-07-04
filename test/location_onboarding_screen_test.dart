@@ -16,6 +16,7 @@ import 'package:uvalert/screens/notification_onboarding_screen.dart';
 import 'package:uvalert/screens/theme_onboarding_screen.dart';
 import 'package:uvalert/storage/preferences.dart';
 
+import 'fakes/fake_fixed_location_notifier.dart';
 import 'fakes/fake_geolocator.dart';
 import 'helpers.dart';
 
@@ -30,19 +31,6 @@ class _NullResultLocationNotifier extends LocationNotifier {
   Future<void> fetchGps() async {
     // Completes without updating state, so locationProvider stays null.
   }
-}
-
-// ---------------------------------------------------------------------------
-// LocationNotifier with a fixed starting lat/lon (covers confirm-phase
-// restore-from-settings, simulating navigating back from
-// NotificationOnboardingScreen after a location was already confirmed).
-// ---------------------------------------------------------------------------
-
-class _FixedLocationNotifier extends LocationNotifier {
-  _FixedLocationNotifier() : super(platform: FakeGeolocatorPlatform());
-
-  @override
-  LocationState build() => (lat: 36.75, lon: -119.65);
 }
 
 // ---------------------------------------------------------------------------
@@ -994,7 +982,7 @@ void main() {
       await tester.pumpWidget(
         _wrap(
           const LocationOnboardingScreen(restoreConfirmedLocation: true),
-          locationFactory: _FixedLocationNotifier.new,
+          locationFactory: FakeFixedLocationNotifier.new,
         ),
       );
       await tester.pumpAndSettle();
@@ -1017,7 +1005,7 @@ void main() {
       await tester.pumpWidget(
         _wrap(
           LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
-          locationFactory: _FixedLocationNotifier.new,
+          locationFactory: FakeFixedLocationNotifier.new,
         ),
       );
       await tester.pumpAndSettle();
