@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.0](https://github.com/milliorn/uv-alert/compare/v1.10.0...v1.11.0) (2026-07-05)
+
+
+### Features
+
+* **dashboard:** add app bar with navigation and settings access ([#89](https://github.com/milliorn/uv-alert/issues/89)) ([ca041df](https://github.com/milliorn/uv-alert/commit/ca041df7a8f2a170167860fc8bbad0f33d8b4df1))
+
 ## [1.10.0](https://github.com/milliorn/uv-alert/compare/v1.9.0...v1.10.0) (2026-07-04)
 
 
