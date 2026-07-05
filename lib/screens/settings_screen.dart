@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 /// Placeholder for the settings screen.
 ///
 /// Full implementation (location, notifications, support sections) is
-/// tracked in a follow-up issue; see `.private/architecture/SCREENS.md`.
+/// tracked in a follow-up issue.
 class SettingsScreen extends StatelessWidget {
   /// Creates a [SettingsScreen].
   const SettingsScreen({super.key});
