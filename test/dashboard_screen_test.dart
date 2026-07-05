@@ -50,6 +50,7 @@ void main() {
     await tester.tap(find.byTooltip('Change location'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(DashboardScreen), findsOneWidget);
+    expect(find.text('Dashboard'), findsOneWidget);
+    expect(find.byType(SettingsScreen), findsNothing);
   });
 }
