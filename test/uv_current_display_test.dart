@@ -1,0 +1,105 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:uvalert/widgets/uv_current_display.dart';
+
+Widget _wrap(double uvIndex) =>
+    MaterialApp(home: Scaffold(body: UvCurrentDisplay(uvIndex: uvIndex)));
+
+void main() {
+  testWidgets('UvCurrentDisplay constructs with an explicit key', (
+    WidgetTester tester,
+  ) async {
+    final Key key = UniqueKey();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: UvCurrentDisplay(uvIndex: 1, key: key)),
+      ),
+    );
+
+    expect(find.byKey(key), findsOneWidget);
+  });
+
+  group('WHO risk bands', () {
+    final Map<double, String> bandLabels = <double, String>{
+      0: 'Low',
+      2: 'Low',
+      3: 'Moderate',
+      5: 'Moderate',
+      6: 'High',
+      7: 'High',
+      8: 'Very High',
+      10: 'Very High',
+      11: 'Extreme',
+      15: 'Extreme',
+    };
+
+    for (final MapEntry<double, String> entry in bandLabels.entries) {
+      testWidgets(
+        'UV ${entry.key} shows "${entry.value}" label colored to '
+        'whoRiskColor',
+        (WidgetTester tester) async {
+          await tester.pumpWidget(_wrap(entry.key));
+
+          expect(find.text(entry.value), findsOneWidget);
+
+          final Text riskText = tester.widget<Text>(find.text(entry.value));
+          expect(riskText.style?.color, whoRiskColor(entry.key));
+          expect(whoRiskLabel(entry.key), entry.value);
+        },
+      );
+    }
+
+    testWidgets('band colors are all distinct', (WidgetTester tester) async {
+      final Set<Color> colors = <Color>{
+        whoRiskColor(0),
+        whoRiskColor(3),
+        whoRiskColor(6),
+        whoRiskColor(8),
+        whoRiskColor(11),
+      };
+      expect(colors, hasLength(5));
+    });
+  });
+
+  testWidgets('applies semantic label with UV value and risk', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(_wrap(4.2));
+
+    expect(
+      tester.getSemantics(find.byType(UvCurrentDisplay)),
+      matchesSemantics(label: 'UV index 4.2, Moderate risk'),
+    );
+  });
+
+  testWidgets('formats the UV number to one decimal place', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(_wrap(7));
+
+    expect(find.text('7.0'), findsOneWidget);
+  });
+
+  testWidgets('ring diameter scales with textScaler', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+        child: _wrap(4),
+      ),
+    );
+
+    final Container ring = tester.widget<Container>(find.byType(Container));
+    final BoxConstraints constraints = ring.constraints!;
+
+    await tester.pumpWidget(_wrap(4));
+    final Container baseRing = tester.widget<Container>(
+      find.byType(Container),
+    );
+    final BoxConstraints baseConstraints = baseRing.constraints!;
+
+    expect(constraints.maxWidth, greaterThan(baseConstraints.maxWidth));
+  });
+}
