@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.0](https://github.com/milliorn/uv-alert/compare/v1.11.0...v1.12.0) (2026-07-06)
+
+
+### Features
+
+* implement UV hero number, ring, and WHO risk label ([#91](https://github.com/milliorn/uv-alert/issues/91)) ([7ed42a0](https://github.com/milliorn/uv-alert/commit/7ed42a0fcad797ce7ff0c002ac9ca969b54f8a01)), closes [#18](https://github.com/milliorn/uv-alert/issues/18)
+
 ## [1.11.0](https://github.com/milliorn/uv-alert/compare/v1.10.0...v1.11.0) (2026-07-05)
 
 
