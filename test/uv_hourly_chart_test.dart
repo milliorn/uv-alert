@@ -1,0 +1,260 @@
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:uvalert/models/uv_model.dart';
+import 'package:uvalert/utils/who_risk.dart';
+import 'package:uvalert/widgets/uv_hourly_chart.dart';
+
+import 'fakes/fake_uv_data.dart';
+
+/// Sunrise used by [makeUvData]'s defaults, so hourly fixtures line up.
+final DateTime _sunrise = DateTime.utc(2024, 6, 1, 6);
+
+List<UvForecastEntry> _hourlyFrom(
+  DateTime sunrise,
+  int count, {
+  double Function(int hour)? uviAt,
+}) => <UvForecastEntry>[
+  for (int i = 0; i < count; i++)
+    UvForecastEntry(
+      time: sunrise.add(Duration(hours: i)),
+      uvi: uviAt != null ? uviAt(i) : 5,
+    ),
+];
+
+Widget _wrap(UvData uvData, {double width = 400}) => MaterialApp(
+  home: Scaffold(
+    body: SizedBox(
+      width: width,
+      height: 220,
+      child: UvHourlyChart(uvData: uvData),
+    ),
+  ),
+);
+
+LineChartData _chartData(WidgetTester tester) =>
+    tester.widget<LineChart>(find.byType(LineChart)).data;
+
+void main() {
+  testWidgets('renders a LineChart spanning sunrise to sunset', (
+    WidgetTester tester,
+  ) async {
+    final UvData uvData = makeUvData(
+      sunrise: _sunrise,
+      sunset: _sunrise.add(const Duration(hours: 14)),
+      hourly: _hourlyFrom(_sunrise, 15),
+    );
+
+    await tester.pumpWidget(_wrap(uvData));
+
+    final LineChartData data = _chartData(tester);
+    expect(data.minX, 0);
+    expect(data.maxX, 14);
+    expect(data.lineBarsData, hasLength(1));
+    expect(data.lineBarsData.single.spots, hasLength(15));
+  });
+
+  testWidgets('only plots hourly entries within sunrise-to-sunset', (
+    WidgetTester tester,
+  ) async {
+    final DateTime sunset = _sunrise.add(const Duration(hours: 14));
+    final UvData uvData = makeUvData(
+      sunrise: _sunrise,
+      sunset: sunset,
+      hourly: <UvForecastEntry>[
+        UvForecastEntry(
+          time: _sunrise.subtract(const Duration(hours: 1)),
+          uvi: 1,
+        ),
+        ..._hourlyFrom(_sunrise, 15),
+        UvForecastEntry(time: sunset.add(const Duration(hours: 1)), uvi: 1),
+      ],
+    );
+
+    await tester.pumpWidget(_wrap(uvData));
+
+    expect(_chartData(tester).lineBarsData.single.spots, hasLength(15));
+  });
+
+  group('WHO risk band background fills', () {
+    testWidgets('draws all 5 WHO bands with their reference colors', (
+      WidgetTester tester,
+    ) async {
+      final UvData uvData = makeUvData(
+        sunrise: _sunrise,
+        sunset: _sunrise.add(const Duration(hours: 14)),
+        hourly: _hourlyFrom(_sunrise, 15),
+      );
+
+      await tester.pumpWidget(_wrap(uvData));
+
+      final List<HorizontalRangeAnnotation> bands = _chartData(
+        tester,
+      ).rangeAnnotations.horizontalRangeAnnotations;
+
+      expect(bands, hasLength(5));
+
+      final Set<Color> opaqueBandColors = bands
+          .map((HorizontalRangeAnnotation b) => b.color!.withValues(alpha: 1))
+          .toSet();
+
+      expect(
+        opaqueBandColors,
+        containsAll(<Color>[
+          whoColorLow,
+          whoColorModerate,
+          whoColorHigh,
+          whoColorVeryHigh,
+          whoColorExtreme,
+        ]),
+      );
+    });
+
+    testWidgets('bands use a low opacity fill, not a solid color', (
+      WidgetTester tester,
+    ) async {
+      final UvData uvData = makeUvData(
+        sunrise: _sunrise,
+        sunset: _sunrise.add(const Duration(hours: 14)),
+        hourly: _hourlyFrom(_sunrise, 15),
+      );
+
+      await tester.pumpWidget(_wrap(uvData));
+
+      final List<HorizontalRangeAnnotation> bands = _chartData(
+        tester,
+      ).rangeAnnotations.horizontalRangeAnnotations;
+
+      for (final HorizontalRangeAnnotation band in bands) {
+        expect(band.color!.a, lessThan(1));
+        expect(band.color!.a, greaterThan(0));
+      }
+    });
+
+    testWidgets('bands span y1/y2 at the WHO threshold boundaries', (
+      WidgetTester tester,
+    ) async {
+      final UvData uvData = makeUvData(
+        sunrise: _sunrise,
+        sunset: _sunrise.add(const Duration(hours: 14)),
+        hourly: _hourlyFrom(_sunrise, 15),
+      );
+
+      await tester.pumpWidget(_wrap(uvData));
+
+      final List<HorizontalRangeAnnotation> bands = _chartData(
+        tester,
+      ).rangeAnnotations.horizontalRangeAnnotations;
+
+      final List<double> boundaries = <double>[
+        for (final HorizontalRangeAnnotation b in bands) b.y1,
+        bands.last.y2,
+      ];
+
+      expect(boundaries, <double>[
+        0,
+        whoLowMax,
+        whoModerateMax,
+        whoHighMax,
+        whoVeryHighMax,
+        boundaries.last,
+      ]);
+    });
+  });
+
+  group('hourly vs every-2-hours axis label fallback', () {
+    testWidgets('uses a 1-hour interval when the chart is wide enough', (
+      WidgetTester tester,
+    ) async {
+      final UvData uvData = makeUvData(
+        sunrise: _sunrise,
+        sunset: _sunrise.add(const Duration(hours: 6)),
+        hourly: _hourlyFrom(_sunrise, 7),
+      );
+
+      await tester.pumpWidget(_wrap(uvData, width: 800));
+
+      expect(_chartData(tester).titlesData.bottomTitles.sideTitles.interval, 1);
+    });
+
+    testWidgets('falls back to a 2-hour interval on a narrow chart', (
+      WidgetTester tester,
+    ) async {
+      final UvData uvData = makeUvData(
+        sunrise: _sunrise,
+        sunset: _sunrise.add(const Duration(hours: 14)),
+        hourly: _hourlyFrom(_sunrise, 15),
+      );
+
+      await tester.pumpWidget(_wrap(uvData, width: 200));
+
+      expect(_chartData(tester).titlesData.bottomTitles.sideTitles.interval, 2);
+    });
+  });
+
+  group('accessibility semantics', () {
+    testWidgets(
+      'exposes one semantics node per hourly point with time, UV, and risk',
+      (WidgetTester tester) async {
+        final UvData uvData = makeUvData(
+          sunrise: _sunrise,
+          sunset: _sunrise.add(const Duration(hours: 2)),
+          hourly: _hourlyFrom(
+            _sunrise,
+            3,
+            uviAt: (int hour) => <double>[1, 4, 9][hour],
+          ),
+        );
+
+        final SemanticsHandle handle = tester.ensureSemantics();
+        await tester.pumpWidget(_wrap(uvData));
+
+        expect(
+          tester.getSemantics(
+            find.bySemanticsLabel(RegExp('6:00 AM, UV index 1.0, Low risk')),
+          ),
+          matchesSemantics(label: '6:00 AM, UV index 1.0, Low risk'),
+        );
+        expect(
+          tester.getSemantics(
+            find.bySemanticsLabel(
+              RegExp('7:00 AM, UV index 4.0, Moderate risk'),
+            ),
+          ),
+          matchesSemantics(label: '7:00 AM, UV index 4.0, Moderate risk'),
+        );
+        expect(
+          tester.getSemantics(
+            find.bySemanticsLabel(
+              RegExp('8:00 AM, UV index 9.0, Very High risk'),
+            ),
+          ),
+          matchesSemantics(label: '8:00 AM, UV index 9.0, Very High risk'),
+        );
+
+        handle.dispose();
+      },
+    );
+
+    testWidgets('excludes the visual chart canvas from the semantics tree', (
+      WidgetTester tester,
+    ) async {
+      final UvData uvData = makeUvData(
+        sunrise: _sunrise,
+        sunset: _sunrise.add(const Duration(hours: 2)),
+        hourly: _hourlyFrom(_sunrise, 3),
+      );
+
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await tester.pumpWidget(_wrap(uvData));
+
+      final SemanticsNode chartNode = tester.getSemantics(
+        find.byType(LineChart),
+      );
+      expect(chartNode.label, isEmpty);
+
+      handle.dispose();
+    });
+  });
+}
