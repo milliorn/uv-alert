@@ -69,7 +69,7 @@ const double _tenthsPerUnit = 10;
 /// 5.04 truncates to the displayed "5.0" and bands as Moderate, not High).
 ({Color color, String label}) _whoRiskBand(double uvIndex) {
   final double v = _truncateToTenth(uvIndex);
-  
+
   if (v <= _whoLowMax) return (color: _whoColorLow, label: 'Low');
 
   if (v <= _whoModerateMax) {
@@ -115,9 +115,9 @@ class UvCurrentDisplay extends StatelessWidget {
         (theme.textTheme.displayLarge ?? const TextStyle(fontSize: 48))
             .copyWith(color: color, fontWeight: FontWeight.bold);
 
-    final double fontSize =
-        (numberStyle.fontSize ?? 48) *
-        MediaQuery.textScalerOf(context).scale(1);
+    final double fontSize = MediaQuery.textScalerOf(
+      context,
+    ).scale(numberStyle.fontSize ?? 48);
     final double diameter = fontSize * _ringDiameterFactor;
     final double strokeWidth = fontSize * _ringStrokeWidthFactor;
 
