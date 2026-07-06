@@ -86,9 +86,17 @@ const double _tenthsPerUnit = 10;
 }
 
 /// Returns the WHO risk-band color for [uvIndex].
+///
+/// Exposed for tests only; [UvCurrentDisplay] itself reads bands via the
+/// private [_whoRiskBand].
+@visibleForTesting
 Color whoRiskColor(double uvIndex) => _whoRiskBand(uvIndex).color;
 
 /// Returns the WHO risk-band label for [uvIndex].
+///
+/// Exposed for tests only; [UvCurrentDisplay] itself reads bands via the
+/// private [_whoRiskBand].
+@visibleForTesting
 String whoRiskLabel(double uvIndex) => _whoRiskBand(uvIndex).label;
 
 /// The dashboard hero: a large UV index number inside a WHO-colored ring,

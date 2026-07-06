@@ -22,40 +22,48 @@ void main() {
   });
 
   group('WHO risk bands', () {
-    final Map<double, String> bandLabels = <double, String>{
-      0: 'Low',
-      2: 'Low',
-      3: 'Moderate',
-      5: 'Moderate',
-      6: 'High',
-      7: 'High',
-      8: 'Very High',
-      10: 'Very High',
-      11: 'Extreme',
-      15: 'Extreme',
-    };
+    // Expected colors are hard-coded from WHO's own RGB values (see
+    // docs/adr/who-uv-index-colour-standards.pdf), computed independently
+    // via Color.fromARGB rather than imported from the widget's color
+    // constants, so a regression inside whoRiskColor/_whoRiskBand itself
+    // (e.g. a swapped or mistyped color) is actually caught.
+    final Map<double, (String label, Color color)> bands =
+        <double, (String, Color)>{
+          0: ('Low', const Color.fromARGB(255, 40, 149, 0)),
+          2: ('Low', const Color.fromARGB(255, 40, 149, 0)),
+          3: ('Moderate', const Color.fromARGB(255, 247, 228, 0)),
+          5: ('Moderate', const Color.fromARGB(255, 247, 228, 0)),
+          6: ('High', const Color.fromARGB(255, 248, 89, 0)),
+          7: ('High', const Color.fromARGB(255, 248, 89, 0)),
+          8: ('Very High', const Color.fromARGB(255, 216, 0, 29)),
+          10: ('Very High', const Color.fromARGB(255, 216, 0, 29)),
+          11: ('Extreme', const Color.fromARGB(255, 107, 73, 200)),
+          15: ('Extreme', const Color.fromARGB(255, 107, 73, 200)),
+        };
 
-    for (final MapEntry<double, String> entry in bandLabels.entries) {
-      testWidgets('UV ${entry.key} shows "${entry.value}" label colored to '
-          'whoRiskColor', (WidgetTester tester) async {
-        await tester.pumpWidget(_wrap(entry.key));
+    for (final MapEntry<double, (String, Color)> entry in bands.entries) {
+      final double uvIndex = entry.key;
+      final (String label, Color color) = entry.value;
 
-        expect(find.text(entry.value), findsOneWidget);
+      testWidgets('UV $uvIndex shows "$label" label and ring colored to '
+          'the WHO reference color', (WidgetTester tester) async {
+        await tester.pumpWidget(_wrap(uvIndex));
 
-        final Text riskText = tester.widget<Text>(find.text(entry.value));
-        expect(riskText.style?.color, whoRiskColor(entry.key));
-        expect(whoRiskLabel(entry.key), entry.value);
+        expect(find.text(label), findsOneWidget);
+
+        final Text riskText = tester.widget<Text>(find.text(label));
+        expect(riskText.style?.color, color);
+
+        final Container ring = tester.widget<Container>(find.byType(Container));
+        final BoxDecoration decoration = ring.decoration! as BoxDecoration;
+        expect(decoration.border!.top.color, color);
       });
     }
 
     testWidgets('band colors are all distinct', (WidgetTester tester) async {
-      final Set<Color> colors = <Color>{
-        whoRiskColor(0),
-        whoRiskColor(3),
-        whoRiskColor(6),
-        whoRiskColor(8),
-        whoRiskColor(11),
-      };
+      final Set<Color> colors = bands.values
+          .map(((String, Color) v) => v.$2)
+          .toSet();
       expect(colors, hasLength(5));
     });
   });
