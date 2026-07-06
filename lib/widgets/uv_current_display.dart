@@ -25,20 +25,26 @@ const double _whoHighMax = 7;
 /// Upper bound (inclusive) of the WHO "Very High" UV risk band.
 const double _whoVeryHighMax = 10;
 
+// Sourced from WHO's "UV Index Symbol Colour Standards (PMS and RGB)"
+// table, vendored at docs/adr/who-uv-index-colour-standards.pdf: Low
+// RGB(40,149,0) Pantone 375, Moderate RGB(247,228,0) Pantone 102, High
+// RGB(248,89,0) Pantone 151, Very High RGB(216,0,29) Pantone 032,
+// Extreme RGB(107,73,200) Pantone 265.
+
 /// WHO risk-band color for a UV index of 0-2 ("Low").
-const Color _whoColorLow = Color(0xFF4CAF50);
+const Color _whoColorLow = Color(0xFF289500);
 
 /// WHO risk-band color for a UV index of 3-5 ("Moderate").
-const Color _whoColorModerate = Color(0xFFFFC107);
+const Color _whoColorModerate = Color(0xFFF7E400);
 
 /// WHO risk-band color for a UV index of 6-7 ("High").
-const Color _whoColorHigh = Color(0xFFFF9800);
+const Color _whoColorHigh = Color(0xFFF85900);
 
 /// WHO risk-band color for a UV index of 8-10 ("Very High").
-const Color _whoColorVeryHigh = Color(0xFFF44336);
+const Color _whoColorVeryHigh = Color(0xFFD8001D);
 
 /// WHO risk-band color for a UV index of 11+ ("Extreme").
-const Color _whoColorExtreme = Color(0xFF9C27B0);
+const Color _whoColorExtreme = Color(0xFF6B49C8);
 
 /// Returns the WHO risk-band color for [uvIndex].
 Color whoRiskColor(double uvIndex) {
