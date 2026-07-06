@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uvalert/widgets/uv_current_display.dart';
 
-Widget _wrap(double uvIndex) =>
-    MaterialApp(home: Scaffold(body: UvCurrentDisplay(uvIndex: uvIndex)));
+Widget _wrap(double uvIndex) => MaterialApp(
+  home: Scaffold(body: UvCurrentDisplay(uvIndex: uvIndex)),
+);
 
 void main() {
   testWidgets('UvCurrentDisplay constructs with an explicit key', (
@@ -35,19 +36,16 @@ void main() {
     };
 
     for (final MapEntry<double, String> entry in bandLabels.entries) {
-      testWidgets(
-        'UV ${entry.key} shows "${entry.value}" label colored to '
-        'whoRiskColor',
-        (WidgetTester tester) async {
-          await tester.pumpWidget(_wrap(entry.key));
+      testWidgets('UV ${entry.key} shows "${entry.value}" label colored to '
+          'whoRiskColor', (WidgetTester tester) async {
+        await tester.pumpWidget(_wrap(entry.key));
 
-          expect(find.text(entry.value), findsOneWidget);
+        expect(find.text(entry.value), findsOneWidget);
 
-          final Text riskText = tester.widget<Text>(find.text(entry.value));
-          expect(riskText.style?.color, whoRiskColor(entry.key));
-          expect(whoRiskLabel(entry.key), entry.value);
-        },
-      );
+        final Text riskText = tester.widget<Text>(find.text(entry.value));
+        expect(riskText.style?.color, whoRiskColor(entry.key));
+        expect(whoRiskLabel(entry.key), entry.value);
+      });
     }
 
     testWidgets('band colors are all distinct', (WidgetTester tester) async {
@@ -84,22 +82,22 @@ void main() {
   testWidgets('ring diameter scales with textScaler', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(
-      MediaQuery(
-        data: const MediaQueryData(textScaler: TextScaler.linear(2)),
-        child: _wrap(4),
-      ),
-    );
+    Future<double> ringWidthAt(TextScaler scaler) async {
+      await tester.pumpWidget(
+        MediaQuery(
+          data: MediaQueryData(textScaler: scaler),
+          child: _wrap(4),
+        ),
+      );
+      return tester
+          .widget<Container>(find.byType(Container))
+          .constraints!
+          .maxWidth;
+    }
 
-    final Container ring = tester.widget<Container>(find.byType(Container));
-    final BoxConstraints constraints = ring.constraints!;
+    final double baseWidth = await ringWidthAt(TextScaler.noScaling);
+    final double scaledWidth = await ringWidthAt(const TextScaler.linear(2));
 
-    await tester.pumpWidget(_wrap(4));
-    final Container baseRing = tester.widget<Container>(
-      find.byType(Container),
-    );
-    final BoxConstraints baseConstraints = baseRing.constraints!;
-
-    expect(constraints.maxWidth, greaterThan(baseConstraints.maxWidth));
+    expect(scaledWidth, greaterThan(baseWidth));
   });
 }

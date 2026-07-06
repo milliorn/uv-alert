@@ -46,23 +46,28 @@ const Color _whoColorVeryHigh = Color(0xFFD8001D);
 /// WHO risk-band color for a UV index of 11+ ("Extreme").
 const Color _whoColorExtreme = Color(0xFF6B49C8);
 
-/// Returns the WHO risk-band color for [uvIndex].
-Color whoRiskColor(double uvIndex) {
-  if (uvIndex <= _whoLowMax) return _whoColorLow;
-  if (uvIndex <= _whoModerateMax) return _whoColorModerate;
-  if (uvIndex <= _whoHighMax) return _whoColorHigh;
-  if (uvIndex <= _whoVeryHighMax) return _whoColorVeryHigh;
-  return _whoColorExtreme;
+/// The WHO risk band for a given UV index: its display color and label.
+({Color color, String label}) _whoRiskBand(double uvIndex) {
+  if (uvIndex <= _whoLowMax) return (color: _whoColorLow, label: 'Low');
+
+  if (uvIndex <= _whoModerateMax) {
+    return (color: _whoColorModerate, label: 'Moderate');
+  }
+
+  if (uvIndex <= _whoHighMax) return (color: _whoColorHigh, label: 'High');
+
+  if (uvIndex <= _whoVeryHighMax) {
+    return (color: _whoColorVeryHigh, label: 'Very High');
+  }
+
+  return (color: _whoColorExtreme, label: 'Extreme');
 }
 
+/// Returns the WHO risk-band color for [uvIndex].
+Color whoRiskColor(double uvIndex) => _whoRiskBand(uvIndex).color;
+
 /// Returns the WHO risk-band label for [uvIndex].
-String whoRiskLabel(double uvIndex) {
-  if (uvIndex <= _whoLowMax) return 'Low';
-  if (uvIndex <= _whoModerateMax) return 'Moderate';
-  if (uvIndex <= _whoHighMax) return 'High';
-  if (uvIndex <= _whoVeryHighMax) return 'Very High';
-  return 'Extreme';
-}
+String whoRiskLabel(double uvIndex) => _whoRiskBand(uvIndex).label;
 
 /// The dashboard hero: a large UV index number inside a WHO-colored ring,
 /// with the WHO risk label shown below.
@@ -79,13 +84,14 @@ class UvCurrentDisplay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color color = whoRiskColor(uvIndex);
-    final String risk = whoRiskLabel(uvIndex);
+    final ({Color color, String label}) band = _whoRiskBand(uvIndex);
+    final Color color = band.color;
+    final String risk = band.label;
     final String uviLabel = uvIndex.toStringAsFixed(1);
 
-    final TextStyle numberStyle = (theme.textTheme.displayLarge ??
-            const TextStyle(fontSize: 48))
-        .copyWith(color: color, fontWeight: FontWeight.bold);
+    final TextStyle numberStyle =
+        (theme.textTheme.displayLarge ?? const TextStyle(fontSize: 48))
+            .copyWith(color: color, fontWeight: FontWeight.bold);
 
     final double fontSize =
         (numberStyle.fontSize ?? 48) *
