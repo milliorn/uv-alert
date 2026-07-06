@@ -13,6 +13,12 @@ const double _ringDiameterFactor = 2.2;
 /// UV number's rendered font size.
 const double _labelGapFactor = 0.3;
 
+/// Padding inside the ring, expressed as a multiple of the ring's stroke
+/// width, so the number never touches or overflows past the ring border
+/// even for wider content than a typical "9.1"-style reading (e.g. a
+/// negative sign or an unexpectedly long value).
+const double _ringInnerPaddingFactor = 1.5;
+
 /// Upper bound (inclusive) of the WHO "Low" UV risk band.
 const double _whoLowMax = 2;
 
@@ -46,17 +52,33 @@ const Color _whoColorVeryHigh = Color(0xFFD8001D);
 /// WHO risk-band color for a UV index of 11+ ("Extreme").
 const Color _whoColorExtreme = Color(0xFF6B49C8);
 
-/// The WHO risk band for a given UV index: its display color and label.
-({Color color, String label}) _whoRiskBand(double uvIndex) {
-  if (uvIndex <= _whoLowMax) return (color: _whoColorLow, label: 'Low');
+/// Truncates (not rounds) [uvIndex] to one decimal place, per WHO's
+/// convention of truncating fractional UV readings rather than rounding
+/// them (e.g. 3.01 -> 3.0, 2.99 -> 2.9).
+double _truncateToTenth(double uvIndex) =>
+    (uvIndex * _tenthsPerUnit).truncateToDouble() / _tenthsPerUnit;
 
-  if (uvIndex <= _whoModerateMax) {
+/// Number of tenths in one whole UV index unit, used to truncate to one
+/// decimal place without rounding.
+const double _tenthsPerUnit = 10;
+
+/// The WHO risk band for a given UV index: its display color and label.
+///
+/// Bands on the same truncated-to-one-decimal value that is displayed, so
+/// the shown number and its color/label can never disagree (e.g. a raw
+/// 5.04 truncates to the displayed "5.0" and bands as Moderate, not High).
+({Color color, String label}) _whoRiskBand(double uvIndex) {
+  final double v = _truncateToTenth(uvIndex);
+  
+  if (v <= _whoLowMax) return (color: _whoColorLow, label: 'Low');
+
+  if (v <= _whoModerateMax) {
     return (color: _whoColorModerate, label: 'Moderate');
   }
 
-  if (uvIndex <= _whoHighMax) return (color: _whoColorHigh, label: 'High');
+  if (v <= _whoHighMax) return (color: _whoColorHigh, label: 'High');
 
-  if (uvIndex <= _whoVeryHighMax) {
+  if (v <= _whoVeryHighMax) {
     return (color: _whoColorVeryHigh, label: 'Very High');
   }
 
@@ -87,7 +109,7 @@ class UvCurrentDisplay extends StatelessWidget {
     final ({Color color, String label}) band = _whoRiskBand(uvIndex);
     final Color color = band.color;
     final String risk = band.label;
-    final String uviLabel = uvIndex.toStringAsFixed(1);
+    final String uviLabel = _truncateToTenth(uvIndex).toStringAsFixed(1);
 
     final TextStyle numberStyle =
         (theme.textTheme.displayLarge ?? const TextStyle(fontSize: 48))
@@ -109,11 +131,14 @@ class UvCurrentDisplay extends StatelessWidget {
               width: diameter,
               height: diameter,
               alignment: Alignment.center,
+              padding: EdgeInsets.all(strokeWidth * _ringInnerPaddingFactor),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(color: color, width: strokeWidth),
               ),
-              child: Text(uviLabel, style: numberStyle),
+              child: FittedBox(
+                child: Text(uviLabel, style: numberStyle, maxLines: 1),
+              ),
             ),
           ),
           SizedBox(height: fontSize * _labelGapFactor),

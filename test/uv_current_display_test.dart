@@ -79,6 +79,35 @@ void main() {
     expect(find.text('7.0'), findsOneWidget);
   });
 
+  group('displayed number always agrees with its band color/label', () {
+    // Regression coverage for a boundary bug: a raw uvIndex just above an
+    // integer threshold (e.g. 5.04) used to round up to the next band's
+    // displayed number via toStringAsFixed while banding on the raw value,
+    // so the shown number and its color/label could visibly disagree.
+    final Map<double, String> truncatedDisplay = <double, String>{
+      5.04: '5.0',
+      2.04: '2.0',
+      7.04: '7.0',
+      2.99: '2.9',
+      3.01: '3.0',
+    };
+
+    for (final MapEntry<double, String> entry in truncatedDisplay.entries) {
+      testWidgets(
+        'UV ${entry.key} displays "${entry.value}" and bands to match',
+        (WidgetTester tester) async {
+          await tester.pumpWidget(_wrap(entry.key));
+
+          expect(find.text(entry.value), findsOneWidget);
+
+          final String expectedRisk = whoRiskLabel(entry.key);
+          final Text riskText = tester.widget<Text>(find.text(expectedRisk));
+          expect(riskText.style?.color, whoRiskColor(entry.key));
+        },
+      );
+    }
+  });
+
   testWidgets('ring diameter scales with textScaler', (
     WidgetTester tester,
   ) async {
