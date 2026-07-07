@@ -189,7 +189,7 @@ void main() {
         whoModerateMax,
         whoHighMax,
         whoVeryHighMax,
-        boundaries.last,
+        chartYAxisMax,
       ]);
     });
 

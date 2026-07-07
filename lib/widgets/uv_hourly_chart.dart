@@ -69,7 +69,7 @@ class UvHourlyChart extends StatelessWidget {
   _ChartPoint _chartPoint(UvForecastEntry entry, DateTime sunrise) {
     final DateTime localTime = _toLocationLocal(entry.time);
     return (
-      hours: localTime.difference(sunrise).inMinutes / Duration.minutesPerHour,
+      hours: localTime.difference(sunrise).inSeconds / Duration.secondsPerHour,
       localTime: localTime,
       entry: entry,
     );
@@ -80,7 +80,7 @@ class UvHourlyChart extends StatelessWidget {
     final DateTime sunrise = _toLocationLocal(uvData.sunrise);
     final DateTime sunset = _toLocationLocal(uvData.sunset);
     final double sunsetHours =
-        sunset.difference(sunrise).inMinutes / Duration.minutesPerHour;
+        sunset.difference(sunrise).inSeconds / Duration.secondsPerHour;
 
     final List<_ChartPoint> points = <_ChartPoint>[
       for (final UvForecastEntry entry in uvData.hourly)
