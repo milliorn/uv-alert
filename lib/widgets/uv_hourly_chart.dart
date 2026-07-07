@@ -92,7 +92,7 @@ class UvHourlyChart extends StatelessWidget {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double hourInterval = _hourLabelInterval(
-          constraints.maxWidth,
+          constraints.maxWidth - _leftTitleReservedSize,
           sunsetHours,
         );
 
@@ -222,9 +222,14 @@ Duration _hoursDuration(double hours) =>
 
 /// Chooses the hour-label axis interval: every hour, or every 2 hours if
 /// hourly labels would not fit within the available chart width.
-double _hourLabelInterval(double chartWidth, double sunsetHours) {
+///
+/// [plotAreaWidth] must be the chart's plot area width, not the full widget
+/// width -- fl_chart reserves [_leftTitleReservedSize] for the left axis
+/// titles (subtracted from the chart's content area as layout margin), which
+/// is not available for spacing the bottom axis's hour labels.
+double _hourLabelInterval(double plotAreaWidth, double sunsetHours) {
   final int hourlyLabelCount = sunsetHours.ceil() + 1;
-  final double pixelsPerHour = chartWidth / hourlyLabelCount;
+  final double pixelsPerHour = plotAreaWidth / hourlyLabelCount;
 
   return pixelsPerHour >= _minPixelsPerHourLabel ? 1 : 2;
 }
