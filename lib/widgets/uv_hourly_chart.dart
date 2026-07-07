@@ -68,6 +68,18 @@ class UvHourlyChart extends StatelessWidget {
   DateTime _toLocationLocal(DateTime time) =>
       time.add(Duration(seconds: uvData.timezoneOffset));
 
+  /// Builds a [_ChartPoint] for [entry], computing its location-local time
+  /// once and reusing it for both the plotted x-position and the
+  /// accessibility label.
+  _ChartPoint _chartPoint(UvForecastEntry entry, DateTime sunrise) {
+    final DateTime localTime = _toLocationLocal(entry.time);
+    return (
+      hours: localTime.difference(sunrise).inMinutes / Duration.minutesPerHour,
+      localTime: localTime,
+      entry: entry,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final DateTime sunrise = _toLocationLocal(uvData.sunrise);
@@ -79,13 +91,7 @@ class UvHourlyChart extends StatelessWidget {
       for (final UvForecastEntry entry in uvData.hourly)
         if (!entry.time.isBefore(uvData.sunrise) &&
             !entry.time.isAfter(uvData.sunset))
-          (
-            hours:
-                _toLocationLocal(entry.time).difference(sunrise).inMinutes /
-                Duration.minutesPerHour,
-            localTime: _toLocationLocal(entry.time),
-            entry: entry,
-          ),
+          _chartPoint(entry, sunrise),
     ];
 
     return LayoutBuilder(
@@ -129,7 +135,7 @@ class UvHourlyChart extends StatelessWidget {
                       sideTitles: SideTitles(
                         showTitles: true,
                         reservedSize: _leftTitleReservedSize,
-                        interval: whoModerateMax - whoLowMax,
+                        interval: 1,
                         getTitlesWidget: (double value, TitleMeta meta) =>
                             _LeftTitle(value: value, meta: meta),
                       ),
@@ -161,7 +167,15 @@ class UvHourlyChart extends StatelessWidget {
                 ),
               ),
             ),
-            Positioned.fill(child: _HourlyChartSemantics(points: points)),
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.only(
+                  left: _leftTitleReservedSize,
+                  bottom: _bottomTitleReservedSize,
+                ),
+                child: _HourlyChartSemantics(points: points),
+              ),
+            ),
           ],
         );
       },
@@ -287,6 +301,17 @@ class _BottomTitle extends StatelessWidget {
   }
 }
 
+/// The WHO threshold boundaries drawn on the left axis, matching the
+/// background risk-band edges exactly.
+const List<double> _leftAxisWhoBoundaries = <double>[
+  0,
+  whoLowMax,
+  whoModerateMax,
+  whoHighMax,
+  whoVeryHighMax,
+  _whoExtremeMax,
+];
+
 class _LeftTitle extends StatelessWidget {
   const _LeftTitle({required this.value, required this.meta});
 
@@ -295,6 +320,8 @@ class _LeftTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!_leftAxisWhoBoundaries.contains(value)) return const SizedBox.shrink();
+
     return SideTitleWidget(
       meta: meta,
       child: Text(

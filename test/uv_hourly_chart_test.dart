@@ -36,6 +36,21 @@ Widget _wrap(UvData uvData, {double width = 400}) => MaterialApp(
 LineChartData _chartData(WidgetTester tester) =>
     tester.widget<LineChart>(find.byType(LineChart)).data;
 
+/// A [TitleMeta] fixture for directly invoking a [GetTitleWidgetFunction]
+/// in tests; field values are arbitrary except where the widget under test
+/// reads them.
+TitleMeta _fakeTitleMeta() => TitleMeta(
+  min: 0,
+  max: 12,
+  parentAxisSize: 100,
+  axisPosition: 0,
+  appliedInterval: 1,
+  sideTitles: const SideTitles(),
+  formattedValue: '',
+  axisSide: AxisSide.left,
+  rotationQuarterTurns: 0,
+);
+
 void main() {
   testWidgets('renders a LineChart spanning sunrise to sunset', (
     WidgetTester tester,
@@ -75,6 +90,22 @@ void main() {
     await tester.pumpWidget(_wrap(uvData));
 
     expect(_chartData(tester).lineBarsData.single.spots, hasLength(15));
+  });
+
+  testWidgets('renders without error when hourly is empty', (
+    WidgetTester tester,
+  ) async {
+    // makeUvData()'s hourly default is already an empty list; omitted here
+    // to satisfy the analyzer, but that default is exactly what this test
+    // exercises.
+    final UvData uvData = makeUvData(
+      sunrise: _sunrise,
+      sunset: _sunrise.add(const Duration(hours: 14)),
+    );
+
+    await tester.pumpWidget(_wrap(uvData));
+
+    expect(_chartData(tester).lineBarsData.single.spots, isEmpty);
   });
 
   group('WHO risk band background fills', () {
@@ -161,6 +192,51 @@ void main() {
         boundaries.last,
       ]);
     });
+
+    testWidgets('left axis only labels values at WHO threshold boundaries', (
+      WidgetTester tester,
+    ) async {
+      final UvData uvData = makeUvData(
+        sunrise: _sunrise,
+        sunset: _sunrise.add(const Duration(hours: 14)),
+        hourly: _hourlyFrom(_sunrise, 15),
+      );
+
+      await tester.pumpWidget(_wrap(uvData));
+
+      final GetTitleWidgetFunction getTitlesWidget = _chartData(
+        tester,
+      ).titlesData.leftTitles.sideTitles.getTitlesWidget;
+      final TitleMeta meta = _fakeTitleMeta();
+
+      Future<bool> hasLabelAt(double value) async {
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: getTitlesWidget(value, meta),
+          ),
+        );
+        return find.byType(Text).evaluate().isNotEmpty;
+      }
+
+      const List<double> whoBoundaries = <double>[0, 2, 5, 7, 10, 12];
+      for (final double value in whoBoundaries) {
+        expect(
+          await hasLabelAt(value),
+          isTrue,
+          reason: 'expected a label at WHO boundary $value',
+        );
+      }
+
+      const List<double> nonBoundaries = <double>[1, 3, 4, 6, 8, 9, 11];
+      for (final double value in nonBoundaries) {
+        expect(
+          await hasLabelAt(value),
+          isFalse,
+          reason: 'expected no label at non-boundary $value',
+        );
+      }
+    });
   });
 
   group('hourly vs every-2-hours axis label fallback', () {
@@ -208,32 +284,34 @@ void main() {
         );
 
         final SemanticsHandle handle = tester.ensureSemantics();
-        await tester.pumpWidget(_wrap(uvData));
+        try {
+          await tester.pumpWidget(_wrap(uvData));
 
-        expect(
-          tester.getSemantics(
-            find.bySemanticsLabel(RegExp('6:00 AM, UV index 1.0, Low risk')),
-          ),
-          matchesSemantics(label: '6:00 AM, UV index 1.0, Low risk'),
-        );
-        expect(
-          tester.getSemantics(
-            find.bySemanticsLabel(
-              RegExp('7:00 AM, UV index 4.0, Moderate risk'),
+          expect(
+            tester.getSemantics(
+              find.bySemanticsLabel(RegExp('6:00 AM, UV index 1.0, Low risk')),
             ),
-          ),
-          matchesSemantics(label: '7:00 AM, UV index 4.0, Moderate risk'),
-        );
-        expect(
-          tester.getSemantics(
-            find.bySemanticsLabel(
-              RegExp('8:00 AM, UV index 9.0, Very High risk'),
+            matchesSemantics(label: '6:00 AM, UV index 1.0, Low risk'),
+          );
+          expect(
+            tester.getSemantics(
+              find.bySemanticsLabel(
+                RegExp('7:00 AM, UV index 4.0, Moderate risk'),
+              ),
             ),
-          ),
-          matchesSemantics(label: '8:00 AM, UV index 9.0, Very High risk'),
-        );
-
-        handle.dispose();
+            matchesSemantics(label: '7:00 AM, UV index 4.0, Moderate risk'),
+          );
+          expect(
+            tester.getSemantics(
+              find.bySemanticsLabel(
+                RegExp('8:00 AM, UV index 9.0, Very High risk'),
+              ),
+            ),
+            matchesSemantics(label: '8:00 AM, UV index 9.0, Very High risk'),
+          );
+        } finally {
+          handle.dispose();
+        }
       },
     );
 
@@ -247,14 +325,16 @@ void main() {
       );
 
       final SemanticsHandle handle = tester.ensureSemantics();
-      await tester.pumpWidget(_wrap(uvData));
+      try {
+        await tester.pumpWidget(_wrap(uvData));
 
-      final SemanticsNode chartNode = tester.getSemantics(
-        find.byType(LineChart),
-      );
-      expect(chartNode.label, isEmpty);
-
-      handle.dispose();
+        final SemanticsNode chartNode = tester.getSemantics(
+          find.byType(LineChart),
+        );
+        expect(chartNode.label, isEmpty);
+      } finally {
+        handle.dispose();
+      }
     });
   });
 }
