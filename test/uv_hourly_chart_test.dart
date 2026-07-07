@@ -179,8 +179,8 @@ void main() {
       ).rangeAnnotations.horizontalRangeAnnotations;
 
       final List<double> boundaries = <double>[
-        for (final HorizontalRangeAnnotation b in bands) b.y1,
-        bands.last.y2,
+        bands.first.y1,
+        for (final HorizontalRangeAnnotation b in bands) b.y2,
       ];
 
       expect(boundaries, <double>[
