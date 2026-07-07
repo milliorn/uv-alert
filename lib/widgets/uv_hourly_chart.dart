@@ -20,7 +20,15 @@ const double _dotRadius = 2.5;
 /// The WHO "Extreme" band is open-ended (11+), so the chart caps its
 /// vertical scale here; real-world UV indices essentially never exceed
 /// this in practice.
-const double _yAxisMax = 12;
+///
+/// Exposed for tests only; [UvHourlyChart] itself reads this via the
+/// private [_yAxisMax] alias below.
+@visibleForTesting
+const double chartYAxisMax = 12;
+
+/// Private alias for [chartYAxisMax], so production code within this file
+/// reads it under the file's established `_`-prefixed naming convention.
+const double _yAxisMax = chartYAxisMax;
 
 /// Below this pixel width per hourly label, hour labels would visually
 /// overlap, so the chart falls back to showing every 2 hours instead.
@@ -312,6 +320,22 @@ const List<double> _leftAxisWhoBoundaries = <double>[
   _whoExtremeMax,
 ];
 
+/// Tolerance for matching a generated axis tick against
+/// [_leftAxisWhoBoundaries].
+///
+/// fl_chart generates tick values by repeatedly summing the axis interval,
+/// so ticks can accumulate floating-point drift; comparing with a small
+/// tolerance instead of exact equality keeps the boundary labels showing
+/// even if a threshold constant or the axis interval ever becomes a value
+/// that isn't exactly representable in binary floating point.
+const double _axisBoundaryTolerance = 1e-6;
+
+/// Whether [value] matches one of [_leftAxisWhoBoundaries], within
+/// [_axisBoundaryTolerance].
+bool _isWhoAxisBoundary(double value) => _leftAxisWhoBoundaries.any(
+  (double boundary) => (value - boundary).abs() < _axisBoundaryTolerance,
+);
+
 class _LeftTitle extends StatelessWidget {
   const _LeftTitle({required this.value, required this.meta});
 
@@ -320,7 +344,7 @@ class _LeftTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!_leftAxisWhoBoundaries.contains(value)) return const SizedBox.shrink();
+    if (!_isWhoAxisBoundary(value)) return const SizedBox.shrink();
 
     return SideTitleWidget(
       meta: meta,

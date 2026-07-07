@@ -219,7 +219,14 @@ void main() {
         return find.byType(Text).evaluate().isNotEmpty;
       }
 
-      const List<double> whoBoundaries = <double>[0, 2, 5, 7, 10, 12];
+      final List<double> whoBoundaries = <double>[
+        0,
+        whoLowMax,
+        whoModerateMax,
+        whoHighMax,
+        whoVeryHighMax,
+        chartYAxisMax,
+      ];
       for (final double value in whoBoundaries) {
         expect(
           await hasLabelAt(value),
@@ -228,7 +235,10 @@ void main() {
         );
       }
 
-      const List<double> nonBoundaries = <double>[1, 3, 4, 6, 8, 9, 11];
+      final List<double> nonBoundaries = <double>[
+        for (int i = 0; i <= chartYAxisMax; i++)
+          if (!whoBoundaries.contains(i.toDouble())) i.toDouble(),
+      ];
       for (final double value in nonBoundaries) {
         expect(
           await hasLabelAt(value),
