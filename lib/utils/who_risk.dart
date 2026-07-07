@@ -71,3 +71,12 @@ Color whoRiskColor(double uvIndex) => whoRiskBand(uvIndex).color;
 
 /// Returns the WHO risk-band label for [uvIndex].
 String whoRiskLabel(double uvIndex) => whoRiskBand(uvIndex).label;
+
+/// The shared "UV index X.X, Y risk" phrase used in accessibility labels
+/// for [uvIndex], so wording stays in sync across widgets that report a
+/// UV reading to screen readers.
+String uvIndexSemanticsPhrase(double uvIndex) {
+  final String uviLabel = truncateToTenth(uvIndex).toStringAsFixed(1);
+  final String risk = whoRiskLabel(uvIndex);
+  return 'UV index $uviLabel, $risk risk';
+}

@@ -39,6 +39,7 @@ class UvCurrentDisplay extends StatelessWidget {
     final Color color = band.color;
     final String risk = band.label;
     final String uviLabel = truncateToTenth(uvIndex).toStringAsFixed(1);
+    final String semanticsLabel = uvIndexSemanticsPhrase(uvIndex);
 
     final TextStyle numberStyle =
         (theme.textTheme.displayLarge ?? const TextStyle(fontSize: 48))
@@ -51,7 +52,7 @@ class UvCurrentDisplay extends StatelessWidget {
     final double strokeWidth = fontSize * _ringStrokeWidthFactor;
 
     return Semantics(
-      label: 'UV index $uviLabel, $risk risk',
+      label: semanticsLabel,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[

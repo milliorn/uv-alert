@@ -21,28 +21,15 @@ const double _dotRadius = 2.5;
 /// vertical scale here; real-world UV indices essentially never exceed
 /// this in practice.
 ///
-/// Exposed for tests only; [UvHourlyChart] itself reads this via the
-/// private [_yAxisMax] alias below.
+/// Also doubles as the upper bound of the WHO "Extreme" band drawn on the
+/// chart background, since that is the top of the visible chart. Exposed
+/// for tests via [visibleForTesting].
 @visibleForTesting
 const double chartYAxisMax = 12;
-
-/// Private alias for [chartYAxisMax], so production code within this file
-/// reads it under the file's established `_`-prefixed naming convention.
-const double _yAxisMax = chartYAxisMax;
 
 /// Below this pixel width per hourly label, hour labels would visually
 /// overlap, so the chart falls back to showing every 2 hours instead.
 const double _minPixelsPerHourLabel = 36;
-
-/// Approximate width, in logical pixels, of a single hour-label such as
-/// "2 PM", used to decide whether hourly labels fit without overlapping.
-const double _estimatedHourLabelWidth = 32;
-
-/// The upper bound of the WHO "Extreme" band drawn on the chart background.
-///
-/// The real WHO "Extreme" band is open-ended (11+); the chart draws its
-/// fill up to [_yAxisMax] since that is the top of the visible chart.
-const double _whoExtremeMax = _yAxisMax;
 
 /// A single hourly UV reading positioned along the chart's x-axis.
 ///
@@ -117,11 +104,11 @@ class UvHourlyChart extends StatelessWidget {
                   minX: 0,
                   maxX: sunsetHours,
                   minY: 0,
-                  maxY: _yAxisMax,
+                  maxY: chartYAxisMax,
                   backgroundColor: Colors.transparent,
                   gridData: const FlGridData(show: false),
                   borderData: FlBorderData(show: false),
-                  rangeAnnotations: _whoRangeAnnotations(),
+                  rangeAnnotations: _whoRangeAnnotations,
                   titlesData: FlTitlesData(
                     topTitles: const AxisTitles(),
                     rightTitles: const AxisTitles(),
@@ -132,8 +119,9 @@ class UvHourlyChart extends StatelessWidget {
                         interval: hourInterval,
                         getTitlesWidget: (double value, TitleMeta meta) =>
                             _BottomTitle(
-                              label: _formatHour(
+                              label: _formatTime(
                                 sunrise.add(_hoursDuration(value)),
+                                includeMinutes: false,
                               ),
                               meta: meta,
                             ),
@@ -189,37 +177,39 @@ class UvHourlyChart extends StatelessWidget {
       },
     );
   }
-
-  RangeAnnotations _whoRangeAnnotations() => RangeAnnotations(
-    horizontalRangeAnnotations: <HorizontalRangeAnnotation>[
-      HorizontalRangeAnnotation(
-        y1: 0,
-        y2: whoLowMax,
-        color: _bandFill(whoColorLow),
-      ),
-      HorizontalRangeAnnotation(
-        y1: whoLowMax,
-        y2: whoModerateMax,
-        color: _bandFill(whoColorModerate),
-      ),
-      HorizontalRangeAnnotation(
-        y1: whoModerateMax,
-        y2: whoHighMax,
-        color: _bandFill(whoColorHigh),
-      ),
-      HorizontalRangeAnnotation(
-        y1: whoHighMax,
-        y2: whoVeryHighMax,
-        color: _bandFill(whoColorVeryHigh),
-      ),
-      HorizontalRangeAnnotation(
-        y1: whoVeryHighMax,
-        y2: _whoExtremeMax,
-        color: _bandFill(whoColorExtreme),
-      ),
-    ],
-  );
 }
+
+/// WHO risk-band background fills, drawn once and reused across rebuilds
+/// since the boundaries and colors never change.
+final RangeAnnotations _whoRangeAnnotations = RangeAnnotations(
+  horizontalRangeAnnotations: <HorizontalRangeAnnotation>[
+    HorizontalRangeAnnotation(
+      y1: 0,
+      y2: whoLowMax,
+      color: _bandFill(whoColorLow),
+    ),
+    HorizontalRangeAnnotation(
+      y1: whoLowMax,
+      y2: whoModerateMax,
+      color: _bandFill(whoColorModerate),
+    ),
+    HorizontalRangeAnnotation(
+      y1: whoModerateMax,
+      y2: whoHighMax,
+      color: _bandFill(whoColorHigh),
+    ),
+    HorizontalRangeAnnotation(
+      y1: whoHighMax,
+      y2: whoVeryHighMax,
+      color: _bandFill(whoColorVeryHigh),
+    ),
+    HorizontalRangeAnnotation(
+      y1: whoVeryHighMax,
+      y2: chartYAxisMax,
+      color: _bandFill(whoColorExtreme),
+    ),
+  ],
+);
 
 /// Background-fill opacity for WHO risk bands, kept low so the line and
 /// dots remain the visual focus.
@@ -236,14 +226,8 @@ double _hourLabelInterval(double chartWidth, double sunsetHours) {
   final int hourlyLabelCount = sunsetHours.ceil() + 1;
   final double pixelsPerHour = chartWidth / hourlyLabelCount;
 
-  final bool hourlyLabelsFit =
-      pixelsPerHour >= _minPixelsPerHourLabel &&
-      pixelsPerHour >= _estimatedHourLabelWidth;
-
-  return hourlyLabelsFit ? 1 : 2;
+  return pixelsPerHour >= _minPixelsPerHourLabel ? 1 : 2;
 }
-
-String _formatHour(DateTime time) => _formatTime(time, includeMinutes: false);
 
 /// Formats [time] as e.g. "2:00 PM" (or "2 PM" when [includeMinutes] is
 /// false), for use in axis labels and accessibility semantic labels.
@@ -288,9 +272,7 @@ class _HourlyChartSemantics extends StatelessWidget {
 
   String _pointLabel(_ChartPoint point) {
     final String time = _formatTime(point.localTime, includeMinutes: true);
-    final String uviLabel = truncateToTenth(point.entry.uvi).toStringAsFixed(1);
-    final String risk = whoRiskLabel(point.entry.uvi);
-    return '$time, UV index $uviLabel, $risk risk';
+    return '$time, ${uvIndexSemanticsPhrase(point.entry.uvi)}';
   }
 }
 
@@ -317,7 +299,7 @@ const List<double> _leftAxisWhoBoundaries = <double>[
   whoModerateMax,
   whoHighMax,
   whoVeryHighMax,
-  _whoExtremeMax,
+  chartYAxisMax,
 ];
 
 /// Tolerance for matching a generated axis tick against
