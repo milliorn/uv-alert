@@ -92,6 +92,26 @@ void main() {
     expect(_chartData(tester).lineBarsData.single.spots, hasLength(15));
   });
 
+  testWidgets('plots points in chronological order even if hourly is not', (
+    WidgetTester tester,
+  ) async {
+    final UvData uvData = makeUvData(
+      sunrise: _sunrise,
+      sunset: _sunrise.add(const Duration(hours: 2)),
+      hourly: <UvForecastEntry>[
+        UvForecastEntry(time: _sunrise.add(const Duration(hours: 2)), uvi: 3),
+        UvForecastEntry(time: _sunrise, uvi: 1),
+        UvForecastEntry(time: _sunrise.add(const Duration(hours: 1)), uvi: 2),
+      ],
+    );
+
+    await tester.pumpWidget(_wrap(uvData));
+
+    final List<FlSpot> spots = _chartData(tester).lineBarsData.single.spots;
+    expect(spots.map((FlSpot s) => s.x), <double>[0, 1, 2]);
+    expect(spots.map((FlSpot s) => s.y), <double>[1, 2, 3]);
+  });
+
   testWidgets('renders without error when hourly is empty', (
     WidgetTester tester,
   ) async {

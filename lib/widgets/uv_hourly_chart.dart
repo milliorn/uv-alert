@@ -82,12 +82,15 @@ class UvHourlyChart extends StatelessWidget {
     final double sunsetHours =
         sunset.difference(sunrise).inSeconds / Duration.secondsPerHour;
 
+    // UvData.hourly has no documented ordering guarantee, so sort explicitly
+    // -- an out-of-order list would otherwise draw a zigzagging line and
+    // expose semantics nodes to TalkBack in the wrong swipe order.
     final List<_ChartPoint> points = <_ChartPoint>[
       for (final UvForecastEntry entry in uvData.hourly)
         if (!entry.time.isBefore(uvData.sunrise) &&
             !entry.time.isAfter(uvData.sunset))
           _chartPoint(entry, sunrise),
-    ];
+    ]..sort((_ChartPoint a, _ChartPoint b) => a.hours.compareTo(b.hours));
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
