@@ -31,15 +31,29 @@ const double chartYAxisMax = 12;
 /// overlap, so the chart falls back to showing every 2 hours instead.
 const double _minPixelsPerHourLabel = 36;
 
+/// Chart x-axis lower bound: sunrise, 0 hours after itself.
+const double _chartXAxisMin = 0;
+
+/// Chart y-axis lower bound: the minimum possible UV index.
+const double _chartYAxisMin = 0;
+
+/// Left axis tick generation step. Ticks are generated at every whole UV
+/// index unit, then [_isWhoAxisBoundary] filters the rendered labels down
+/// to only the WHO threshold values.
+const double _leftAxisTickInterval = 1;
+
 /// A single hourly UV reading positioned along the chart's x-axis.
 ///
 /// `hours` is the fractional number of hours since sunrise (the chart's
 /// x-coordinate); `localTime` is the reading's timestamp in the queried
-/// location's local time (not the device's).
+/// location's local time (not the device's); `whoColor` is this point's WHO
+/// risk-band color, computed once and reused by the dot painter instead of
+/// re-deriving it per dot paint.
 typedef _ChartPoint = ({
   double hours,
   DateTime localTime,
   UvForecastEntry entry,
+  Color whoColor,
 });
 
 /// A static hourly UV index line chart, spanning sunrise to sunset.
@@ -64,14 +78,15 @@ class UvHourlyChart extends StatelessWidget {
       time.add(Duration(seconds: uvData.timezoneOffset));
 
   /// Builds a [_ChartPoint] for [entry], computing its location-local time
-  /// once and reusing it for both the plotted x-position and the
-  /// accessibility label.
+  /// and WHO risk color once and reusing them for the plotted x-position
+  /// and dot color.
   _ChartPoint _chartPoint(UvForecastEntry entry, DateTime sunrise) {
     final DateTime localTime = _toLocationLocal(entry.time);
     return (
       hours: localTime.difference(sunrise).inSeconds / Duration.secondsPerHour,
       localTime: localTime,
       entry: entry,
+      whoColor: whoRiskColor(entry.uvi),
     );
   }
 
@@ -104,9 +119,9 @@ class UvHourlyChart extends StatelessWidget {
             ExcludeSemantics(
               child: LineChart(
                 LineChartData(
-                  minX: 0,
+                  minX: _chartXAxisMin,
                   maxX: sunsetHours,
-                  minY: 0,
+                  minY: _chartYAxisMin,
                   maxY: chartYAxisMax,
                   backgroundColor: Colors.transparent,
                   gridData: const FlGridData(show: false),
@@ -134,7 +149,7 @@ class UvHourlyChart extends StatelessWidget {
                       sideTitles: SideTitles(
                         showTitles: true,
                         reservedSize: _leftTitleReservedSize,
-                        interval: 1,
+                        interval: _leftAxisTickInterval,
                         getTitlesWidget: (double value, TitleMeta meta) =>
                             _LeftTitle(value: value, meta: meta),
                       ),
@@ -158,7 +173,7 @@ class UvHourlyChart extends StatelessWidget {
                               int index,
                             ) => FlDotCirclePainter(
                               radius: _dotRadius,
-                              color: whoRiskColor(spot.y),
+                              color: points[index].whoColor,
                             ),
                       ),
                     ),
@@ -231,6 +246,10 @@ Duration _hoursDuration(double hours) =>
 /// titles (subtracted from the chart's content area as layout margin), which
 /// is not available for spacing the bottom axis's hour labels.
 double _hourLabelInterval(double plotAreaWidth, double sunsetHours) {
+  // +1 because labels cover both endpoints (0..ceil(sunsetHours) inclusive),
+  // matching fl_chart's own tick count for a fractional axis max -- see
+  // AxisChartHelper.iterateThroughAxis, which always emits an extra tick
+  // exactly at a non-integer max in addition to the integer ticks below it.
   final int hourlyLabelCount = sunsetHours.ceil() + 1;
   final double pixelsPerHour = plotAreaWidth / hourlyLabelCount;
 
