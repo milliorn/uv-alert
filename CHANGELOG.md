@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.0](https://github.com/milliorn/uv-alert/compare/v1.12.0...v1.13.0) (2026-07-08)
+
+
+### Features
+
+* implement hourly UV line chart widget ([#93](https://github.com/milliorn/uv-alert/issues/93)) ([e6eaf90](https://github.com/milliorn/uv-alert/commit/e6eaf905012905f1ac40257ec031da7156bc5e4d)), closes [#19](https://github.com/milliorn/uv-alert/issues/19)
+
 ## [1.12.0](https://github.com/milliorn/uv-alert/compare/v1.11.0...v1.12.0) (2026-07-06)
 
 
