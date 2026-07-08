@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:uvalert/utils/who_risk.dart';
 import 'package:uvalert/widgets/uv_current_display.dart';
 
 Widget _wrap(double uvIndex) => MaterialApp(
