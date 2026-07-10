@@ -94,21 +94,30 @@ class UvDailyChart extends StatelessWidget {
 
     // UvData.daily has no documented ordering guarantee, so sort explicitly
     // -- an out-of-order list would otherwise draw days out of sequence and
-    // expose semantics nodes to TalkBack in the wrong swipe order.
-    final List<UvForecastEntry> sorted = <UvForecastEntry>[
-      for (final UvForecastEntry entry in uvData.daily)
-        if (!_toLocationLocal(entry.time).isBefore(todayDate)) entry,
+    // expose semantics nodes to TalkBack in the wrong swipe order. Sorting
+    // first (on raw entries) lets the filter below compute each entry's
+    // location-local time exactly once, instead of once to filter and again
+    // to build its _ChartPoint.
+    final List<UvForecastEntry> sortedEntries = <UvForecastEntry>[
+      ...uvData.daily,
     ]..sort((UvForecastEntry a, UvForecastEntry b) => a.time.compareTo(b.time));
 
-    final List<_ChartPoint> points = <_ChartPoint>[
-      for (int i = 0; i < sorted.length && i < _daysShown; i++)
-        (
-          index: i,
-          localTime: _toLocationLocal(sorted[i].time),
-          entry: sorted[i],
-          whoColor: whoRiskColor(sorted[i].uvi),
-        ),
-    ];
+    final List<_ChartPoint> points = <_ChartPoint>[];
+    for (final UvForecastEntry entry in sortedEntries) {
+      if (points.length >= _daysShown) {
+        break;
+      }
+      final DateTime localTime = _toLocationLocal(entry.time);
+      if (localTime.isBefore(todayDate)) {
+        continue;
+      }
+      points.add((
+        index: points.length,
+        localTime: localTime,
+        entry: entry,
+        whoColor: whoRiskColor(entry.uvi),
+      ));
+    }
 
     final TextStyle? labelStyle = Theme.of(context).textTheme.bodySmall;
 
