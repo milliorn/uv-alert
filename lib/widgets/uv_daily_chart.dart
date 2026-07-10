@@ -46,7 +46,8 @@ const List<String> _weekdayAbbreviations = <String>[
 /// `index` is the bar's position (0 = current/earliest day); `localTime` is
 /// the reading's date in the queried location's local time (not the
 /// device's); `whoColor` is this bar's WHO risk-band color, computed once
-/// and reused by both the bar fill and the accessibility label.
+/// and used for the bar fill. The accessibility label derives its own risk
+/// text separately via `whoRiskLabel(entry.uvi)`, not from `whoColor`.
 typedef _ChartPoint = ({
   int index,
   DateTime localTime,
