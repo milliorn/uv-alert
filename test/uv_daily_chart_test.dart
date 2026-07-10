@@ -14,10 +14,13 @@ import 'fakes/fake_uv_data.dart';
 /// because [UvDailyChart] now drops any daily entry whose location-local
 /// date is in the past -- a hardcoded past date would be silently filtered
 /// out of every fixture below.
-final DateTime _day0 = () {
-  final DateTime now = DateTime.now().toUtc();
-  return DateTime.utc(now.year, now.month, now.day);
-}();
+///
+/// Assigned fresh in [setUp] (not at file-load time) so it can never go
+/// stale relative to [UvDailyChart]'s own `DateTime.now()` call at build
+/// time -- a suite that happens to cross UTC midnight between file load and
+/// a later test's pump would otherwise see that test's fixtures filtered
+/// out as "before today" by the widget's live clock.
+late DateTime _day0;
 
 /// Mirrors the widget's own weekday-abbreviation lookup, so tests can
 /// derive expected labels from [_day0] instead of hardcoding a day-of-week
@@ -37,10 +40,11 @@ String _weekdayAbbreviation(DateTime date) =>
     _weekdayAbbreviations[date.weekday - 1];
 
 /// Abbreviated weekday names for [_day0] and the six days after it.
-final List<String> _weekdaysFromDay0 = <String>[
-  for (int i = 0; i < 7; i++)
-    _weekdayAbbreviation(_day0.add(Duration(days: i))),
-];
+///
+/// Assigned alongside [_day0] in [setUp] for the same midnight-crossing
+/// reason -- it must always be derived from the same `_day0` a test's
+/// fixtures use.
+late List<String> _weekdaysFromDay0;
 
 List<UvForecastEntry> _dailyFrom(
   DateTime start,
@@ -83,6 +87,15 @@ TitleMeta _fakeTitleMeta() => TitleMeta(
 );
 
 void main() {
+  setUp(() {
+    final DateTime now = DateTime.now().toUtc();
+    _day0 = DateTime.utc(now.year, now.month, now.day);
+    _weekdaysFromDay0 = <String>[
+      for (int i = 0; i < 7; i++)
+        _weekdayAbbreviation(_day0.add(Duration(days: i))),
+    ];
+  });
+
   testWidgets('renders one bar group per daily entry, up to 7', (
     WidgetTester tester,
   ) async {

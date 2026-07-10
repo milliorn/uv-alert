@@ -63,12 +63,14 @@ typedef _ChartPoint = ({
 /// tap/scrub interaction -- see the "Out of scope" note on the originating
 /// issue for that follow-up.
 class UvDailyChart extends StatelessWidget {
-  /// Creates a [UvDailyChart] from up to the first [_daysShown] entries in
-  /// [UvData.daily].
+  /// Creates a [UvDailyChart] from up to [_daysShown] entries in
+  /// [UvData.daily], chronologically sorted with stale (pre-today,
+  /// location-local) entries dropped first.
   const UvDailyChart({required this.uvData, super.key});
 
-  /// The UV data to chart; only the first [_daysShown] entries of
-  /// [UvData.daily], sorted chronologically, are shown.
+  /// The UV data to chart. [UvData.daily] is sorted chronologically and any
+  /// entry whose location-local date is before today is dropped; up to
+  /// [_daysShown] of what remains is shown.
   final UvData uvData;
 
   /// Converts a UTC [time] to the data's location-local time, using
