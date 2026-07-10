@@ -130,6 +130,31 @@ void main() {
     expect(_chartData(tester).barGroups, isEmpty);
   });
 
+  testWidgets(
+    'renders one bar and one full-width semantics node when daily has '
+    'exactly one entry',
+    (WidgetTester tester) async {
+      const double barWidth = 20; // must match _barWidth in the widget.
+      final UvData uvData = makeUvData(daily: _dailyFrom(_day0, 1));
+
+      final SemanticsHandle handle = tester.ensureSemantics();
+      try {
+        await tester.pumpWidget(_wrap(uvData));
+
+        expect(_chartData(tester).barGroups, hasLength(1));
+        final SemanticsNode node = tester.getSemantics(
+          find.bySemanticsLabel(RegExp('UV max')),
+        );
+        // With only one bar there is no neighbor on either side, so the
+        // node's cell falls back to half the plot width -- still centered
+        // on the single bar, not clipped to _barWidth.
+        expect(node.rect.width, greaterThan(barWidth));
+      } finally {
+        handle.dispose();
+      }
+    },
+  );
+
   testWidgets('orders bars chronologically even if daily is not', (
     WidgetTester tester,
   ) async {
@@ -367,8 +392,13 @@ void main() {
             final SemanticsNode node = tester.getSemantics(
               find.bySemanticsLabel(RegExp('^${RegExp.escape(day)}, UV max')),
             );
-            final double actualCenter =
-                node.rect.center.dx + node.transform!.getTranslation().x;
+            // node.transform is null when no translation is needed (e.g. a
+            // node whose local origin already matches its parent's, such as
+            // the leftmost cell) -- fall back to an identity translation of
+            // 0 rather than assuming a transform always exists.
+            final double translationX =
+                node.transform?.getTranslation().x ?? 0;
+            final double actualCenter = node.rect.center.dx + translationX;
             expect(
               actualCenter,
               closeTo(expectedCenter(i), 0.5),

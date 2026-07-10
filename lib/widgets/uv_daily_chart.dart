@@ -222,12 +222,16 @@ String _weekdayAbbreviation(DateTime localTime) =>
 /// needing a tap/scrub interaction (out of scope for this widget;
 /// sighted/touch users get only the visual chart).
 ///
-/// Each node is positioned at its bar's exact horizontal center rather than
-/// splitting [plotWidth] into equal-width cells, because fl_chart's
+/// Each node is centered on its bar's exact horizontal center, but sized to
+/// span the full constant spacing between adjacent bar centers (not just
+/// the bar's visible [_barWidth]), applied symmetrically on both sides even
+/// at the outermost bars -- an equal split of [plotWidth] into same-width
+/// slices would instead misalign the outermost nodes with their bars by a
+/// growing margin as the bar count shrinks, since fl_chart's
 /// [BarChartAlignment.spaceEvenly] lays out fixed-width bars with computed
-/// gaps around them, not as equal-width slices -- an equal split would
-/// misalign the outermost nodes with their bars by a growing margin as the
-/// bar count shrinks.
+/// gaps around them, not as equal-width slices. Symmetric cell sizing keeps
+/// every node's rect exactly centered on its bar while still giving
+/// TalkBack a much wider touch target than a narrow [_barWidth]-wide one.
 ///
 /// This exactness depends on invariants enforced elsewhere in this file,
 /// not by the compiler -- changing any of them without updating
@@ -262,6 +266,18 @@ class _DailyChartSemantics extends StatelessWidget {
     return eachSpace * (index + 1) + _barWidth * (index + 0.5);
   }
 
+  /// Half the constant spacing between adjacent bar centers under
+  /// [BarChartAlignment.spaceEvenly] -- used as each semantics node's cell
+  /// half-width, applied symmetrically on both sides of [_barCenterX] (even
+  /// at the outermost bars) so every node's rect stays exactly centered on
+  /// its bar while still spanning far more than [_barWidth].
+  double get _cellHalfWidth {
+    if (points.length < 2) {
+      return plotWidth / 2;
+    }
+    return (_barCenterX(1) - _barCenterX(0)) / 2;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Semantics(
@@ -271,8 +287,15 @@ class _DailyChartSemantics extends StatelessWidget {
         children: <Widget>[
           for (final _ChartPoint point in points)
             Positioned(
-              left: _barCenterX(point.index) - _barWidth / 2,
-              width: _barWidth,
+              // Sized to the full inter-bar cell width, centered on the bar,
+              // rather than just _barWidth, so TalkBack explore-by-touch and
+              // focus targeting aren't confined to the narrow visible bar --
+              // matches _HourlyChartSemantics' full-width Expanded regions.
+              // Applying the same half-width symmetrically at the edges (not
+              // extending to the plot boundary) keeps every node's rect
+              // centered exactly on its bar, matching _barCenterX.
+              left: _barCenterX(point.index) - _cellHalfWidth,
+              width: _cellHalfWidth * 2,
               top: 0,
               bottom: 0,
               child: Semantics(
