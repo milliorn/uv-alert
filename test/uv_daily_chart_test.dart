@@ -68,6 +68,19 @@ Widget _wrap(UvData uvData, {double width = 400}) => MaterialApp(
   ),
 );
 
+/// Wraps [UvDailyChart] in a horizontally-scrolling ancestor with no width
+/// bound, so its `LayoutBuilder` sees `constraints.maxWidth ==
+/// double.infinity` -- reproduces the unbounded-width scenario the
+/// non-finite-plotWidth guard exists for.
+Widget _wrapUnboundedWidth(UvData uvData) => MaterialApp(
+  home: Scaffold(
+    body: SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: SizedBox(height: 220, child: UvDailyChart(uvData: uvData)),
+    ),
+  ),
+);
+
 BarChartData _chartData(WidgetTester tester) =>
     tester.widget<BarChart>(find.byType(BarChart)).data;
 
@@ -142,6 +155,20 @@ void main() {
 
     expect(_chartData(tester).barGroups, isEmpty);
   });
+
+  testWidgets(
+    'renders without crashing when laid out with unbounded width',
+    (WidgetTester tester) async {
+      final UvData uvData = makeUvData(daily: _dailyFrom(_day0, 7));
+
+      // No exception should escape pumpWidget: _DailyChartSemantics must
+      // bail out via its plotWidth.isFinite guard instead of computing
+      // non-finite Positioned bounds and crashing layout.
+      await tester.pumpWidget(_wrapUnboundedWidth(uvData));
+
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'renders one bar and one full-width semantics node when daily has '

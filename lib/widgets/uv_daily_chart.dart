@@ -126,6 +126,20 @@ class UvDailyChart extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
+        // asserts are stripped in release builds, so this must also be
+        // checked at runtime: an unbounded-width ancestor (e.g. a
+        // horizontal ListView/SingleChildScrollView this widget is ever
+        // placed in without a bounding constraint) would otherwise make
+        // both fl_chart's own axis-title layout and
+        // _DailyChartSemantics._barCenterX compute non-finite positions,
+        // crashing layout/paint in release mode with no assert to catch it
+        // first. An empty points list has no such risk -- it still renders
+        // a valid, finite-width empty chart -- so it's deliberately not
+        // short-circuited here.
+        if (!constraints.maxWidth.isFinite) {
+          return const SizedBox.shrink();
+        }
+
         return Stack(
           children: <Widget>[
             ExcludeSemantics(
@@ -186,6 +200,12 @@ class UvDailyChart extends StatelessWidget {
                               top: Radius.circular(_barTopRadius),
                             ),
                             label: BarChartRodLabel(
+                              // Pinned explicitly (matching the current
+                              // default), same reasoning as `alignment`
+                              // above: labels can't silently disappear if
+                              // fl_chart's own default ever changes.
+                              // ignore: avoid_redundant_argument_values
+                              show: true,
                               offset: const Offset(0, _valueLabelOffsetY),
                               text: truncateToTenth(
                                 point.entry.uvi,
@@ -249,6 +269,10 @@ String _weekdayAbbreviation(DateTime localTime) =>
 ///  * `BarChart` is never given a `transformationConfig` (pan/zoom), which
 ///    would otherwise shrink fl_chart's internal plot width below
 ///    [plotWidth].
+///  * [UvDailyChart] only constructs this widget once its `LayoutBuilder`
+///    constraints are confirmed finite -- [plotWidth] itself is never
+///    checked here, so a future caller that skips that guard can produce
+///    non-finite [_barCenterX] output.
 class _DailyChartSemantics extends StatelessWidget {
   const _DailyChartSemantics({required this.points, required this.plotWidth});
 
