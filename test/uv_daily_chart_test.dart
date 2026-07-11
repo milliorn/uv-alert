@@ -156,19 +156,18 @@ void main() {
     expect(_chartData(tester).barGroups, isEmpty);
   });
 
-  testWidgets(
-    'renders without crashing when laid out with unbounded width',
-    (WidgetTester tester) async {
-      final UvData uvData = makeUvData(daily: _dailyFrom(_day0, 7));
+  testWidgets('renders without crashing when laid out with unbounded width', (
+    WidgetTester tester,
+  ) async {
+    final UvData uvData = makeUvData(daily: _dailyFrom(_day0, 7));
 
-      // No exception should escape pumpWidget: _DailyChartSemantics must
-      // bail out via its plotWidth.isFinite guard instead of computing
-      // non-finite Positioned bounds and crashing layout.
-      await tester.pumpWidget(_wrapUnboundedWidth(uvData));
+    // No exception should escape pumpWidget: _DailyChartSemantics must
+    // bail out via its plotWidth.isFinite guard instead of computing
+    // non-finite Positioned bounds and crashing layout.
+    await tester.pumpWidget(_wrapUnboundedWidth(uvData));
 
-      expect(tester.takeException(), isNull);
-    },
-  );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'renders one bar and one full-width semantics node when daily has '
@@ -436,8 +435,7 @@ void main() {
             // node whose local origin already matches its parent's, such as
             // the leftmost cell) -- fall back to an identity translation of
             // 0 rather than assuming a transform always exists.
-            final double translationX =
-                node.transform?.getTranslation().x ?? 0;
+            final double translationX = node.transform?.getTranslation().x ?? 0;
             final double actualCenter = node.rect.center.dx + translationX;
             expect(
               actualCenter,
