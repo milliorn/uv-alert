@@ -173,20 +173,24 @@ void main() {
     'renders one bar and one full-width semantics node when daily has '
     'exactly one entry',
     (WidgetTester tester) async {
-      const double barWidth = 20; // must match _barWidth in the widget.
       final UvData uvData = makeUvData(daily: _dailyFrom(_day0, 1));
 
       final SemanticsHandle handle = tester.ensureSemantics();
       try {
         await tester.pumpWidget(_wrap(uvData));
 
-        expect(_chartData(tester).barGroups, hasLength(1));
+        final BarChartData data = _chartData(tester);
+        expect(data.barGroups, hasLength(1));
+        // Read the actual rendered bar width instead of hardcoding it, so
+        // this assertion stays correct if the widget's private _barWidth
+        // constant is ever changed.
+        final double barWidth = data.barGroups.single.barRods.single.width;
         final SemanticsNode node = tester.getSemantics(
           find.bySemanticsLabel(RegExp('UV max')),
         );
         // With only one bar there is no neighbor on either side, so the
         // node's cell falls back to half the plot width -- still centered
-        // on the single bar, not clipped to _barWidth.
+        // on the single bar, not clipped to the bar's own width.
         expect(node.rect.width, greaterThan(barWidth));
       } finally {
         handle.dispose();
@@ -409,7 +413,6 @@ void main() {
       "positions each semantics node at its bar's actual horizontal center",
       (WidgetTester tester) async {
         const double chartWidth = 400;
-        const double barWidth = 20; // must match _barWidth in the widget.
         const int count = 7;
         final UvData uvData = makeUvData(daily: _dailyFrom(_day0, count));
 
@@ -417,12 +420,19 @@ void main() {
         try {
           await tester.pumpWidget(_wrap(uvData));
 
+          // Read the actual rendered bar width instead of hardcoding it, so
+          // this assertion stays correct if the widget's private _barWidth
+          // constant is ever changed.
+          final double barWidth = _chartData(
+            tester,
+          ).barGroups.first.barRods.single.width;
+
           // Mirrors fl_chart's BarChartAlignment.spaceEvenly formula
           // (calculateGroupsX in bar_chart_data_extension.dart) so this
           // test fails if the semantics overlay ever drifts from the
           // chart's actual bar layout again.
-          const double spaceAvailable = chartWidth - barWidth * count;
-          const double eachSpace = spaceAvailable / (count + 1);
+          final double spaceAvailable = chartWidth - barWidth * count;
+          final double eachSpace = spaceAvailable / (count + 1);
           double expectedCenter(int index) =>
               eachSpace * (index + 1) + barWidth * (index + 0.5);
 
