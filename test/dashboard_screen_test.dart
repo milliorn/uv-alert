@@ -77,5 +77,11 @@ void main() {
 
     expect(find.text(_heatAdvisory.event), findsOneWidget);
     expect(find.text(_heatAdvisory.description), findsOneWidget);
+
+    final double appBarBottom = tester.getBottomLeft(find.byType(AppBar)).dy;
+    final double bannerTop = tester
+        .getTopLeft(find.text(_heatAdvisory.event))
+        .dy;
+    expect(bannerTop, greaterThanOrEqualTo(appBarBottom));
   });
 }
