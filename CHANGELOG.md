@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.14.0](https://github.com/milliorn/uv-alert/compare/v1.13.0...v1.14.0) (2026-07-11)
+
+
+### Features
+
+* add UvDailyChart widget for daily UV index visualization ([#95](https://github.com/milliorn/uv-alert/issues/95)) ([578e528](https://github.com/milliorn/uv-alert/commit/578e528acd221d668040e515010a64f18a31c3f0)), closes [#20](https://github.com/milliorn/uv-alert/issues/20)
+
 ## [1.13.0](https://github.com/milliorn/uv-alert/compare/v1.12.0...v1.13.0) (2026-07-08)
 
 
