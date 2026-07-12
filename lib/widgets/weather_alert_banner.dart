@@ -1,18 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:uvalert/models/weather_alert.dart';
 
-/// Horizontal padding inside the banner.
-const double _bannerPaddingHorizontal = 16;
-
-/// Vertical padding inside the banner.
-const double _bannerPaddingVertical = 12;
-
-/// Gap between the warning icon and the alert text.
-const double _iconTextGap = 12;
-
-/// Gap between the dismiss button and the banner's trailing edge.
-const double _dismissButtonGap = 4;
-
 /// Maximum lines shown for the alert description before truncating with an
 /// ellipsis, so an unusually long alert body can't grow the banner enough to
 /// crowd out the rest of the dashboard.
@@ -24,6 +12,11 @@ const int _descriptionMaxLines = 3;
 /// Renders nothing when [alert] is `null`. Dismissal is local, in-memory
 /// state: once dismissed, the banner stays hidden until a *different*
 /// [WeatherAlert] (by value) is passed in, at which point it reappears.
+///
+/// Built on [MaterialBanner] embedded directly in the widget tree (not
+/// shown via `ScaffoldMessenger.showMaterialBanner`), so it renders inline
+/// below the app bar and pushes the rest of the dashboard down, rather than
+/// floating on top of it.
 class WeatherAlertBanner extends StatefulWidget {
   /// Creates a [WeatherAlertBanner] for [alert], or a hidden banner when
   /// [alert] is `null`.
@@ -63,59 +56,46 @@ class _WeatherAlertBannerState extends State<WeatherAlertBanner> {
     final ThemeData theme = Theme.of(context);
     final ColorScheme colors = theme.colorScheme;
 
-    return Material(
-      color: colors.errorContainer,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: _bannerPaddingHorizontal,
-          vertical: _bannerPaddingVertical,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            ExcludeSemantics(
-              child: Icon(Icons.warning_amber, color: colors.onErrorContainer),
-            ),
-            const SizedBox(width: _iconTextGap),
-            Expanded(
-              child: Semantics(
-                liveRegion: true,
-                label: '${alert.event}. ${alert.description}',
-                child: ExcludeSemantics(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        alert.event,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: colors.onErrorContainer,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        alert.description,
-                        maxLines: _descriptionMaxLines,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colors.onErrorContainer,
-                        ),
-                      ),
-                    ],
-                  ),
+    return MaterialBanner(
+      backgroundColor: colors.errorContainer,
+      leading: ExcludeSemantics(
+        child: Icon(Icons.warning_amber, color: colors.onErrorContainer),
+      ),
+      content: Semantics(
+        liveRegion: true,
+        label: '${alert.event}. ${alert.description}',
+        child: ExcludeSemantics(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                alert.event,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: colors.onErrorContainer,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-            const SizedBox(width: _dismissButtonGap),
-            IconButton(
-              icon: Icon(Icons.close, color: colors.onErrorContainer),
-              tooltip: 'Dismiss alert',
-              onPressed: _onDismiss,
-            ),
-          ],
+              Text(
+                alert.description,
+                maxLines: _descriptionMaxLines,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colors.onErrorContainer,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
+      actions: <Widget>[
+        IconButton(
+          icon: Icon(Icons.close, color: colors.onErrorContainer),
+          tooltip: 'Dismiss alert',
+          onPressed: _onDismiss,
+        ),
+      ],
     );
   }
 }
