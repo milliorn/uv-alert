@@ -19,9 +19,7 @@ void main() {
 
   test('toJson round-trips through fromJson', () {
     final WeatherAlert original = WeatherAlert.fromJson(sampleJson);
-    final WeatherAlert roundTripped = WeatherAlert.fromJson(
-      original.toJson(),
-    );
+    final WeatherAlert roundTripped = WeatherAlert.fromJson(original.toJson());
 
     expect(roundTripped, equals(original));
   });

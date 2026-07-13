@@ -70,9 +70,7 @@ void main() {
   testWidgets('renders the alert banner below the app bar when an active '
       'alert is passed in', (WidgetTester tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: DashboardScreen(activeAlert: _heatAdvisory),
-      ),
+      const MaterialApp(home: DashboardScreen(activeAlert: _heatAdvisory)),
     );
 
     expect(find.text(_heatAdvisory.event), findsOneWidget);

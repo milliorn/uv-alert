@@ -13,8 +13,9 @@ const WeatherAlert _floodWarning = WeatherAlert(
   description: 'Heavy rainfall may cause flash flooding.',
 );
 
-Widget _wrap(WeatherAlert? alert) =>
-    MaterialApp(home: Scaffold(body: WeatherAlertBanner(alert: alert)));
+Widget _wrap(WeatherAlert? alert) => MaterialApp(
+  home: Scaffold(body: WeatherAlertBanner(alert: alert)),
+);
 
 void main() {
   testWidgets('renders nothing when there is no active alert', (
