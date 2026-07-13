@@ -35,9 +35,16 @@ class _WeatherAlertBannerState extends State<WeatherAlertBanner> {
   @override
   void didUpdateWidget(WeatherAlertBanner oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // A newly arrived alert (different from whatever was last dismissed)
-    // must reappear even if the user dismissed an earlier one.
-    if (widget.alert != oldWidget.alert) {
+    // Compare against _dismissedAlert itself (not oldWidget.alert): a
+    // newly arrived alert that differs from whatever was last dismissed
+    // must reappear, even after intervening rebuilds -- including a
+    // transient null (e.g. a refresh that briefly reports no active
+    // alert). Comparing against oldWidget.alert instead would clear the
+    // dismissed marker on the null->same-alert transition, incorrectly
+    // resurfacing a banner the user already dismissed.
+    final WeatherAlert? newAlert = widget.alert;
+
+    if (newAlert != null && newAlert != _dismissedAlert) {
       _dismissedAlert = null;
     }
   }
@@ -49,6 +56,7 @@ class _WeatherAlertBannerState extends State<WeatherAlertBanner> {
   @override
   Widget build(BuildContext context) {
     final WeatherAlert? alert = widget.alert;
+    
     if (alert == null || alert == _dismissedAlert) {
       return const SizedBox.shrink();
     }

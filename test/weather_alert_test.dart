@@ -47,6 +47,28 @@ void main() {
     );
   });
 
+  test('fromJson throws FormatException (not TypeError) when event is not '
+      'a string', () {
+    expect(
+      () => WeatherAlert.fromJson(const <String, Object?>{
+        'event': 404,
+        'description': 'Wrong-type event field.',
+      }),
+      throwsA(isA<FormatException>()),
+    );
+  });
+
+  test('fromJson throws FormatException (not TypeError) when description '
+      'is not a string', () {
+    expect(
+      () => WeatherAlert.fromJson(const <String, Object?>{
+        'event': 'Heat Advisory',
+        'description': false,
+      }),
+      throwsA(isA<FormatException>()),
+    );
+  });
+
   test('toJson round-trips through fromJson', () {
     final WeatherAlert original = WeatherAlert.fromJson(sampleJson);
     final WeatherAlert roundTripped = WeatherAlert.fromJson(original.toJson());

@@ -98,4 +98,24 @@ void main() {
 
     expect(find.text(_heatAdvisory.event), findsNothing);
   });
+
+  testWidgets('dismissing, then a transient null, then the same alert '
+      'returning stays hidden', (WidgetTester tester) async {
+    // Regression test: didUpdateWidget used to clear _dismissedAlert on
+    // ANY change, including a transition to null. A refresh that briefly
+    // reports "no active alert" before the same alert reappears would
+    // then incorrectly resurface a banner the user already dismissed.
+    await tester.pumpWidget(_wrap(_heatAdvisory));
+    await tester.tap(find.byTooltip('Dismiss alert'));
+    await tester.pumpAndSettle();
+    expect(find.text(_heatAdvisory.event), findsNothing);
+
+    await tester.pumpWidget(_wrap(null));
+    await tester.pumpAndSettle();
+
+    await tester.pumpWidget(_wrap(_heatAdvisory));
+    await tester.pumpAndSettle();
+
+    expect(find.text(_heatAdvisory.event), findsNothing);
+  });
 }

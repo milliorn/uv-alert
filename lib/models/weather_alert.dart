@@ -1,12 +1,17 @@
 import 'package:flutter/foundation.dart';
 
 /// Returns `json[field]` as a [String], or throws [FormatException] if the
-/// field is absent.
+/// field is absent or not a string.
 String _requireString(Map<String, Object?> json, String field) {
   final Object? value = json[field];
-  return value != null
-      ? value as String
-      : throw FormatException('missing required field: $field');
+  if (value == null) {
+    throw FormatException('missing required field: $field');
+  }
+  
+  if (value is! String) {
+    throw FormatException('field $field must be a string, got $value');
+  }
+  return value;
 }
 
 /// A government weather alert to surface on the dashboard banner.
@@ -22,7 +27,8 @@ class WeatherAlert {
 
   /// Deserializes a [WeatherAlert] from a JSON map.
   ///
-  /// Throws [FormatException] if `event` or `description` is absent.
+  /// Throws [FormatException] if `event` or `description` is absent or not
+  /// a string.
   factory WeatherAlert.fromJson(Map<String, Object?> json) {
     return WeatherAlert(
       event: _requireString(json, 'event'),
