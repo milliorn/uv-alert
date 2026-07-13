@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.15.0](https://github.com/milliorn/uv-alert/compare/v1.14.0...v1.15.0) (2026-07-13)
+
+
+### Features
+
+* implement government weather alert banner ([#98](https://github.com/milliorn/uv-alert/issues/98)) ([4165b76](https://github.com/milliorn/uv-alert/commit/4165b763938894f20f582a52015a60f228e9a603)), closes [#21](https://github.com/milliorn/uv-alert/issues/21)
+
 ## [1.14.0](https://github.com/milliorn/uv-alert/compare/v1.13.0...v1.14.0) (2026-07-11)
 
 
