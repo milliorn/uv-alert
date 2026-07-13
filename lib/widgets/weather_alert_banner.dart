@@ -56,7 +56,7 @@ class _WeatherAlertBannerState extends State<WeatherAlertBanner> {
   @override
   Widget build(BuildContext context) {
     final WeatherAlert? alert = widget.alert;
-    
+
     if (alert == null || alert == _dismissedAlert) {
       return const SizedBox.shrink();
     }

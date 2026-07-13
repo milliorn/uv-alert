@@ -7,9 +7,11 @@ String _requireString(Map<String, Object?> json, String field) {
   if (value == null) {
     throw FormatException('missing required field: $field');
   }
-  
+
   if (value is! String) {
-    throw FormatException('field $field must be a string, got $value');
+    throw FormatException(
+      'field $field must be a string, got ${value.runtimeType}',
+    );
   }
   return value;
 }
