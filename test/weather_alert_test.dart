@@ -17,6 +17,36 @@ void main() {
     );
   });
 
+  test('fromJson throws FormatException when event is missing', () {
+    expect(
+      () => WeatherAlert.fromJson(const <String, Object?>{
+        'description': 'Missing the event field.',
+      }),
+      throwsA(
+        isA<FormatException>().having(
+          (FormatException e) => e.message,
+          'message',
+          'missing required field: event',
+        ),
+      ),
+    );
+  });
+
+  test('fromJson throws FormatException when description is missing', () {
+    expect(
+      () => WeatherAlert.fromJson(const <String, Object?>{
+        'event': 'Heat Advisory',
+      }),
+      throwsA(
+        isA<FormatException>().having(
+          (FormatException e) => e.message,
+          'message',
+          'missing required field: description',
+        ),
+      ),
+    );
+  });
+
   test('toJson round-trips through fromJson', () {
     final WeatherAlert original = WeatherAlert.fromJson(sampleJson);
     final WeatherAlert roundTripped = WeatherAlert.fromJson(original.toJson());
