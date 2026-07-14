@@ -1,12 +1,17 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/models/weather_alert.dart';
+import 'package:uvalert/providers/location_provider.dart';
+import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/screens/settings_screen.dart';
+import 'package:uvalert/widgets/dashboard_no_data_view.dart';
 import 'package:uvalert/widgets/weather_alert_banner.dart';
 
 /// The main screen shown after onboarding completes.
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends ConsumerWidget {
   /// Creates a [DashboardScreen].
   ///
   /// [activeAlert] is the government weather alert to surface in the
@@ -19,7 +24,11 @@ class DashboardScreen extends StatelessWidget {
   final WeatherAlert? activeAlert;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<UvData> uvState = ref.watch(uvProvider);
+    final bool showNoData = uvState.hasError && !uvState.hasValue;
+    final LocationState location = ref.watch(locationProvider);
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -48,7 +57,21 @@ class DashboardScreen extends StatelessWidget {
       body: Column(
         children: <Widget>[
           WeatherAlertBanner(alert: activeAlert),
-          const Expanded(child: Center(child: Text('Dashboard'))),
+          Expanded(
+            child: showNoData
+                ? DashboardNoDataView(
+                    onRetry: () {
+                      if (location == null) return;
+
+                      unawaited(
+                        ref
+                            .read(uvProvider.notifier)
+                            .fetch(lat: location.lat, lon: location.lon),
+                      );
+                    },
+                  )
+                : const Center(child: Text('Dashboard')),
+          ),
         ],
       ),
     );
