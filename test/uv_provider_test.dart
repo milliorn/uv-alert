@@ -12,12 +12,11 @@ import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/storage/cache.dart';
 
 import 'fakes/fake_uv_data.dart';
-
-class _MockUvApi extends Mock implements UvApi {}
+import 'fakes/mock_uv_api.dart';
 
 UvData _makeData() => makeUvData();
 
-ProviderContainer _makeContainerWith(_MockUvApi api) {
+ProviderContainer _makeContainerWith(MockUvApi api) {
   final ProviderContainer container = ProviderContainer(
     // Override type inference is not exposed publicly in flutter_riverpod.
     // ignore: always_specify_types
@@ -34,21 +33,21 @@ ProviderContainer _makeContainerWith(_MockUvApi api) {
 /// Returns a container with [uvProvider] and [deviceIdProvider] already
 /// resolved, so microtasks inside build() can reach their `.wait` without
 /// blocking on the first location change.
-Future<ProviderContainer> _makeWarmContainerWith(_MockUvApi api) async {
+Future<ProviderContainer> _makeWarmContainerWith(MockUvApi api) async {
   final ProviderContainer container = _makeContainerWith(api)..read(uvProvider);
   await container.read(deviceIdProvider.future);
   return container;
 }
 
 void main() {
-  late _MockUvApi mockApi;
+  late MockUvApi mockApi;
 
   setUpAll(() {
     registerFallbackValue(FakeUvData());
   });
 
   setUp(() {
-    mockApi = _MockUvApi();
+    mockApi = MockUvApi();
   });
 
   tearDown(resetMocktailState);

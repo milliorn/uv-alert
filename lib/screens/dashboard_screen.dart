@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/models/weather_alert.dart';
 import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
@@ -25,8 +24,7 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<UvData> uvState = ref.watch(uvProvider);
-    final bool showNoData = uvState.hasError && !uvState.hasValue;
+    final bool showNoData = ref.watch(uvProvider).isNoData;
     final LocationState location = ref.watch(locationProvider);
 
     return Scaffold(

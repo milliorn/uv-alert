@@ -14,21 +14,16 @@ import 'package:uvalert/widgets/dashboard_no_data_view.dart';
 import 'fakes/fake_fixed_location_notifier.dart';
 import 'fakes/fake_uv_data.dart';
 import 'fakes/fake_uv_notifier.dart';
+import 'fakes/mock_uv_api.dart';
 
 const WeatherAlert _heatAdvisory = WeatherAlert(
   event: 'Heat Advisory',
   description: 'Dangerously high UV and heat index expected today.',
 );
 
-class _MockUvApi extends Mock implements UvApi {}
-
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
-  });
-
-  setUpAll(() {
-    registerFallbackValue(FakeUvData());
   });
 
   tearDown(resetMocktailState);
@@ -175,7 +170,7 @@ void main() {
   testWidgets('tapping Retry triggers a fresh UV fetch', (
     WidgetTester tester,
   ) async {
-    final _MockUvApi mockApi = _MockUvApi();
+    final MockUvApi mockApi = MockUvApi();
     when(
       () => mockApi.fetch(
         lat: any(named: 'lat'),
@@ -240,7 +235,7 @@ void main() {
     'tapping Retry right after a location change uses the new location, '
     'not a stale one',
     (WidgetTester tester) async {
-      final _MockUvApi mockApi = _MockUvApi();
+      final MockUvApi mockApi = MockUvApi();
       when(
         () => mockApi.fetch(
           lat: any(named: 'lat'),

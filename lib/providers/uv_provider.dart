@@ -47,6 +47,14 @@ final FutureProvider<UvApi> uvApiProvider = FutureProvider<UvApi>((
 final NotifierProvider<UvNotifier, AsyncValue<UvData>> uvProvider =
     NotifierProvider<UvNotifier, AsyncValue<UvData>>(UvNotifier.new);
 
+/// Extra queries on [UvNotifier]'s state, co-located here so callers don't
+/// re-derive [UvNotifier]'s state-transition guarantees themselves.
+extension UvStateQueries on AsyncValue<UvData> {
+  /// Whether there is genuinely no UV data to show: the last fetch failed
+  /// and no prior successful data exists to fall back to.
+  bool get isNoData => hasError && !hasValue;
+}
+
 /// Manages UV data state.
 ///
 /// Watches [locationProvider] for coordinate changes and triggers a re-fetch
