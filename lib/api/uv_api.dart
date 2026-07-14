@@ -35,13 +35,21 @@ class UvApi {
 
   /// Returns UV data for the given coordinates, using the cache when valid.
   ///
-  /// Throws [UvApiException] on a non-200 response or unparseable body.
-  /// Throws a timeout exception when the request exceeds the configured
-  /// timeout.
+  /// [appVersion] is sent as the `app_version` query parameter on every
+  /// request so the proxy can enforce a minimum supported version -- see
+  /// `docs/adr/0009-force-update-via-426.md`. The proxy reads this from the
+  /// query string, not a header (confirmed against the deployed proxy;
+  /// there is no header fallback, unlike [deviceIdHeader]/`uuid`).
+  ///
+  /// Throws [UvApiForceUpdateException] on a 426 response.
+  /// Throws [UvApiException] on any other non-200 response or unparseable
+  /// body. Throws a timeout exception when the request exceeds the
+  /// configured timeout.
   Future<UvData> fetch({
     required double lat,
     required double lon,
     required String uuid,
+    required String appVersion,
   }) async {
     if (_cache.isValid) {
       final UvData? cached = await _cache.read();
@@ -53,6 +61,7 @@ class UvApi {
       queryParameters: <String, String>{
         'lat': lat.toString(),
         'lon': lon.toString(),
+        'app_version': appVersion,
       },
     );
 
@@ -61,6 +70,10 @@ class UvApi {
     final http.Response response = await _httpClient
         .get(uri, headers: <String, String>{deviceIdHeader: uuid})
         .timeout(_timeout);
+
+    if (response.statusCode == httpUpgradeRequired) {
+      throw const UvApiForceUpdateException();
+    }
 
     if (response.statusCode != httpOk) {
       throw UvApiException(response.statusCode, response.body);
@@ -85,6 +98,14 @@ class UvApi {
     await _cache.store(data);
     return data;
   }
+}
+
+/// Thrown when the proxy returns 426 (app version too old).
+///
+/// See `docs/adr/0009-force-update-via-426.md`.
+class UvApiForceUpdateException implements Exception {
+  /// Creates a [UvApiForceUpdateException].
+  const UvApiForceUpdateException();
 }
 
 /// Thrown when the UV API returns a non-200 status or an unparseable body.

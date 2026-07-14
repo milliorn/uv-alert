@@ -30,6 +30,11 @@ const int httpOk = 200;
 /// HTTP 404 Not Found status code.
 const int httpNotFound = 404;
 
+/// HTTP 426 Upgrade Required status code.
+///
+/// See `docs/adr/0009-force-update-via-426.md`.
+const int httpUpgradeRequired = 426;
+
 /// Strips a trailing slash from [url] if present.
 String stripTrailingSlash(String url) =>
     url.endsWith('/') ? url.substring(0, url.length - 1) : url;

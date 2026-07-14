@@ -5,6 +5,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uvalert/api/uv_api.dart';
 import 'package:uvalert/models/weather_alert.dart';
+import 'package:uvalert/providers/app_version_provider.dart';
 import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/screens/dashboard_screen.dart';
@@ -176,6 +177,7 @@ void main() {
         lat: any(named: 'lat'),
         lon: any(named: 'lon'),
         uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
       ),
     ).thenAnswer((_) async => makeUvData());
 
@@ -185,6 +187,7 @@ void main() {
         overrides: [
           uvProvider.overrideWith(() => FakeErrorUvNotifier(api: mockApi)),
           locationProvider.overrideWith(FakeFixedLocationNotifier.new),
+          appVersionProvider.overrideWith((_) async => 'test-version'),
         ],
         child: const MaterialApp(home: DashboardScreen()),
       ),
@@ -196,7 +199,12 @@ void main() {
     await tester.pumpAndSettle();
 
     verify(
-      () => mockApi.fetch(lat: 36.75, lon: -119.65, uuid: any(named: 'uuid')),
+      () => mockApi.fetch(
+        lat: 36.75,
+        lon: -119.65,
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+      ),
     ).called(1);
   });
 
@@ -241,6 +249,7 @@ void main() {
           lat: any(named: 'lat'),
           lon: any(named: 'lon'),
           uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
         ),
       ).thenThrow(UvApiException(500, 'server error'));
 
@@ -249,6 +258,7 @@ void main() {
         overrides: [
           uvProvider.overrideWith(() => UvNotifier(api: mockApi)),
           locationProvider.overrideWith(LocationNotifier.new),
+          appVersionProvider.overrideWith((_) async => 'test-version'),
         ],
       );
       addTearDown(container.dispose);
@@ -277,10 +287,20 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(
-        () => mockApi.fetch(lat: 99, lon: 88, uuid: any(named: 'uuid')),
+        () => mockApi.fetch(
+          lat: 99,
+          lon: 88,
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+        ),
       ).called(greaterThanOrEqualTo(1));
       verifyNever(
-        () => mockApi.fetch(lat: 1, lon: 2, uuid: any(named: 'uuid')),
+        () => mockApi.fetch(
+          lat: 1,
+          lon: 2,
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+        ),
       );
     },
   );

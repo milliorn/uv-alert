@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uvalert/api/uv_api.dart';
 import 'package:uvalert/constants.dart';
 import 'package:uvalert/models/uv_model.dart';
+import 'package:uvalert/providers/app_version_provider.dart';
 import 'package:uvalert/providers/device_id_provider.dart';
 import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/providers/preferences_provider.dart';
@@ -88,8 +89,9 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
         Future<void>.microtask(() async {
           try {
             // ref.read (not watch) so resolution doesn't re-trigger build().
-            final (String uuid, UvApi api) = await (
+            final (String uuid, String appVersion, UvApi api) = await (
               ref.read(deviceIdProvider.future),
+              ref.read(appVersionProvider.future),
               _resolveApi(),
             ).wait;
 
@@ -100,6 +102,7 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
               lat: location.lat,
               lon: location.lon,
               uuid: uuid,
+              appVersion: appVersion,
               generation: generation,
             );
           } on Object catch (e, st) {
@@ -124,11 +127,13 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
     if (!ref.mounted) return;
 
     final String uuid;
+    final String appVersion;
     final UvApi api;
 
     try {
-      (uuid, api) = await (
+      (uuid, appVersion, api) = await (
         ref.read(deviceIdProvider.future),
+        ref.read(appVersionProvider.future),
         _resolveApi(),
       ).wait;
     } on Object catch (e, st) {
@@ -139,7 +144,7 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
 
     // Increment after the await so this manual fetch supersedes any concurrent
     // auto-fetch microtask that incremented the counter while we were awaiting
-    // deviceId/api above.
+    // deviceId/appVersion/api above.
     final int generation = ++_fetchGeneration;
 
     if (!ref.mounted) return;
@@ -150,6 +155,7 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
       lat: lat,
       lon: lon,
       uuid: uuid,
+      appVersion: appVersion,
       generation: generation,
     );
   }
@@ -159,6 +165,7 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
     required double lat,
     required double lon,
     required String uuid,
+    required String appVersion,
     required int generation,
   }) async {
     // Re-check generation before every state write so a newer build() that
@@ -172,7 +179,12 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
     final UvData data;
 
     try {
-      data = await api.fetch(lat: lat, lon: lon, uuid: uuid);
+      data = await api.fetch(
+        lat: lat,
+        lon: lon,
+        uuid: uuid,
+        appVersion: appVersion,
+      );
     } on Object catch (e, st) {
       if (!ref.mounted || isStale()) return;
       state = AsyncValue<UvData>.error(e, st);
