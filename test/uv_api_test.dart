@@ -66,6 +66,7 @@ void main() {
         lat: 40.7,
         lon: -74,
         uuid: 'uuid-1',
+        appVersion: 'test-version',
       );
 
       expect(result.currentUvi, cached.currentUvi);
@@ -88,6 +89,7 @@ void main() {
         lat: 40.7,
         lon: -74,
         uuid: 'uuid-1',
+        appVersion: 'test-version',
       );
 
       expect(result.currentUvi, 5.0);
@@ -112,6 +114,7 @@ void main() {
         lat: 40.7,
         lon: -74,
         uuid: 'uuid-1',
+        appVersion: 'test-version',
       );
 
       expect(result.currentUvi, 5.0);
@@ -129,7 +132,12 @@ void main() {
       );
 
       await expectLater(
-        () => api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1'),
+        () => api.fetch(
+          lat: 40.7,
+          lon: -74,
+          uuid: 'uuid-1',
+          appVersion: 'test-version',
+        ),
         throwsA(
           isA<UvApiException>().having(
             (UvApiException e) => e.statusCode,
@@ -137,6 +145,23 @@ void main() {
             500,
           ),
         ),
+      );
+    });
+
+    test('throws UvApiForceUpdateException on 426 response', () async {
+      final UvApi api = UvApi(
+        cache: mockCache,
+        proxyBaseUrl: 'http://example.com',
+        httpClient: mockClientReturning(
+          426,
+          jsonEncode(<String, Object?>{'error': 'upgrade_required'}),
+        ),
+      );
+
+      await expectLater(
+        () =>
+            api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1', appVersion: '0.1.0'),
+        throwsA(isA<UvApiForceUpdateException>()),
       );
     });
 
@@ -148,7 +173,12 @@ void main() {
       );
 
       await expectLater(
-        () => api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1'),
+        () => api.fetch(
+          lat: 40.7,
+          lon: -74,
+          uuid: 'uuid-1',
+          appVersion: 'test-version',
+        ),
         throwsA(isA<UvApiException>()),
       );
     });
@@ -162,7 +192,12 @@ void main() {
         );
 
         await expectLater(
-          () => api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1'),
+          () => api.fetch(
+            lat: 40.7,
+            lon: -74,
+            uuid: 'uuid-1',
+            appVersion: 'test-version',
+          ),
           throwsA(isA<UvApiException>()),
           reason: 'expected UvApiException for body: $body',
         );
@@ -181,7 +216,12 @@ void main() {
         }),
       );
 
-      await api.fetch(lat: 51.5, lon: -0.1, uuid: 'uuid-1');
+      await api.fetch(
+        lat: 51.5,
+        lon: -0.1,
+        uuid: 'uuid-1',
+        appVersion: 'test-version',
+      );
 
       expect(capturedUri?.queryParameters['lat'], '51.5');
       expect(capturedUri?.queryParameters['lon'], '-0.1');
@@ -199,7 +239,12 @@ void main() {
         }),
       );
 
-      await api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1');
+      await api.fetch(
+        lat: 40.7,
+        lon: -74,
+        uuid: 'uuid-1',
+        appVersion: 'test-version',
+      );
 
       expect(capturedUri?.path, '/api/uv');
     });
@@ -216,9 +261,31 @@ void main() {
         }),
       );
 
-      await api.fetch(lat: 40.7, lon: -74, uuid: 'my-device-uuid');
+      await api.fetch(
+        lat: 40.7,
+        lon: -74,
+        uuid: 'my-device-uuid',
+        appVersion: 'test-version',
+      );
 
       expect(deviceId, 'my-device-uuid');
+    });
+
+    test('sends app_version query parameter with appVersion', () async {
+      Uri? capturedUri;
+
+      final UvApi api = UvApi(
+        cache: mockCache,
+        proxyBaseUrl: 'http://example.com',
+        httpClient: MockClient((http.Request request) async {
+          capturedUri = request.url;
+          return http.Response(jsonEncode(_apiJson()), 200);
+        }),
+      );
+
+      await api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1', appVersion: '1.2.3');
+
+      expect(capturedUri?.queryParameters['app_version'], '1.2.3');
     });
 
     test('propagates TimeoutException when request exceeds timeout', () async {
@@ -230,7 +297,12 @@ void main() {
       );
 
       await expectLater(
-        () => api.fetch(lat: 40.7, lon: -74, uuid: 'uuid-1'),
+        () => api.fetch(
+          lat: 40.7,
+          lon: -74,
+          uuid: 'uuid-1',
+          appVersion: 'test-version',
+        ),
         throwsA(isA<TimeoutException>()),
       );
     });

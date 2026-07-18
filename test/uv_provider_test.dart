@@ -6,24 +6,25 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uvalert/api/uv_api.dart';
 import 'package:uvalert/models/uv_model.dart';
+import 'package:uvalert/providers/app_version_provider.dart';
 import 'package:uvalert/providers/device_id_provider.dart';
 import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/storage/cache.dart';
 
 import 'fakes/fake_uv_data.dart';
-
-class _MockUvApi extends Mock implements UvApi {}
+import 'fakes/mock_uv_api.dart';
 
 UvData _makeData() => makeUvData();
 
-ProviderContainer _makeContainerWith(_MockUvApi api) {
+ProviderContainer _makeContainerWith(MockUvApi api) {
   final ProviderContainer container = ProviderContainer(
     // Override type inference is not exposed publicly in flutter_riverpod.
     // ignore: always_specify_types
     overrides: [
       uvProvider.overrideWith(() => UvNotifier(api: api)),
       deviceIdProvider.overrideWith((_) async => 'test-uuid'),
+      appVersionProvider.overrideWith((_) async => 'test-version'),
       locationProvider.overrideWith(LocationNotifier.new),
     ],
   );
@@ -34,21 +35,21 @@ ProviderContainer _makeContainerWith(_MockUvApi api) {
 /// Returns a container with [uvProvider] and [deviceIdProvider] already
 /// resolved, so microtasks inside build() can reach their `.wait` without
 /// blocking on the first location change.
-Future<ProviderContainer> _makeWarmContainerWith(_MockUvApi api) async {
+Future<ProviderContainer> _makeWarmContainerWith(MockUvApi api) async {
   final ProviderContainer container = _makeContainerWith(api)..read(uvProvider);
   await container.read(deviceIdProvider.future);
   return container;
 }
 
 void main() {
-  late _MockUvApi mockApi;
+  late MockUvApi mockApi;
 
   setUpAll(() {
     registerFallbackValue(FakeUvData());
   });
 
   setUp(() {
-    mockApi = _MockUvApi();
+    mockApi = MockUvApi();
   });
 
   tearDown(resetMocktailState);
@@ -74,6 +75,7 @@ void main() {
         lat: any(named: 'lat'),
         lon: any(named: 'lon'),
         uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
       ),
     ).thenAnswer((_) async => data);
 
@@ -95,6 +97,7 @@ void main() {
         lat: any(named: 'lat'),
         lon: any(named: 'lon'),
         uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
       ),
     ).thenThrow(UvApiException(500, 'server error'));
 
@@ -116,6 +119,7 @@ void main() {
         lat: any(named: 'lat'),
         lon: any(named: 'lon'),
         uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
       ),
     ).thenAnswer((_) async => data);
 
@@ -127,6 +131,7 @@ void main() {
         uvProvider.overrideWith(UvNotifier.new),
         uvApiProvider.overrideWith((_) async => mockApi),
         deviceIdProvider.overrideWith((_) async => 'test-uuid'),
+        appVersionProvider.overrideWith((_) async => 'test-version'),
       ],
     );
     addTearDown(container.dispose);
@@ -209,6 +214,7 @@ void main() {
           deviceIdProvider.overrideWith(
             (_) async => throw StateError('device id unavailable'),
           ),
+          appVersionProvider.overrideWith((_) async => 'test-version'),
           locationProvider.overrideWith(LocationNotifier.new),
         ],
       );
@@ -247,6 +253,7 @@ void main() {
         lat: any(named: 'lat'),
         lon: any(named: 'lon'),
         uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
       ),
     ).thenAnswer((_) async {
       callCount++;
@@ -278,7 +285,14 @@ void main() {
     expect(result, data);
 
     // The second fetch (lat:10, lon:20) must have produced the final data.
-    verify(() => mockApi.fetch(lat: 10, lon: 20, uuid: 'test-uuid')).called(1);
+    verify(
+      () => mockApi.fetch(
+        lat: 10,
+        lon: 20,
+        uuid: 'test-uuid',
+        appVersion: 'test-version',
+      ),
+    ).called(1);
   });
 
   // ---------------------------------------------------------------------------
@@ -296,6 +310,7 @@ void main() {
           deviceIdProvider.overrideWith(
             (_) async => throw StateError('device id unavailable'),
           ),
+          appVersionProvider.overrideWith((_) async => 'test-version'),
           locationProvider.overrideWith(LocationNotifier.new),
         ],
       );
@@ -324,6 +339,7 @@ void main() {
           lat: any(named: 'lat'),
           lon: any(named: 'lon'),
           uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
         ),
       ).thenAnswer((_) async {
         callCount++;
@@ -356,7 +372,12 @@ void main() {
       // Only the second fetch (lat:99) should have produced data; the first
       // (lat:1) was stale when _fetchWith ran.
       verify(
-        () => mockApi.fetch(lat: 99, lon: 99, uuid: 'test-uuid'),
+        () => mockApi.fetch(
+          lat: 99,
+          lon: 99,
+          uuid: 'test-uuid',
+          appVersion: 'test-version',
+        ),
       ).called(1);
     },
   );
@@ -376,6 +397,7 @@ void main() {
           lat: any(named: 'lat'),
           lon: any(named: 'lon'),
           uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
         ),
       );
     },
@@ -392,6 +414,7 @@ void main() {
         lat: any(named: 'lat'),
         lon: any(named: 'lon'),
         uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
       ),
     ).thenAnswer((_) async => data);
 
@@ -412,7 +435,14 @@ void main() {
 
     // Confirm the fetch was triggered by the build() watcher, not a direct
     // call, and that it received the coordinates from setManual().
-    verify(() => mockApi.fetch(lat: 10, lon: 20, uuid: 'test-uuid')).called(1);
+    verify(
+      () => mockApi.fetch(
+        lat: 10,
+        lon: 20,
+        uuid: 'test-uuid',
+        appVersion: 'test-version',
+      ),
+    ).called(1);
     verifyNoMoreInteractions(mockApi);
   });
 }
