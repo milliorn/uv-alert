@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.16.0](https://github.com/milliorn/uv-alert/compare/v1.15.0...v1.16.0) (2026-07-18)
+
+
+### Features
+
+* add dashboard no-data state and 426 force-update detection ([#102](https://github.com/milliorn/uv-alert/issues/102)) ([e413f2b](https://github.com/milliorn/uv-alert/commit/e413f2bb98d0716c6ed94960daca890cb9481f38))
+
 ## [1.15.0](https://github.com/milliorn/uv-alert/compare/v1.14.0...v1.15.0) (2026-07-13)
 
 
