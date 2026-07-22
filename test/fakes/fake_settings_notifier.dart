@@ -18,33 +18,24 @@ class FakeLoadedSettingsNotifier extends SettingsNotifier {
   );
 }
 
-/// Returns data immediately with a non-null [SettingsState.manualLocation].
+/// Returns data immediately with the given [manualLocation].
 ///
-/// Use when a test needs a resolved city/state, e.g. for `DashboardFooter`.
+/// Use when a test needs a specific resolved (or empty-but-not-null)
+/// location, e.g. for `DashboardFooter`.
 class FakeManualLocationSettingsNotifier extends SettingsNotifier {
-  @override
-  AsyncValue<SettingsState> build() => const AsyncValue<SettingsState>.data(
-    SettingsState(
-      themeMode: ThemeMode.system,
-      useGps: false,
-      manualLocation: 'Fresno, CA, US',
-      notificationsEnabled: false,
-    ),
-  );
-}
+  /// Creates a [FakeManualLocationSettingsNotifier] that resolves with
+  /// [manualLocation], defaulting to `'Fresno, CA, US'`.
+  FakeManualLocationSettingsNotifier([this.manualLocation = 'Fresno, CA, US']);
 
-/// Returns data immediately with [SettingsState.manualLocation] set to the
-/// empty string (distinct from `null`).
-///
-/// Use when a test needs to exercise the empty-but-not-null location edge
-/// case, e.g. for `DashboardFooter`.
-class FakeEmptyManualLocationSettingsNotifier extends SettingsNotifier {
+  /// The location returned by [build].
+  final String manualLocation;
+
   @override
-  AsyncValue<SettingsState> build() => const AsyncValue<SettingsState>.data(
+  AsyncValue<SettingsState> build() => AsyncValue<SettingsState>.data(
     SettingsState(
       themeMode: ThemeMode.system,
       useGps: false,
-      manualLocation: '',
+      manualLocation: manualLocation,
       notificationsEnabled: false,
     ),
   );

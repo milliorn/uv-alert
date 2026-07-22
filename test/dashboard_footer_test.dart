@@ -62,52 +62,29 @@ void main() {
     expect(find.text('Updated just now · Fresno, CA'), findsOneWidget);
   });
 
-  testWidgets('formats elapsed minutes', (WidgetTester tester) async {
-    final DateTime fetchedAt = DateTime.now().toUtc().subtract(
-      const Duration(minutes: 5),
-    );
+  for (final (Duration elapsed, String expectedSuffix) in <(Duration, String)>[
+    (const Duration(minutes: 5), 'min ago · Fresno, CA'),
+    (const Duration(hours: 3), 'hr ago · Fresno, CA'),
+    (const Duration(days: 2), 'd ago · Fresno, CA'),
+  ]) {
+    testWidgets('formats elapsed time as "$expectedSuffix"', (
+      WidgetTester tester,
+    ) async {
+      final DateTime fetchedAt = DateTime.now().toUtc().subtract(elapsed);
 
-    await tester.pumpWidget(
-      _wrap(
-        uvNotifier: () => FakeDataUvNotifier(makeUvData(fetchedAt: fetchedAt)),
-      ),
-    );
+      await tester.pumpWidget(
+        _wrap(
+          uvNotifier: () =>
+              FakeDataUvNotifier(makeUvData(fetchedAt: fetchedAt)),
+        ),
+      );
 
-    expect(find.textContaining('min ago · Fresno, CA'), findsOneWidget);
-  });
-
-  testWidgets('formats elapsed hours', (WidgetTester tester) async {
-    final DateTime fetchedAt = DateTime.now().toUtc().subtract(
-      const Duration(hours: 3),
-    );
-
-    await tester.pumpWidget(
-      _wrap(
-        uvNotifier: () => FakeDataUvNotifier(makeUvData(fetchedAt: fetchedAt)),
-      ),
-    );
-
-    expect(find.textContaining('hr ago · Fresno, CA'), findsOneWidget);
-  });
-
-  testWidgets('formats elapsed days', (WidgetTester tester) async {
-    final DateTime fetchedAt = DateTime.now().toUtc().subtract(
-      const Duration(days: 2),
-    );
-
-    await tester.pumpWidget(
-      _wrap(
-        uvNotifier: () => FakeDataUvNotifier(makeUvData(fetchedAt: fetchedAt)),
-      ),
-    );
-
-    expect(find.textContaining('d ago · Fresno, CA'), findsOneWidget);
-  });
+      expect(find.textContaining(expectedSuffix), findsOneWidget);
+    });
+  }
 
   testWidgets(
-    'schedules a periodic timer that stays active and is cancelled on '
-    'dispose, so the relative-time label keeps itself fresh without '
-    'depending on a provider change',
+    'periodic timer refreshes the label and is cancelled on dispose',
     (WidgetTester tester) async {
       await tester.pumpWidget(
         _wrap(uvNotifier: () => FakeDataUvNotifier(makeUvData())),
@@ -149,7 +126,7 @@ void main() {
       _wrap(
         uvNotifier: () =>
             FakeDataUvNotifier(makeUvData(fetchedAt: DateTime.now().toUtc())),
-        settingsNotifier: FakeEmptyManualLocationSettingsNotifier.new,
+        settingsNotifier: () => FakeManualLocationSettingsNotifier(''),
       ),
     );
 

@@ -100,7 +100,7 @@ class _DashboardFooterState extends ConsumerState<DashboardFooter> {
 /// platform reports it could not open a handler for the URL.
 Future<void> _openGithubRepo(BuildContext context) async {
   final bool launched = await launchUrl(Uri.parse(githubRepoUrl));
-  
+
   if (!context.mounted || launched) return;
 
   ScaffoldMessenger.of(
@@ -150,5 +150,6 @@ String? _cityState(String? manualLocation) {
   if (manualLocation == null || manualLocation.isEmpty) return null;
 
   final List<String> segments = manualLocation.split(', ');
+
   return segments.take(2).join(', ');
 }
