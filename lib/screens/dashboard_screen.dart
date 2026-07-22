@@ -53,26 +53,28 @@ class DashboardScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: Column(
-        children: <Widget>[
-          WeatherAlertBanner(alert: activeAlert),
-          Expanded(
-            child: showNoData
-                ? DashboardNoDataView(
-                    onRetry: () {
-                      if (location == null) return;
+      body: SafeArea(
+        child: Column(
+          children: <Widget>[
+            WeatherAlertBanner(alert: activeAlert),
+            Expanded(
+              child: showNoData
+                  ? DashboardNoDataView(
+                      onRetry: () {
+                        if (location == null) return;
 
-                      unawaited(
-                        ref
-                            .read(uvProvider.notifier)
-                            .fetch(lat: location.lat, lon: location.lon),
-                      );
-                    },
-                  )
-                : const Center(child: Text('Dashboard')),
-          ),
-          const DashboardFooter(),
-        ],
+                        unawaited(
+                          ref
+                              .read(uvProvider.notifier)
+                              .fetch(lat: location.lat, lon: location.lon),
+                        );
+                      },
+                    )
+                  : const Center(child: Text('Dashboard')),
+            ),
+            const DashboardFooter(),
+          ],
+        ),
       ),
     );
   }
