@@ -3,12 +3,20 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:uvalert/constants.dart';
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
 
-/// The uv-alert GitHub repository URL, linked from the dashboard footer.
-final Uri _githubRepoUri = Uri.parse('https://github.com/milliorn/uv-alert');
+/// Horizontal padding around the dashboard footer's content.
+const double dashboardFooterPaddingHorizontal = 16;
+
+/// Vertical padding around the dashboard footer's content.
+const double dashboardFooterPaddingVertical = 12;
+
+/// How often the "Updated X ago" label re-renders itself so it stays
+/// accurate while the dashboard is left open without any provider change.
+const Duration _relativeTimeRefreshInterval = Duration(minutes: 1);
 
 /// Number of minutes in an hour, used by [_formatRelativeTime].
 const int _minutesPerHour = 60;
@@ -24,12 +32,34 @@ const int _hoursPerDay = 24;
 /// last-updated/location line when `uvProvider` has no cached value yet.
 /// The stale-data warning variant is a separate, not-yet-implemented
 /// feature.
-class DashboardFooter extends ConsumerWidget {
+class DashboardFooter extends ConsumerStatefulWidget {
   /// Creates a [DashboardFooter].
   const DashboardFooter({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardFooter> createState() => _DashboardFooterState();
+}
+
+class _DashboardFooterState extends ConsumerState<DashboardFooter> {
+  late final Timer _relativeTimeTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _relativeTimeTimer = Timer.periodic(
+      _relativeTimeRefreshInterval,
+      (_) => setState(() {}),
+    );
+  }
+
+  @override
+  void dispose() {
+    _relativeTimeTimer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final UvData? uvData = ref.watch(uvProvider).value;
     final String? manualLocation = ref
         .watch(settingsProvider)
@@ -42,21 +72,21 @@ class DashboardFooter extends ConsumerWidget {
     );
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: dashboardFooterPaddingHorizontal,
+        vertical: dashboardFooterPaddingVertical,
+      ),
       child: Column(
         children: <Widget>[
           if (uvData != null)
             Text(
               _updatedLabel(uvData.fetchedAt, manualLocation),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: mutedStyle,
             ),
           TextButton(
-            style: TextButton.styleFrom(
-              padding: EdgeInsets.zero,
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            onPressed: () => unawaited(launchUrl(_githubRepoUri)),
+            onPressed: () => unawaited(_openGithubRepo(context)),
             child: const Text('GitHub'),
           ),
           Text('© ${DateTime.now().year} UV Alert', style: mutedStyle),
@@ -64,6 +94,18 @@ class DashboardFooter extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Launches the uv-alert GitHub repository, showing a [SnackBar] if the
+/// platform reports it could not open a handler for the URL.
+Future<void> _openGithubRepo(BuildContext context) async {
+  final bool launched = await launchUrl(Uri.parse(githubRepoUrl));
+  
+  if (!context.mounted || launched) return;
+
+  ScaffoldMessenger.of(
+    context,
+  ).showSnackBar(const SnackBar(content: Text('Could not open GitHub')));
 }
 
 /// Builds the "Updated {relative} · {City, State}" label, omitting the
@@ -83,7 +125,7 @@ String _formatRelativeTime(DateTime fetchedAt) {
   final Duration elapsed = DateTime.now().toUtc().difference(fetchedAt);
 
   if (elapsed.inMinutes < 1) return 'just now';
-  
+
   if (elapsed.inMinutes < _minutesPerHour) {
     return '${elapsed.inMinutes} min ago';
   }
@@ -95,14 +137,17 @@ String _formatRelativeTime(DateTime fetchedAt) {
 
 /// Derives a "City, State" (or "City, Country" when there is no state)
 /// string from a geocoded display name like "Fresno, CA, US" or
-/// "Tokyo, Japan". Returns `null` when [manualLocation] is `null`.
+/// "Tokyo, Japan". Returns `null` when [manualLocation] is `null` or empty.
 ///
-/// The geocoding API always produces a 3-segment display name when a state
-/// is present, or 2 segments otherwise. Taking the first two segments
-/// therefore yields "City, State" whenever a state exists, and a sensible
-/// "City, Country" fallback otherwise.
+/// The geocoding API always produces a 3-segment, comma-space-delimited
+/// display name when a state is present, or 2 segments otherwise. Taking
+/// the first two segments therefore yields "City, State" whenever a state
+/// exists, and a sensible "City, Country" fallback otherwise. If
+/// [manualLocation] doesn't match that shape (e.g. a future format change,
+/// or a hand-edited preference), it's returned unsplit rather than dropped,
+/// so the footer degrades to showing the raw string instead of nothing.
 String? _cityState(String? manualLocation) {
-  if (manualLocation == null) return null;
+  if (manualLocation == null || manualLocation.isEmpty) return null;
 
   final List<String> segments = manualLocation.split(', ');
   return segments.take(2).join(', ');

@@ -33,6 +33,23 @@ class FakeManualLocationSettingsNotifier extends SettingsNotifier {
   );
 }
 
+/// Returns data immediately with [SettingsState.manualLocation] set to the
+/// empty string (distinct from `null`).
+///
+/// Use when a test needs to exercise the empty-but-not-null location edge
+/// case, e.g. for `DashboardFooter`.
+class FakeEmptyManualLocationSettingsNotifier extends SettingsNotifier {
+  @override
+  AsyncValue<SettingsState> build() => const AsyncValue<SettingsState>.data(
+    SettingsState(
+      themeMode: ThemeMode.system,
+      useGps: false,
+      manualLocation: '',
+      notificationsEnabled: false,
+    ),
+  );
+}
+
 /// Immediately emits an error state.
 class FakeErrorSettingsNotifier extends SettingsNotifier {
   @override
