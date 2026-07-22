@@ -24,6 +24,10 @@ const int _minutesPerHour = 60;
 /// Number of hours in a day, used by [_formatRelativeTime].
 const int _hoursPerDay = 24;
 
+/// Minimum width and height (in density-independent pixels) for a tappable
+/// element, per ADR 0011's accessibility touch-target requirement.
+const double _minTouchTargetDp = 48;
+
 /// Footer shown at the bottom of the dashboard screen, displaying when the
 /// UV data was last updated, the current location, a link to the project's
 /// GitHub repository, and a copyright notice.
@@ -87,6 +91,12 @@ class _DashboardFooterState extends ConsumerState<DashboardFooter> {
               style: mutedStyle,
             ),
           TextButton(
+            style: TextButton.styleFrom(
+              minimumSize: const Size(
+                _minTouchTargetDp,
+                _minTouchTargetDp,
+              ),
+            ),
             onPressed: () => unawaited(_openGithubRepo(context)),
             child: const Text('GitHub'),
           ),
