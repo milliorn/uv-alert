@@ -10,6 +10,7 @@ import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/screens/dashboard_screen.dart';
 import 'package:uvalert/screens/settings_screen.dart';
+import 'package:uvalert/widgets/dashboard_footer.dart';
 import 'package:uvalert/widgets/dashboard_no_data_view.dart';
 
 import 'fakes/fake_fixed_location_notifier.dart';
@@ -43,6 +44,22 @@ void main() {
     );
 
     expect(find.text('Dashboard'), findsOneWidget);
+  });
+
+  testWidgets('DashboardScreen renders the footer', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        // ignore: always_specify_types - Override not in flutter_riverpod public API
+        overrides: [
+          uvProvider.overrideWith(() => FakeDataUvNotifier(makeUvData())),
+        ],
+        child: const MaterialApp(home: DashboardScreen()),
+      ),
+    );
+
+    expect(find.byType(DashboardFooter), findsOneWidget);
   });
 
   testWidgets('DashboardScreen app bar has title and both icons', (

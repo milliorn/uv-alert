@@ -18,6 +18,21 @@ class FakeLoadedSettingsNotifier extends SettingsNotifier {
   );
 }
 
+/// Returns data immediately with a non-null [SettingsState.manualLocation].
+///
+/// Use when a test needs a resolved city/state, e.g. for `DashboardFooter`.
+class FakeManualLocationSettingsNotifier extends SettingsNotifier {
+  @override
+  AsyncValue<SettingsState> build() => const AsyncValue<SettingsState>.data(
+    SettingsState(
+      themeMode: ThemeMode.system,
+      useGps: false,
+      manualLocation: 'Fresno, CA, US',
+      notificationsEnabled: false,
+    ),
+  );
+}
+
 /// Immediately emits an error state.
 class FakeErrorSettingsNotifier extends SettingsNotifier {
   @override

@@ -6,6 +6,7 @@ import 'package:uvalert/models/weather_alert.dart';
 import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/screens/settings_screen.dart';
+import 'package:uvalert/widgets/dashboard_footer.dart';
 import 'package:uvalert/widgets/dashboard_no_data_view.dart';
 import 'package:uvalert/widgets/weather_alert_banner.dart';
 
@@ -70,6 +71,7 @@ class DashboardScreen extends ConsumerWidget {
                   )
                 : const Center(child: Text('Dashboard')),
           ),
+          const DashboardFooter(),
         ],
       ),
     );
