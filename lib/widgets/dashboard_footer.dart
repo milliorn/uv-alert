@@ -28,9 +28,10 @@ const int _hoursPerDay = 24;
 /// UV data was last updated, the current location, a link to the project's
 /// GitHub repository, and a copyright notice.
 ///
-/// Only covers the "fresh data" state -- renders nothing for the
-/// last-updated/location line when `uvProvider` has no cached value yet.
-/// The stale-data warning variant is a separate, not-yet-implemented
+/// Renders the last-updated/location line whenever `uvProvider` has a
+/// cached value, with no check of how old it is -- there is currently no
+/// visual distinction between recently-fetched and long-stale data. A
+/// dedicated stale-data warning variant is a separate, not-yet-implemented
 /// feature.
 class DashboardFooter extends ConsumerStatefulWidget {
   /// Creates a [DashboardFooter].
@@ -109,7 +110,7 @@ Future<void> _openGithubRepo(BuildContext context) async {
 }
 
 /// Builds the "Updated {relative} · {City, State}" label, omitting the
-/// location segment entirely when [manualLocation] is `null`.
+/// location segment entirely when [manualLocation] is `null` or empty.
 String _updatedLabel(DateTime fetchedAt, String? manualLocation) {
   final String relative = _formatRelativeTime(fetchedAt);
   final String? cityState = _cityState(manualLocation);
@@ -144,8 +145,10 @@ String _formatRelativeTime(DateTime fetchedAt) {
 /// the first two segments therefore yields "City, State" whenever a state
 /// exists, and a sensible "City, Country" fallback otherwise. If
 /// [manualLocation] doesn't match that shape (e.g. a future format change,
-/// or a hand-edited preference), it's returned unsplit rather than dropped,
-/// so the footer degrades to showing the raw string instead of nothing.
+/// or a hand-edited preference), this still returns at most its first two
+/// comma-separated segments -- a 1-segment string comes back unchanged,
+/// but anything with 3+ segments is truncated, which may drop real data
+/// rather than showing it verbatim.
 String? _cityState(String? manualLocation) {
   if (manualLocation == null || manualLocation.isEmpty) return null;
 

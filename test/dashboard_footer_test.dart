@@ -36,9 +36,11 @@ Widget _wrap({
 
 void main() {
   late _MockUrlLauncherPlatform mockUrlLauncher;
+  late UrlLauncherPlatform originalUrlLauncher;
 
   setUpAll(() {
     registerFallbackValue(const LaunchOptions());
+    originalUrlLauncher = UrlLauncherPlatform.instance;
   });
 
   setUp(() {
@@ -47,6 +49,10 @@ void main() {
     when(
       () => mockUrlLauncher.launchUrl(any(), any()),
     ).thenAnswer((_) async => true);
+  });
+
+  tearDown(() {
+    UrlLauncherPlatform.instance = originalUrlLauncher;
   });
 
   testWidgets('renders updated time and city/state when data is fresh', (
