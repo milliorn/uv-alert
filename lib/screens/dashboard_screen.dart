@@ -33,8 +33,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   void initState() {
     super.initState();
     // Deferred to a post-frame callback (not called directly here) because
-    // reading/mutating providers during initState runs before the widget
-    // tree has finished its first build, which Riverpod disallows.
+    // _restoreLocationIfNeeded may mutate locationProvider, and Riverpod
+    // disallows mutating a provider while the widget tree is still building
+    // -- a constraint on mutation during build, not on reading providers
+    // from initState, which is otherwise fine (e.g. OnboardingScreen reads
+    // preferencesProvider directly from initState).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _restoreLocationIfNeeded(ref, ref.read(settingsProvider));
