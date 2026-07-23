@@ -120,6 +120,13 @@ class _LocationOnboardingScreenState
   // resolving on the first build).
   bool _restoredFromSettings = false;
 
+  // True from the moment a GPS-mode confirmation is restored until the
+  // post-frame GPS refresh has actually been scheduled. deviceIdProvider may
+  // still be resolving on the build where the restore happens, so this
+  // survives across builds (unlike a local in build()) until deviceId is
+  // finally available.
+  bool _gpsRefreshPending = false;
+
   // Called only when this screen was opened with
   // widget._restoreConfirmedLocation set (i.e. navigating back from
   // NotificationOnboardingScreen). Reconstructs the previously confirmed
@@ -127,12 +134,18 @@ class _LocationOnboardingScreenState
   // screen reopens on the confirm card instead of the idle picker. Uses
   // ref.watch (called from build) rather than ref.read because
   // settingsProvider may still be loading on the very first build.
+  //
+  // When the restored confirmation came from GPS, sets _gpsRefreshPending so
+  // build() triggers a fresh GPS+reverse-geocode lookup once deviceId is
+  // available -- the stored name/coordinates may be from a previous
+  // onboarding run and no longer reflect the device's current position,
+  // unlike a manually searched location, which doesn't go stale the same way.
   void _restoreConfirmedLocation() {
     if (_restoredFromSettings) return;
 
     final SettingsState? settings = ref.watch(settingsProvider).value;
     final LocationState location = ref.watch(locationProvider);
-    final String? displayName = settings?.manualLocation;
+    final String? displayName = settings?.manualLocation?.name;
 
     if (settings == null || location == null || displayName == null) return;
 
@@ -142,6 +155,7 @@ class _LocationOnboardingScreenState
       fromGps: settings.useGps,
     );
     _phase = _Phase.confirm;
+    _gpsRefreshPending = settings.useGps;
   }
 
   GeocodingApi _geocodingApi(String proxyBaseUrl, String deviceId) =>
@@ -222,6 +236,45 @@ class _LocationOnboardingScreenState
     } on Object {
       if (!mounted || _operationId != opId) return;
       _setError('Something went wrong. Please try again.');
+    }
+  }
+
+  // Refreshes a GPS-mode confirmation restored by _restoreConfirmedLocation,
+  // without disturbing the currently visible confirm card. Unlike
+  // _onUseMyLocation, this never changes _phase and never surfaces an error:
+  // on success it swaps _pending in place; on any failure it silently keeps
+  // showing the (possibly stale) restored name, since the alternative --
+  // interrupting an already-successful confirm screen with a spinner or
+  // error for a refresh the user never asked for -- is worse than a stale
+  // label the user can still correct via "Search again".
+  Future<void> _refreshGpsConfirmationSilently(
+    String proxyBaseUrl,
+    String deviceId,
+  ) async {
+    final int opId = _operationId;
+
+    try {
+      await ref.read(locationProvider.notifier).fetchGps();
+
+      if (!mounted || _operationId != opId || _phase != _Phase.confirm) {
+        return;
+      }
+
+      final LocationState loc = ref.read(locationProvider);
+      if (loc == null) return;
+
+      final GeocodingResult result = await _geocodingApi(
+        proxyBaseUrl,
+        deviceId,
+      ).reverseGeocode(lat: loc.lat, lon: loc.lon);
+
+      if (!mounted || _operationId != opId || _phase != _Phase.confirm) {
+        return;
+      }
+
+      setState(() => _pending = (result: result, fromGps: true));
+    } on Object catch (e, st) {
+      debugPrint('Silent GPS confirmation refresh failed: $e\n$st');
     }
   }
 
@@ -381,9 +434,11 @@ class _LocationOnboardingScreenState
     final _ConfirmResult confirmed = _pending!;
 
     try {
-      await ref
-          .read(settingsProvider.notifier)
-          .setManualLocation(confirmed.result.displayName);
+      await ref.read(settingsProvider.notifier).setManualLocation((
+        name: confirmed.result.displayName,
+        lat: confirmed.result.lat,
+        lon: confirmed.result.lon,
+      ));
 
       await ref
           .read(settingsProvider.notifier)
@@ -485,6 +540,21 @@ class _LocationOnboardingScreenState
     // Null until deviceIdProvider resolves; callbacks that trigger network
     // calls are disabled while null to prevent an empty X-Device-ID header.
     final String? deviceId = ref.watch(deviceIdProvider).value;
+
+    // Refreshing a restored GPS confirmation needs both proxyBaseUrl and
+    // deviceId, so it's deferred here (post-frame, once deviceId is
+    // available, which may take multiple builds) rather than inside
+    // _restoreConfirmedLocation itself -- calling _onUseMyLocation
+    // synchronously during build() would violate the no-side-effects-
+    // during-build rule, since it calls setState.
+    if (_gpsRefreshPending && deviceId != null) {
+      _gpsRefreshPending = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+
+        unawaited(_refreshGpsConfirmationSilently(proxyBaseUrl, deviceId));
+      });
+    }
 
     final VoidCallback? onGpsPressed = deviceId == null
         ? null

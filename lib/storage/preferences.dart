@@ -1,5 +1,13 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// A manually entered location: its geocoded display name and coordinates.
+///
+/// Always set and persisted together as a single unit -- there is no way to
+/// construct one with a name but no coordinates or vice versa.
+typedef ManualLocation = ({String name, double lat, double lon});
 
 // Computed once; ThemeMode.values never changes at runtime.
 final Map<String, ThemeMode> _themeModeByName = ThemeMode.values.asNameMap();
@@ -94,14 +102,44 @@ class Preferences {
   Future<void> setUseGps({required bool value}) async =>
       _prefs.setBool(_keyUseGps, value);
 
-  // TODO(location): stored as a raw string; migrate to a structured type
-  // (lat/lon pair or named-place object) when the location feature lands.
-  /// The manually entered location string, or `null` if not set.
-  String? get manualLocation => _prefs.getString(_keyManualLocation);
+  /// The manually entered location, or `null` if not set.
+  ///
+  /// Returns `null` (rather than throwing) if the stored JSON is missing a
+  /// required field or otherwise malformed, since a corrupt local value
+  /// should behave like "not set" rather than crash the app.
+  ManualLocation? get manualLocation {
+    final String? stored = _prefs.getString(_keyManualLocation);
 
-  /// Stores the manually entered [location] string.
-  Future<void> setManualLocation(String location) async =>
-      _prefs.setString(_keyManualLocation, location);
+    if (stored == null) return null;
+
+    try {
+      final Object? decoded = jsonDecode(stored);
+
+      if (decoded is! Map<String, Object?>) return null;
+
+      final Object? name = decoded['name'];
+      final Object? lat = decoded['lat'];
+      final Object? lon = decoded['lon'];
+
+      if (name is! String || lat is! num || lon is! num) return null;
+
+      return (name: name, lat: lat.toDouble(), lon: lon.toDouble());
+    } on FormatException {
+      return null;
+    }
+  }
+
+  /// Stores the manually entered [location] as a single JSON value, so its
+  /// name and coordinates can never be read back independently out of sync
+  /// with each other.
+  Future<void> setManualLocation(ManualLocation location) async {
+    final String encoded = jsonEncode(<String, Object>{
+      'name': location.name,
+      'lat': location.lat,
+      'lon': location.lon,
+    });
+    await _prefs.setString(_keyManualLocation, encoded);
+  }
 
   /// Whether push notifications are enabled; defaults to `false`.
   bool get notificationsEnabled =>
