@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uvalert/models/weather_alert.dart';
 import 'package:uvalert/providers/location_provider.dart';
+import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/screens/settings_screen.dart';
 import 'package:uvalert/widgets/dashboard_footer.dart';
@@ -25,6 +26,18 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Watching (not just reading) settingsProvider ensures this build()
+    // re-runs when settings resolve from loading to data, so the
+    // post-frame callback below gets a chance to restore locationProvider
+    // as soon as a manual location becomes available -- not just on the
+    // widget's very first build.
+    final AsyncValue<SettingsState> settingsState = ref.watch(settingsProvider);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+      _restoreLocationIfNeeded(ref, settingsState);
+    });
+
     final bool showNoData = ref.watch(uvProvider).isNoData;
     final LocationState location = ref.watch(locationProvider);
 
@@ -78,4 +91,31 @@ class DashboardScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Populates [locationProvider] from a manually saved location the first
+/// time [settingsState] resolves with one, so a fresh app launch doesn't
+/// leave [locationProvider] `null` (and [uvProvider] un-fetched) until the
+/// user re-visits onboarding. Only restores the manual-location case --
+/// GPS mode re-acquires a fresh position instead, since a stale cached fix
+/// could be far from the device's current location.
+///
+/// No-op once [locationProvider] already has a value, so it never
+/// overwrites a location the user (or GPS) has already set this session.
+void _restoreLocationIfNeeded(
+  WidgetRef ref,
+  AsyncValue<SettingsState> settingsState,
+) {
+  if (ref.read(locationProvider) != null) return;
+
+  final SettingsState? settings = settingsState.value;
+
+  if (settings == null || settings.useGps) return;
+
+  final double? lat = settings.manualLat;
+  final double? lon = settings.manualLon;
+  
+  if (lat == null || lon == null) return;
+
+  ref.read(locationProvider.notifier).setManual(lat: lat, lon: lon);
 }

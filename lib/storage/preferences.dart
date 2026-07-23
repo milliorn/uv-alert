@@ -31,6 +31,8 @@ class Preferences {
   static const String _keyTheme = '${_prefix}theme';
   static const String _keyUseGps = '${_prefix}use_gps';
   static const String _keyManualLocation = '${_prefix}manual_location';
+  static const String _keyManualLat = '${_prefix}manual_lat';
+  static const String _keyManualLon = '${_prefix}manual_lon';
   static const String _keyNotificationsEnabled =
       '${_prefix}notifications_enabled';
   static const String _keyCachedPayload = '${_prefix}cached_payload';
@@ -94,14 +96,25 @@ class Preferences {
   Future<void> setUseGps({required bool value}) async =>
       _prefs.setBool(_keyUseGps, value);
 
-  // TODO(location): stored as a raw string; migrate to a structured type
-  // (lat/lon pair or named-place object) when the location feature lands.
   /// The manually entered location string, or `null` if not set.
   String? get manualLocation => _prefs.getString(_keyManualLocation);
 
-  /// Stores the manually entered [location] string.
-  Future<void> setManualLocation(String location) async =>
-      _prefs.setString(_keyManualLocation, location);
+  /// The latitude of the manually entered location, or `null` if not set.
+  double? get manualLat => _prefs.getDouble(_keyManualLat);
+
+  /// The longitude of the manually entered location, or `null` if not set.
+  double? get manualLon => _prefs.getDouble(_keyManualLon);
+
+  /// Stores the manually entered [location] string and its coordinates.
+  Future<void> setManualLocation(
+    String location, {
+    required double lat,
+    required double lon,
+  }) async {
+    await _prefs.setString(_keyManualLocation, location);
+    await _prefs.setDouble(_keyManualLat, lat);
+    await _prefs.setDouble(_keyManualLon, lon);
+  }
 
   /// Whether push notifications are enabled; defaults to `false`.
   bool get notificationsEnabled =>

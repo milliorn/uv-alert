@@ -12,6 +12,8 @@ class SettingsState {
     required this.themeMode,
     required this.useGps,
     required this.manualLocation,
+    required this.manualLat,
+    required this.manualLon,
     required this.notificationsEnabled,
   });
 
@@ -24,24 +26,35 @@ class SettingsState {
   /// Manually entered location string; `null` when not set.
   final String? manualLocation;
 
+  /// Latitude of [manualLocation]; `null` when not set.
+  final double? manualLat;
+
+  /// Longitude of [manualLocation]; `null` when not set.
+  final double? manualLon;
+
   /// Whether push notifications are enabled.
   final bool notificationsEnabled;
 
   /// Returns a copy of this state with the given fields replaced.
   ///
-  /// [manualLocation] defaults to the current value when omitted. To represent
-  /// "not set", pass `null` only at construction time -- this method cannot
-  /// clear [manualLocation] back to `null` once a value has been stored.
+  /// [manualLocation], [manualLat], and [manualLon] default to their current
+  /// values when omitted. To represent "not set", pass `null` only at
+  /// construction time -- this method cannot clear them back to `null` once
+  /// a value has been stored.
   SettingsState copyWith({
     ThemeMode? themeMode,
     bool? useGps,
     String? manualLocation,
+    double? manualLat,
+    double? manualLon,
     bool? notificationsEnabled,
   }) {
     return SettingsState(
       themeMode: themeMode ?? this.themeMode,
       useGps: useGps ?? this.useGps,
       manualLocation: manualLocation ?? this.manualLocation,
+      manualLat: manualLat ?? this.manualLat,
+      manualLon: manualLon ?? this.manualLon,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
     );
   }
@@ -80,6 +93,8 @@ class SettingsNotifier extends Notifier<AsyncValue<SettingsState>> {
               themeMode: prefs.theme,
               useGps: prefs.useGps,
               manualLocation: prefs.manualLocation,
+              manualLat: prefs.manualLat,
+              manualLon: prefs.manualLon,
               notificationsEnabled: prefs.notificationsEnabled,
             ),
           );
@@ -105,10 +120,16 @@ class SettingsNotifier extends Notifier<AsyncValue<SettingsState>> {
     update: (SettingsState s) => s.copyWith(useGps: value),
   );
 
-  /// Sets the manual location string.
-  Future<void> setManualLocation(String location) => _update(
-    persist: (Preferences prefs) => prefs.setManualLocation(location),
-    update: (SettingsState s) => s.copyWith(manualLocation: location),
+  /// Sets the manual location string and its coordinates.
+  Future<void> setManualLocation(
+    String location, {
+    required double lat,
+    required double lon,
+  }) => _update(
+    persist: (Preferences prefs) =>
+        prefs.setManualLocation(location, lat: lat, lon: lon),
+    update: (SettingsState s) =>
+        s.copyWith(manualLocation: location, manualLat: lat, manualLon: lon),
   );
 
   /// Sets whether push notifications are enabled.

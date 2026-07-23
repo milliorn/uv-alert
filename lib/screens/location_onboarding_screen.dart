@@ -383,7 +383,11 @@ class _LocationOnboardingScreenState
     try {
       await ref
           .read(settingsProvider.notifier)
-          .setManualLocation(confirmed.result.displayName);
+          .setManualLocation(
+            confirmed.result.displayName,
+            lat: confirmed.result.lat,
+            lon: confirmed.result.lon,
+          );
 
       await ref
           .read(settingsProvider.notifier)
