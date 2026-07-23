@@ -35,11 +35,11 @@ class FakeManualLocationSettingsNotifier extends SettingsNotifier {
 
   /// Creates a [FakeManualLocationSettingsNotifier] with [useGps] set to
   /// `true`, so location restoration should not use [lat]/[lon].
-  FakeManualLocationSettingsNotifier.gps([
+  FakeManualLocationSettingsNotifier.gps({
     this.name = 'Fresno, CA, US',
     this.lat = 0,
     this.lon = 0,
-  ]) : useGps = true;
+  }) : useGps = true;
 
   /// The location name returned by [build].
   final String name;

@@ -41,7 +41,13 @@ void main() {
         overrides: [
           uvProvider.overrideWith(() => FakeDataUvNotifier(makeUvData())),
         ],
-        child: const MaterialApp(home: DashboardScreen()),
+        // Not const: every other call site in this file constructs
+        // DashboardScreen() inside a const tree, which the compiler
+        // canonicalizes into one shared instance -- coverage tooling then
+        // credits the constructor only once, and inconsistently. This one
+        // non-const call guarantees the constructor line is always counted.
+        // ignore: prefer_const_constructors
+        child: MaterialApp(home: DashboardScreen()),
       ),
     );
 
@@ -386,9 +392,9 @@ void main() {
         locationProvider.overrideWith(LocationNotifier.new),
         settingsProvider.overrideWith(
           () => FakeManualLocationSettingsNotifier.gps(
-            'New York, NY, US',
-            40.7128,
-            -74.006,
+            name: 'New York, NY, US',
+            lat: 40.7128,
+            lon: -74.006,
           ),
         ),
       ],
