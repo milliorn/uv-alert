@@ -67,10 +67,11 @@ class _DashboardFooterState extends ConsumerState<DashboardFooter> {
   @override
   Widget build(BuildContext context) {
     final UvData? uvData = ref.watch(uvProvider).value;
-    final String? manualLocation = ref
+    final String? manualLocationName = ref
         .watch(settingsProvider)
         .value
-        ?.manualLocation;
+        ?.manualLocation
+        ?.name;
 
     final ThemeData theme = Theme.of(context);
     final TextStyle? mutedStyle = theme.textTheme.bodySmall?.copyWith(
@@ -86,17 +87,14 @@ class _DashboardFooterState extends ConsumerState<DashboardFooter> {
         children: <Widget>[
           if (uvData != null)
             Text(
-              _updatedLabel(uvData.fetchedAt, manualLocation),
+              _updatedLabel(uvData.fetchedAt, manualLocationName),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: mutedStyle,
             ),
           TextButton(
             style: TextButton.styleFrom(
-              minimumSize: const Size(
-                _minTouchTargetDp,
-                _minTouchTargetDp,
-              ),
+              minimumSize: const Size(_minTouchTargetDp, _minTouchTargetDp),
             ),
             onPressed: () => unawaited(_openGithubRepo(context)),
             child: const Text('GitHub'),

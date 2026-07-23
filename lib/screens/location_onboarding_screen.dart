@@ -132,7 +132,7 @@ class _LocationOnboardingScreenState
 
     final SettingsState? settings = ref.watch(settingsProvider).value;
     final LocationState location = ref.watch(locationProvider);
-    final String? displayName = settings?.manualLocation;
+    final String? displayName = settings?.manualLocation?.name;
 
     if (settings == null || location == null || displayName == null) return;
 
@@ -381,13 +381,11 @@ class _LocationOnboardingScreenState
     final _ConfirmResult confirmed = _pending!;
 
     try {
-      await ref
-          .read(settingsProvider.notifier)
-          .setManualLocation(
-            confirmed.result.displayName,
-            lat: confirmed.result.lat,
-            lon: confirmed.result.lon,
-          );
+      await ref.read(settingsProvider.notifier).setManualLocation((
+        name: confirmed.result.displayName,
+        lat: confirmed.result.lat,
+        lon: confirmed.result.lon,
+      ));
 
       await ref
           .read(settingsProvider.notifier)

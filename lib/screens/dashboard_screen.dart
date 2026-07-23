@@ -12,7 +12,7 @@ import 'package:uvalert/widgets/dashboard_no_data_view.dart';
 import 'package:uvalert/widgets/weather_alert_banner.dart';
 
 /// The main screen shown after onboarding completes.
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   /// Creates a [DashboardScreen].
   ///
   /// [activeAlert] is the government weather alert to surface in the
@@ -25,17 +25,29 @@ class DashboardScreen extends ConsumerWidget {
   final WeatherAlert? activeAlert;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Watching (not just reading) settingsProvider ensures this build()
-    // re-runs when settings resolve from loading to data, so the
-    // post-frame callback below gets a chance to restore locationProvider
-    // as soon as a manual location becomes available -- not just on the
-    // widget's very first build.
-    final AsyncValue<SettingsState> settingsState = ref.watch(settingsProvider);
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
 
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Deferred to a post-frame callback (not called directly here) because
+    // reading/mutating providers during initState runs before the widget
+    // tree has finished its first build, which Riverpod disallows.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!context.mounted) return;
-      _restoreLocationIfNeeded(ref, settingsState);
+      if (!mounted) return;
+      _restoreLocationIfNeeded(ref, ref.read(settingsProvider));
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Covers settings resolving (loading -> data) after the one-shot
+    // initState callback above has already run and found nothing to
+    // restore yet.
+    ref.listen(settingsProvider, (_, AsyncValue<SettingsState> next) {
+      _restoreLocationIfNeeded(ref, next);
     });
 
     final bool showNoData = ref.watch(uvProvider).isNoData;
@@ -69,7 +81,7 @@ class DashboardScreen extends ConsumerWidget {
       body: SafeArea(
         child: Column(
           children: <Widget>[
-            WeatherAlertBanner(alert: activeAlert),
+            WeatherAlertBanner(alert: widget.activeAlert),
             Expanded(
               child: showNoData
                   ? DashboardNoDataView(
@@ -112,10 +124,10 @@ void _restoreLocationIfNeeded(
 
   if (settings == null || settings.useGps) return;
 
-  final double? lat = settings.manualLat;
-  final double? lon = settings.manualLon;
-  
-  if (lat == null || lon == null) return;
+  final ManualLocation? manualLocation = settings.manualLocation;
+  if (manualLocation == null) return;
 
-  ref.read(locationProvider.notifier).setManual(lat: lat, lon: lon);
+  ref
+      .read(locationProvider.notifier)
+      .setManual(lat: manualLocation.lat, lon: manualLocation.lon);
 }

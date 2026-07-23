@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uvalert/providers/preferences_provider.dart';
 import 'package:uvalert/storage/preferences.dart';
 
+export 'package:uvalert/storage/preferences.dart' show ManualLocation;
+
 /// Holds the user-facing settings state.
 class SettingsState {
   /// Creates a [SettingsState] with all fields required.
@@ -12,8 +14,6 @@ class SettingsState {
     required this.themeMode,
     required this.useGps,
     required this.manualLocation,
-    required this.manualLat,
-    required this.manualLon,
     required this.notificationsEnabled,
   });
 
@@ -23,38 +23,37 @@ class SettingsState {
   /// Whether GPS location is enabled. When `false`, [manualLocation] is used.
   final bool useGps;
 
-  /// Manually entered location string; `null` when not set.
-  final String? manualLocation;
-
-  /// Latitude of [manualLocation]; `null` when not set.
-  final double? manualLat;
-
-  /// Longitude of [manualLocation]; `null` when not set.
-  final double? manualLon;
+  /// The most recently confirmed location's name and coordinates, `null`
+  /// when none has ever been confirmed.
+  ///
+  /// Despite the name, this is set on confirmation from either onboarding
+  /// path (manual search or GPS-then-reverse-geocode), not only the manual
+  /// one -- it doubles as "last confirmed location" for restoring the
+  /// onboarding confirm card on back-navigation, which uses it regardless
+  /// of [useGps]. Only consult its coordinates for a fresh location fix
+  /// when [useGps] is `false`; in GPS mode, re-acquire a live position
+  /// instead, since this may hold a stale GPS fix from a previous
+  /// onboarding run.
+  final ManualLocation? manualLocation;
 
   /// Whether push notifications are enabled.
   final bool notificationsEnabled;
 
   /// Returns a copy of this state with the given fields replaced.
   ///
-  /// [manualLocation], [manualLat], and [manualLon] default to their current
-  /// values when omitted. To represent "not set", pass `null` only at
-  /// construction time -- this method cannot clear them back to `null` once
-  /// a value has been stored.
+  /// [manualLocation] defaults to the current value when omitted. To
+  /// represent "not set", pass `null` only at construction time -- this
+  /// method cannot clear it back to `null` once a value has been stored.
   SettingsState copyWith({
     ThemeMode? themeMode,
     bool? useGps,
-    String? manualLocation,
-    double? manualLat,
-    double? manualLon,
+    ManualLocation? manualLocation,
     bool? notificationsEnabled,
   }) {
     return SettingsState(
       themeMode: themeMode ?? this.themeMode,
       useGps: useGps ?? this.useGps,
       manualLocation: manualLocation ?? this.manualLocation,
-      manualLat: manualLat ?? this.manualLat,
-      manualLon: manualLon ?? this.manualLon,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
     );
   }
@@ -93,8 +92,6 @@ class SettingsNotifier extends Notifier<AsyncValue<SettingsState>> {
               themeMode: prefs.theme,
               useGps: prefs.useGps,
               manualLocation: prefs.manualLocation,
-              manualLat: prefs.manualLat,
-              manualLon: prefs.manualLon,
               notificationsEnabled: prefs.notificationsEnabled,
             ),
           );
@@ -120,16 +117,10 @@ class SettingsNotifier extends Notifier<AsyncValue<SettingsState>> {
     update: (SettingsState s) => s.copyWith(useGps: value),
   );
 
-  /// Sets the manual location string and its coordinates.
-  Future<void> setManualLocation(
-    String location, {
-    required double lat,
-    required double lon,
-  }) => _update(
-    persist: (Preferences prefs) =>
-        prefs.setManualLocation(location, lat: lat, lon: lon),
-    update: (SettingsState s) =>
-        s.copyWith(manualLocation: location, manualLat: lat, manualLon: lon),
+  /// Sets the manual location's name and coordinates.
+  Future<void> setManualLocation(ManualLocation location) => _update(
+    persist: (Preferences prefs) => prefs.setManualLocation(location),
+    update: (SettingsState s) => s.copyWith(manualLocation: location),
   );
 
   /// Sets whether push notifications are enabled.

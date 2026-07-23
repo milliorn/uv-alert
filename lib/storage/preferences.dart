@@ -1,5 +1,13 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// A manually entered location: its geocoded display name and coordinates.
+///
+/// Always set and persisted together as a single unit -- there is no way to
+/// construct one with a name but no coordinates or vice versa.
+typedef ManualLocation = ({String name, double lat, double lon});
 
 // Computed once; ThemeMode.values never changes at runtime.
 final Map<String, ThemeMode> _themeModeByName = ThemeMode.values.asNameMap();
@@ -31,8 +39,6 @@ class Preferences {
   static const String _keyTheme = '${_prefix}theme';
   static const String _keyUseGps = '${_prefix}use_gps';
   static const String _keyManualLocation = '${_prefix}manual_location';
-  static const String _keyManualLat = '${_prefix}manual_lat';
-  static const String _keyManualLon = '${_prefix}manual_lon';
   static const String _keyNotificationsEnabled =
       '${_prefix}notifications_enabled';
   static const String _keyCachedPayload = '${_prefix}cached_payload';
@@ -96,24 +102,43 @@ class Preferences {
   Future<void> setUseGps({required bool value}) async =>
       _prefs.setBool(_keyUseGps, value);
 
-  /// The manually entered location string, or `null` if not set.
-  String? get manualLocation => _prefs.getString(_keyManualLocation);
+  /// The manually entered location, or `null` if not set.
+  ///
+  /// Returns `null` (rather than throwing) if the stored JSON is missing a
+  /// required field or otherwise malformed, since a corrupt local value
+  /// should behave like "not set" rather than crash the app.
+  ManualLocation? get manualLocation {
+    final String? stored = _prefs.getString(_keyManualLocation);
 
-  /// The latitude of the manually entered location, or `null` if not set.
-  double? get manualLat => _prefs.getDouble(_keyManualLat);
+    if (stored == null) return null;
 
-  /// The longitude of the manually entered location, or `null` if not set.
-  double? get manualLon => _prefs.getDouble(_keyManualLon);
+    try {
+      final Object? decoded = jsonDecode(stored);
 
-  /// Stores the manually entered [location] string and its coordinates.
-  Future<void> setManualLocation(
-    String location, {
-    required double lat,
-    required double lon,
-  }) async {
-    await _prefs.setString(_keyManualLocation, location);
-    await _prefs.setDouble(_keyManualLat, lat);
-    await _prefs.setDouble(_keyManualLon, lon);
+      if (decoded is! Map<String, Object?>) return null;
+
+      final Object? name = decoded['name'];
+      final Object? lat = decoded['lat'];
+      final Object? lon = decoded['lon'];
+      
+      if (name is! String || lat is! num || lon is! num) return null;
+
+      return (name: name, lat: lat.toDouble(), lon: lon.toDouble());
+    } on FormatException {
+      return null;
+    }
+  }
+
+  /// Stores the manually entered [location] as a single JSON value, so its
+  /// name and coordinates can never be read back independently out of sync
+  /// with each other.
+  Future<void> setManualLocation(ManualLocation location) async {
+    final String encoded = jsonEncode(<String, Object>{
+      'name': location.name,
+      'lat': location.lat,
+      'lon': location.lon,
+    });
+    await _prefs.setString(_keyManualLocation, encoded);
   }
 
   /// Whether push notifications are enabled; defaults to `false`.
