@@ -33,7 +33,11 @@ class SettingsState {
   /// of [useGps]. Only consult its coordinates for a fresh location fix
   /// when [useGps] is `false`; in GPS mode, re-acquire a live position
   /// instead, since this may hold a stale GPS fix from a previous
-  /// onboarding run.
+  /// onboarding run. The onboarding confirm-card restore mitigates this by
+  /// silently re-fetching a fresh GPS position and name once restored (see
+  /// `LocationOnboardingScreen._refreshGpsConfirmationSilently`), but that
+  /// only refreshes what's shown on that screen -- the stored value here
+  /// can still lag until the next successful GPS confirmation.
   final ManualLocation? manualLocation;
 
   /// Whether push notifications are enabled.
