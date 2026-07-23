@@ -51,10 +51,11 @@ class _DashboardFooterState extends ConsumerState<DashboardFooter> {
   @override
   void initState() {
     super.initState();
-    _relativeTimeTimer = Timer.periodic(
-      _relativeTimeRefreshInterval,
-      (_) => setState(() {}),
-    );
+    _relativeTimeTimer = Timer.periodic(_relativeTimeRefreshInterval, (_) {
+      if (ref.read(uvProvider).value == null) return;
+
+      setState(() {});
+    });
   }
 
   @override
@@ -130,7 +131,7 @@ String _updatedLabel(DateTime fetchedAt, String? manualLocation) {
       : 'Updated $relative · $cityState';
 }
 
-/// Formats [fetchedAt] (UTC) relative to now, e.g. "just now", "5 min ago",
+/// Formats [fetchedAt] (UTC) relative to now, e.g. "just now", "5 mins ago",
 /// "3 hr ago", "2 d ago".
 String _formatRelativeTime(DateTime fetchedAt) {
   final Duration elapsed = DateTime.now().toUtc().difference(fetchedAt);
@@ -138,7 +139,7 @@ String _formatRelativeTime(DateTime fetchedAt) {
   if (elapsed.inMinutes < 1) return 'just now';
 
   if (elapsed.inMinutes < _minutesPerHour) {
-    return '${elapsed.inMinutes} min ago';
+    return '${elapsed.inMinutes} mins ago';
   }
 
   if (elapsed.inHours < _hoursPerDay) return '${elapsed.inHours} hr ago';

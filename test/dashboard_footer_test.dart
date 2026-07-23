@@ -69,7 +69,7 @@ void main() {
   });
 
   for (final (Duration elapsed, String expectedSuffix) in <(Duration, String)>[
-    (const Duration(minutes: 5), 'min ago · Fresno, CA'),
+    (const Duration(minutes: 5), 'mins ago · Fresno, CA'),
     (const Duration(hours: 3), 'hr ago · Fresno, CA'),
     (const Duration(days: 2), 'd ago · Fresno, CA'),
   ]) {
@@ -105,6 +105,22 @@ void main() {
       // proves both that the periodic Timer fires (FakeAsync isn't
       // needed to observe this: pump(duration) drives Flutter's own
       // timer queue) and that dispose() cancels it correctly.
+      await tester.pump(const Duration(minutes: 1));
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets(
+    'periodic timer skips rebuilding when uvProvider has no value',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(_wrap(uvNotifier: FakeErrorUvNotifier.new));
+
+      expect(find.textContaining('Updated'), findsNothing);
+
+      // Ticking past a refresh interval with no cached uvData must not
+      // throw and must not leave a pending timer once torn down -- this
+      // exercises the early return added so the timer skips setState
+      // when there is nothing to refresh.
       await tester.pump(const Duration(minutes: 1));
       await tester.pumpWidget(const SizedBox.shrink());
     },
