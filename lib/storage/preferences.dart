@@ -120,7 +120,7 @@ class Preferences {
       final Object? name = decoded['name'];
       final Object? lat = decoded['lat'];
       final Object? lon = decoded['lon'];
-      
+
       if (name is! String || lat is! num || lon is! num) return null;
 
       return (name: name, lat: lat.toDouble(), lon: lon.toDouble());
