@@ -328,119 +328,114 @@ void main() {
   // Location restoration on cold launch
   // ---------------------------------------------------------------------------
 
-  testWidgets(
-    'restores locationProvider from a saved manual location and '
-    'auto-fetches UV data',
-    (WidgetTester tester) async {
-      final MockUvApi mockApi = MockUvApi();
-      when(
-        () => mockApi.fetch(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-          uuid: any(named: 'uuid'),
-          appVersion: any(named: 'appVersion'),
-        ),
-      ).thenAnswer((_) async => makeUvData());
+  testWidgets('restores locationProvider from a saved manual location and '
+      'auto-fetches UV data', (WidgetTester tester) async {
+    final MockUvApi mockApi = MockUvApi();
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+      ),
+    ).thenAnswer((_) async => makeUvData());
 
-      final ProviderContainer container = ProviderContainer(
-        // ignore: always_specify_types - Override not in flutter_riverpod public API
-        overrides: [
-          uvProvider.overrideWith(() => UvNotifier(api: mockApi)),
-          locationProvider.overrideWith(LocationNotifier.new),
-          settingsProvider.overrideWith(
-            () => FakeManualLocationSettingsNotifier(
-              'New York, NY, US',
-              40.7128,
-              -74.006,
-            ),
+    final ProviderContainer container = ProviderContainer(
+      // ignore: always_specify_types - Override not in flutter_riverpod public API
+      overrides: [
+        uvProvider.overrideWith(() => UvNotifier(api: mockApi)),
+        locationProvider.overrideWith(LocationNotifier.new),
+        settingsProvider.overrideWith(
+          () => FakeManualLocationSettingsNotifier(
+            'New York, NY, US',
+            40.7128,
+            -74.006,
           ),
-          appVersionProvider.overrideWith((_) async => 'test-version'),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(home: DashboardScreen()),
         ),
-      );
-      await tester.pumpAndSettle();
+        appVersionProvider.overrideWith((_) async => 'test-version'),
+      ],
+    );
+    addTearDown(container.dispose);
 
-      expect(container.read(locationProvider), (lat: 40.7128, lon: -74.006));
-      verify(
-        () => mockApi.fetch(
-          lat: 40.7128,
-          lon: -74.006,
-          uuid: any(named: 'uuid'),
-          appVersion: any(named: 'appVersion'),
-        ),
-      ).called(1);
-    },
-  );
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: DashboardScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-  testWidgets(
-    'does not restore locationProvider when useGps is true',
-    (WidgetTester tester) async {
-      final ProviderContainer container = ProviderContainer(
-        // ignore: always_specify_types - Override not in flutter_riverpod public API
-        overrides: [
-          uvProvider.overrideWith(FakeErrorUvNotifier.new),
-          locationProvider.overrideWith(LocationNotifier.new),
-          settingsProvider.overrideWith(
-            () => FakeManualLocationSettingsNotifier.gps(
-              'New York, NY, US',
-              40.7128,
-              -74.006,
-            ),
+    expect(container.read(locationProvider), (lat: 40.7128, lon: -74.006));
+    verify(
+      () => mockApi.fetch(
+        lat: 40.7128,
+        lon: -74.006,
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+      ),
+    ).called(1);
+  });
+
+  testWidgets('does not restore locationProvider when useGps is true', (
+    WidgetTester tester,
+  ) async {
+    final ProviderContainer container = ProviderContainer(
+      // ignore: always_specify_types - Override not in flutter_riverpod public API
+      overrides: [
+        uvProvider.overrideWith(FakeErrorUvNotifier.new),
+        locationProvider.overrideWith(LocationNotifier.new),
+        settingsProvider.overrideWith(
+          () => FakeManualLocationSettingsNotifier.gps(
+            'New York, NY, US',
+            40.7128,
+            -74.006,
           ),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      // useGps: true means the manual coordinates above must be ignored.
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(home: DashboardScreen()),
         ),
-      );
-      await tester.pumpAndSettle();
+      ],
+    );
+    addTearDown(container.dispose);
 
-      expect(container.read(locationProvider), isNull);
-    },
-  );
+    // useGps: true means the manual coordinates above must be ignored.
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: DashboardScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-  testWidgets(
-    'does not overwrite an already-set locationProvider on rebuild',
-    (WidgetTester tester) async {
-      final ProviderContainer container = ProviderContainer(
-        // ignore: always_specify_types - Override not in flutter_riverpod public API
-        overrides: [
-          uvProvider.overrideWith(() => FakeDataUvNotifier(makeUvData())),
-          locationProvider.overrideWith(LocationNotifier.new),
-          settingsProvider.overrideWith(
-            () => FakeManualLocationSettingsNotifier(
-              'New York, NY, US',
-              40.7128,
-              -74.006,
-            ),
+    expect(container.read(locationProvider), isNull);
+  });
+
+  testWidgets('does not overwrite an already-set locationProvider on rebuild', (
+    WidgetTester tester,
+  ) async {
+    final ProviderContainer container = ProviderContainer(
+      // ignore: always_specify_types - Override not in flutter_riverpod public API
+      overrides: [
+        uvProvider.overrideWith(() => FakeDataUvNotifier(makeUvData())),
+        locationProvider.overrideWith(LocationNotifier.new),
+        settingsProvider.overrideWith(
+          () => FakeManualLocationSettingsNotifier(
+            'New York, NY, US',
+            40.7128,
+            -74.006,
           ),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      container.read(locationProvider.notifier).setManual(lat: 1, lon: 2);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(home: DashboardScreen()),
         ),
-      );
-      await tester.pumpAndSettle();
+      ],
+    );
+    addTearDown(container.dispose);
 
-      expect(container.read(locationProvider), (lat: 1.0, lon: 2.0));
-    },
-  );
+    container.read(locationProvider.notifier).setManual(lat: 1, lon: 2);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: DashboardScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(container.read(locationProvider), (lat: 1.0, lon: 2.0));
+  });
 }

@@ -98,14 +98,38 @@ void main() {
       'setManualLocation stores and retrieves location and coordinates',
       () async {
         final Preferences prefs = await Preferences.load();
-        await prefs.setManualLocation(
-          'New York, NY',
+        await prefs.setManualLocation((
+          name: 'New York, NY',
           lat: 40.7128,
           lon: -74.006,
-        );
-        expect(prefs.manualLocation, 'New York, NY');
-        expect(prefs.manualLat, 40.7128);
-        expect(prefs.manualLon, -74.006);
+        ));
+        expect(prefs.manualLocation, (
+          name: 'New York, NY',
+          lat: 40.7128,
+          lon: -74.006,
+        ));
+      },
+    );
+
+    test(
+      'manualLocation returns null when the stored JSON is malformed',
+      () async {
+        SharedPreferences.setMockInitialValues(<String, Object>{
+          'flutter.uvalert_manual_location': 'not valid json',
+        });
+        final Preferences prefs = await Preferences.load();
+        expect(prefs.manualLocation, isNull);
+      },
+    );
+
+    test(
+      'manualLocation returns null when the stored JSON is missing a field',
+      () async {
+        SharedPreferences.setMockInitialValues(<String, Object>{
+          'flutter.uvalert_manual_location': '{"name": "Boston"}',
+        });
+        final Preferences prefs = await Preferences.load();
+        expect(prefs.manualLocation, isNull);
       },
     );
 
@@ -165,7 +189,11 @@ void main() {
       await prefs.setUuid('abc');
       await prefs.setTheme(ThemeMode.dark);
       await prefs.setUseGps(value: false);
-      await prefs.setManualLocation('Boston', lat: 42.3601, lon: -71.0589);
+      await prefs.setManualLocation((
+        name: 'Boston',
+        lat: 42.3601,
+        lon: -71.0589,
+      ));
       await prefs.setNotificationsEnabled(value: true);
       await prefs.setCachedPayload('data');
       await prefs.setCachedPayloadAt('2023-11-14T12:00:00.000Z');
@@ -177,8 +205,6 @@ void main() {
       expect(prefs.theme, ThemeMode.system);
       expect(prefs.useGps, isTrue);
       expect(prefs.manualLocation, isNull);
-      expect(prefs.manualLat, isNull);
-      expect(prefs.manualLon, isNull);
       expect(prefs.notificationsEnabled, isFalse);
       expect(prefs.cachedPayload, isNull);
       expect(prefs.cachedPayloadAt, isNull);

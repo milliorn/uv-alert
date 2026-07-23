@@ -13,45 +13,42 @@ class FakeLoadedSettingsNotifier extends SettingsNotifier {
       themeMode: ThemeMode.system,
       useGps: false,
       manualLocation: null,
-      manualLat: null,
-      manualLon: null,
       notificationsEnabled: false,
     ),
   );
 }
 
-/// Returns data immediately with the given [manualLocation].
+/// Returns data immediately with the given manual location name.
 ///
 /// Use when a test needs a specific resolved (or empty-but-not-null)
 /// location, e.g. for `DashboardFooter`.
 class FakeManualLocationSettingsNotifier extends SettingsNotifier {
-  /// Creates a [FakeManualLocationSettingsNotifier] that resolves with
-  /// [manualLocation], defaulting to `'Fresno, CA, US'`. [manualLat] and
-  /// [manualLon] default to `null`; set both to exercise a test that needs
+  /// Creates a [FakeManualLocationSettingsNotifier] that resolves with a
+  /// [ManualLocation] named [name], defaulting to `'Fresno, CA, US'`. [lat]
+  /// and [lon] default to `0`; only relevant to a test that needs specific
   /// coordinates alongside the display string, e.g. location restoration.
-  /// [useGps] defaults to `false`.
   FakeManualLocationSettingsNotifier([
-    this.manualLocation = 'Fresno, CA, US',
-    this.manualLat,
-    this.manualLon,
+    this.name = 'Fresno, CA, US',
+    this.lat = 0,
+    this.lon = 0,
   ]) : useGps = false;
 
   /// Creates a [FakeManualLocationSettingsNotifier] with [useGps] set to
-  /// `true`, so location restoration should not use [manualLat]/[manualLon].
+  /// `true`, so location restoration should not use [lat]/[lon].
   FakeManualLocationSettingsNotifier.gps([
-    this.manualLocation = 'Fresno, CA, US',
-    this.manualLat,
-    this.manualLon,
+    this.name = 'Fresno, CA, US',
+    this.lat = 0,
+    this.lon = 0,
   ]) : useGps = true;
 
-  /// The location returned by [build].
-  final String manualLocation;
+  /// The location name returned by [build].
+  final String name;
 
   /// The latitude returned by [build].
-  final double? manualLat;
+  final double lat;
 
   /// The longitude returned by [build].
-  final double? manualLon;
+  final double lon;
 
   /// The GPS toggle returned by [build].
   final bool useGps;
@@ -61,9 +58,7 @@ class FakeManualLocationSettingsNotifier extends SettingsNotifier {
     SettingsState(
       themeMode: ThemeMode.system,
       useGps: useGps,
-      manualLocation: manualLocation,
-      manualLat: manualLat,
-      manualLon: manualLon,
+      manualLocation: (name: name, lat: lat, lon: lon),
       notificationsEnabled: false,
     ),
   );

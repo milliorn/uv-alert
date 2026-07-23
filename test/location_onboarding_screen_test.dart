@@ -39,11 +39,8 @@ class _NullResultLocationNotifier extends LocationNotifier {
 
 class _ThrowingSettingsNotifier extends SettingsNotifier {
   @override
-  Future<void> setManualLocation(
-    String location, {
-    required double lat,
-    required double lon,
-  }) => Future<void>.error(Exception('settings write failed'));
+  Future<void> setManualLocation(ManualLocation location) =>
+      Future<void>.error(Exception('settings write failed'));
 }
 
 // ---------------------------------------------------------------------------
@@ -54,6 +51,12 @@ const String _proxyUrl = 'https://proxy.test';
 
 // _parseEntry assembles displayName as 'name, state, country'.
 const String _displayName = 'Fresno, California, US';
+
+// JSON shape Preferences.manualLocation expects; used to seed
+// SharedPreferences directly in tests that don't go through
+// SettingsNotifier.setManualLocation.
+const String _persistedManualLocationJson =
+    '{"name": "$_displayName", "lat": 36.75, "lon": -119.65}';
 
 // geocodeMultiple expects an array; reverseGeocode expects a single object.
 const String _validGeoArray =
@@ -978,7 +981,7 @@ void main() {
     'restoreConfirmedLocation: true restores confirm phase from settings',
     (WidgetTester tester) async {
       SharedPreferences.setMockInitialValues(<String, Object>{
-        'uvalert_manual_location': _displayName,
+        'uvalert_manual_location': _persistedManualLocationJson,
         'uvalert_use_gps': false,
       });
 
@@ -1001,7 +1004,7 @@ void main() {
     'even when a location was previously confirmed',
     (WidgetTester tester) async {
       SharedPreferences.setMockInitialValues(<String, Object>{
-        'uvalert_manual_location': _displayName,
+        'uvalert_manual_location': _persistedManualLocationJson,
         'uvalert_use_gps': false,
       });
 

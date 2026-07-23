@@ -110,21 +110,20 @@ void main() {
     },
   );
 
-  testWidgets(
-    'periodic timer skips rebuilding when uvProvider has no value',
-    (WidgetTester tester) async {
-      await tester.pumpWidget(_wrap(uvNotifier: FakeErrorUvNotifier.new));
+  testWidgets('periodic timer skips rebuilding when uvProvider has no value', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(_wrap(uvNotifier: FakeErrorUvNotifier.new));
 
-      expect(find.textContaining('Updated'), findsNothing);
+    expect(find.textContaining('Updated'), findsNothing);
 
-      // Ticking past a refresh interval with no cached uvData must not
-      // throw and must not leave a pending timer once torn down -- this
-      // exercises the early return added so the timer skips setState
-      // when there is nothing to refresh.
-      await tester.pump(const Duration(minutes: 1));
-      await tester.pumpWidget(const SizedBox.shrink());
-    },
-  );
+    // Ticking past a refresh interval with no cached uvData must not
+    // throw and must not leave a pending timer once torn down -- this
+    // exercises the early return added so the timer skips setState
+    // when there is nothing to refresh.
+    await tester.pump(const Duration(minutes: 1));
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 
   testWidgets('omits the location segment when manualLocation is null', (
     WidgetTester tester,
