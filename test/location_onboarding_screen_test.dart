@@ -39,8 +39,11 @@ class _NullResultLocationNotifier extends LocationNotifier {
 
 class _ThrowingSettingsNotifier extends SettingsNotifier {
   @override
-  Future<void> setManualLocation(String location) =>
-      Future<void>.error(Exception('settings write failed'));
+  Future<void> setManualLocation(
+    String location, {
+    required double lat,
+    required double lon,
+  }) => Future<void>.error(Exception('settings write failed'));
 }
 
 // ---------------------------------------------------------------------------

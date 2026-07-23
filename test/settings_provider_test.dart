@@ -101,18 +101,24 @@ void main() {
   // setManualLocation
   // -------------------------------------------------------------------------
 
-  test('setManualLocation updates manualLocation in state', () async {
-    final ProviderContainer container = await _makeLoadedContainer();
+  test(
+    'setManualLocation updates manualLocation, manualLat, and manualLon in '
+    'state',
+    () async {
+      final ProviderContainer container = await _makeLoadedContainer();
 
-    await container
-        .read(settingsProvider.notifier)
-        .setManualLocation('New York, NY');
+      await container
+          .read(settingsProvider.notifier)
+          .setManualLocation('New York, NY', lat: 40.7128, lon: -74.006);
 
-    expect(
-      container.read(settingsProvider).requireValue.manualLocation,
-      'New York, NY',
-    );
-  });
+      final SettingsState state = container
+          .read(settingsProvider)
+          .requireValue;
+      expect(state.manualLocation, 'New York, NY');
+      expect(state.manualLat, 40.7128);
+      expect(state.manualLon, -74.006);
+    },
+  );
 
   // -------------------------------------------------------------------------
   // setNotificationsEnabled
