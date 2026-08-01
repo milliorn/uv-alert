@@ -3,10 +3,13 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// A manually entered location: its geocoded display name and coordinates.
+/// A confirmed location's geocoded display name and coordinates.
 ///
-/// Always set and persisted together as a single unit -- there is no way to
-/// construct one with a name but no coordinates or vice versa.
+/// Despite the name, this is persisted on confirmation from either
+/// onboarding path (manual search or GPS-then-reverse-geocode), not only a
+/// manually searched one -- see `SettingsState.manualLocation` for the full
+/// explanation. Always set and persisted together as a single unit -- there
+/// is no way to construct one with a name but no coordinates or vice versa.
 typedef ManualLocation = ({String name, double lat, double lon});
 
 // Computed once; ThemeMode.values never changes at runtime.
@@ -102,7 +105,8 @@ class Preferences {
   Future<void> setUseGps({required bool value}) async =>
       _prefs.setBool(_keyUseGps, value);
 
-  /// The manually entered location, or `null` if not set.
+  /// The most recently confirmed [ManualLocation], or `null` if none has
+  /// ever been confirmed.
   ///
   /// Returns `null` (rather than throwing) if the stored JSON is missing a
   /// required field or otherwise malformed, since a corrupt local value
@@ -129,9 +133,9 @@ class Preferences {
     }
   }
 
-  /// Stores the manually entered [location] as a single JSON value, so its
-  /// name and coordinates can never be read back independently out of sync
-  /// with each other.
+  /// Stores the confirmed [location] as a single JSON value, so its name
+  /// and coordinates can never be read back independently out of sync with
+  /// each other.
   Future<void> setManualLocation(ManualLocation location) async {
     final String encoded = jsonEncode(<String, Object>{
       'name': location.name,
