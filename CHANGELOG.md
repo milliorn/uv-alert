@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.17.0](https://github.com/milliorn/uv-alert/compare/v1.16.0...v1.17.0) (2026-08-02)
+
+
+### Features
+
+* implement dashboard footer ([#104](https://github.com/milliorn/uv-alert/issues/104)) ([d6a54c1](https://github.com/milliorn/uv-alert/commit/d6a54c1be0e4bd4c685c08b95f32d523b0bb8052))
+
 ## [1.16.0](https://github.com/milliorn/uv-alert/compare/v1.15.0...v1.16.0) (2026-07-18)
 
 
