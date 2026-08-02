@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uvalert/constants.dart';
 import 'package:uvalert/providers/location_provider.dart';
@@ -19,6 +20,18 @@ import 'fakes/fake_fixed_location_notifier.dart';
 
 Widget _wrap() => const ProviderScope(
   child: MaterialApp(home: NotificationOnboardingScreen()),
+);
+
+Widget _wrapWithPermission({
+  Future<PermissionStatus> Function()? requestNotificationPermission,
+  Future<bool> Function()? openAppSettingsOverride,
+}) => ProviderScope(
+  child: MaterialApp(
+    home: NotificationOnboardingScreen(
+      requestNotificationPermission: requestNotificationPermission,
+      openAppSettingsOverride: openAppSettingsOverride,
+    ),
+  ),
 );
 
 // ---------------------------------------------------------------------------
@@ -90,7 +103,11 @@ void main() {
   testWidgets('tapping Default Notifications navigates to DashboardScreen', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(_wrap());
+    await tester.pumpWidget(
+      _wrapWithPermission(
+        requestNotificationPermission: () async => PermissionStatus.granted,
+      ),
+    );
     await tester.tap(find.text('Default Notifications'));
     await tester.pumpAndSettle();
     expect(find.byType(DashboardScreen), findsOneWidget);
@@ -99,7 +116,11 @@ void main() {
   testWidgets(
     'tapping Default Notifications sets notificationsEnabled to true',
     (WidgetTester tester) async {
-      await tester.pumpWidget(_wrap());
+      await tester.pumpWidget(
+        _wrapWithPermission(
+          requestNotificationPermission: () async => PermissionStatus.granted,
+        ),
+      );
       await tester.tap(find.text('Default Notifications'));
       await tester.pumpAndSettle();
       final Preferences prefs = await Preferences.load();
@@ -110,12 +131,149 @@ void main() {
   testWidgets('tapping Default Notifications sets isFirstLaunch to false', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(_wrap());
+    await tester.pumpWidget(
+      _wrapWithPermission(
+        requestNotificationPermission: () async => PermissionStatus.granted,
+      ),
+    );
     await tester.tap(find.text('Default Notifications'));
     await tester.pumpAndSettle();
     final Preferences prefs = await Preferences.load();
     expect(prefs.isFirstLaunch, isFalse);
   });
+
+  // -------------------------------------------------------------------------
+  // OS notification permission prompt
+  // -------------------------------------------------------------------------
+
+  testWidgets('tapping Default Notifications with denied permission navigates '
+      'without showing a dialog and leaves notifications disabled', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrapWithPermission(
+        requestNotificationPermission: () async => PermissionStatus.denied,
+      ),
+    );
+    await tester.tap(find.text('Default Notifications'));
+    await tester.pump();
+
+    expect(find.byType(AlertDialog), findsNothing);
+
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DashboardScreen), findsOneWidget);
+    final Preferences prefs = await Preferences.load();
+    expect(prefs.notificationsEnabled, isFalse);
+  });
+
+  testWidgets(
+    'tapping Default Notifications with permanently denied permission '
+    'shows an in-app dialog',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _wrapWithPermission(
+          requestNotificationPermission: () async =>
+              PermissionStatus.permanentlyDenied,
+        ),
+      );
+      await tester.tap(find.text('Default Notifications'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.textContaining('Notifications are blocked'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'tapping Open Settings on the permanently-denied dialog calls the '
+    'override, closes the dialog, and navigates with notifications '
+    'disabled',
+    (WidgetTester tester) async {
+      int openSettingsCalls = 0;
+
+      await tester.pumpWidget(
+        _wrapWithPermission(
+          requestNotificationPermission: () async =>
+              PermissionStatus.permanentlyDenied,
+          openAppSettingsOverride: () async {
+            openSettingsCalls++;
+            return true;
+          },
+        ),
+      );
+      await tester.tap(find.text('Default Notifications'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Open Settings'));
+      await tester.pumpAndSettle();
+
+      expect(openSettingsCalls, equals(1));
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byType(DashboardScreen), findsOneWidget);
+
+      final Preferences prefs = await Preferences.load();
+      expect(prefs.notificationsEnabled, isFalse);
+    },
+  );
+
+  testWidgets(
+    'tapping Not now on the permanently-denied dialog dismisses it without '
+    'opening settings, and still navigates with notifications disabled',
+    (WidgetTester tester) async {
+      int openSettingsCalls = 0;
+
+      await tester.pumpWidget(
+        _wrapWithPermission(
+          requestNotificationPermission: () async =>
+              PermissionStatus.permanentlyDenied,
+          openAppSettingsOverride: () async {
+            openSettingsCalls++;
+            return true;
+          },
+        ),
+      );
+      await tester.tap(find.text('Default Notifications'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(TextButton, 'Not now'));
+      await tester.pumpAndSettle();
+
+      expect(openSettingsCalls, equals(0));
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byType(DashboardScreen), findsOneWidget);
+
+      final Preferences prefs = await Preferences.load();
+      expect(prefs.notificationsEnabled, isFalse);
+    },
+  );
+
+  testWidgets(
+    'shows snackbar and re-enables buttons when the permission request '
+    'throws',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _wrapWithPermission(
+          requestNotificationPermission: () async =>
+              throw Exception('permission request failed'),
+        ),
+      );
+      await tester.tap(find.text('Default Notifications'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        find.text('Something went wrong. Please try again.'),
+        findsOneWidget,
+      );
+
+      final List<InkWell> inkWells = tester
+          .widgetList<InkWell>(find.byType(InkWell))
+          .toList();
+      expect(inkWells, isNotEmpty);
+      expect(inkWells.every((InkWell w) => w.onTap != null), isTrue);
+    },
+  );
 
   // -------------------------------------------------------------------------
   // No Notifications path
@@ -149,6 +307,30 @@ void main() {
     final Preferences prefs = await Preferences.load();
     expect(prefs.isFirstLaunch, isFalse);
   });
+
+  testWidgets(
+    'tapping No Notifications never invokes the OS permission request',
+    (WidgetTester tester) async {
+      int requestCalls = 0;
+
+      await tester.pumpWidget(
+        _wrapWithPermission(
+          requestNotificationPermission: () async {
+            requestCalls++;
+            return PermissionStatus.granted;
+          },
+        ),
+      );
+      await tester.tap(find.text('No Notifications'));
+      await tester.pumpAndSettle();
+
+      expect(requestCalls, equals(0));
+      expect(find.byType(DashboardScreen), findsOneWidget);
+
+      final Preferences prefs = await Preferences.load();
+      expect(prefs.notificationsEnabled, isFalse);
+    },
+  );
 
   // -------------------------------------------------------------------------
   // Back navigation

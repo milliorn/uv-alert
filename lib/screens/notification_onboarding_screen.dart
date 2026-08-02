@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:uvalert/constants.dart';
 import 'package:uvalert/providers/preferences_provider.dart';
 import 'package:uvalert/providers/settings_provider.dart';
@@ -28,9 +29,28 @@ const int _notificationScreenIndex = totalOnboardingSteps - 1;
 /// `setFirstLaunchDone()` call, which was moved here from
 /// `LocationOnboardingScreen` when this screen was inserted as the last
 /// onboarding step.
+///
+/// Choosing "Default Notifications" triggers the OS notification permission
+/// prompt (via [requestNotificationPermission]) before advancing. If the
+/// permission is permanently denied, an in-app dialog points the user to
+/// device Settings (via [openAppSettingsOverride]) before advancing with
+/// notifications left disabled.
 class NotificationOnboardingScreen extends ConsumerStatefulWidget {
   /// Creates a [NotificationOnboardingScreen].
-  const NotificationOnboardingScreen({super.key});
+  const NotificationOnboardingScreen({
+    this.requestNotificationPermission,
+    this.openAppSettingsOverride,
+    super.key,
+  });
+
+  /// Requests the OS notification permission. Defaults to
+  /// `Permission.notification.request()` in production; overridable in
+  /// tests to avoid touching the real platform channel.
+  final Future<PermissionStatus> Function()? requestNotificationPermission;
+
+  /// Opens the device's app settings page. Defaults to `openAppSettings()`
+  /// in production; overridable in tests.
+  final Future<bool> Function()? openAppSettingsOverride;
 
   @override
   ConsumerState<NotificationOnboardingScreen> createState() =>
@@ -41,12 +61,17 @@ class _NotificationOnboardingScreenState
     extends ConsumerState<NotificationOnboardingScreen> {
   bool _continuing = false;
 
-  void _onPressed(bool notificationsEnabled) {
+  int _operationId = 0;
+
+  void _onDefaultPressed() {
     if (_continuing) return;
-    unawaited(_advance(notificationsEnabled: notificationsEnabled));
+    unawaited(_advanceWithPermissionCheck());
   }
 
-  int _operationId = 0;
+  void _onNonePressed() {
+    if (_continuing) return;
+    unawaited(_advance(notificationsEnabled: false));
+  }
 
   void _onBack() {
     unawaited(
@@ -59,22 +84,97 @@ class _NotificationOnboardingScreenState
     );
   }
 
-  Future<void> _advance({required bool notificationsEnabled}) async {
+  /// The function used to request the OS notification permission: the
+  /// injected override in tests, or the real permission_handler request.
+  Future<PermissionStatus> Function() get _requestPermission =>
+      widget.requestNotificationPermission ?? Permission.notification.request;
+
+  /// The function used to open the device's app settings page: the
+  /// injected override in tests, or the real permission_handler call.
+  Future<bool> Function() get _openSettings =>
+      widget.openAppSettingsOverride ?? openAppSettings;
+
+  /// Requests the OS notification permission, shows the permanently-denied
+  /// dialog if applicable, then advances with the resulting enabled state.
+  Future<void> _advanceWithPermissionCheck() async {
     final int opId = ++_operationId;
     setState(() => _continuing = true);
+
+    final bool notificationsEnabled;
+    try {
+      final PermissionStatus status = await _requestPermission();
+
+      if (!mounted || _operationId != opId) return;
+
+      if (status.isPermanentlyDenied) {
+        await _showPermanentlyDeniedDialog();
+        if (!mounted || _operationId != opId) return;
+      }
+
+      notificationsEnabled = status.isGranted;
+    } on Object {
+      if (!mounted || _operationId != opId) return;
+
+      setState(() => _continuing = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Something went wrong. Please try again.'),
+        ),
+      );
+      return;
+    }
+
+    await _advance(notificationsEnabled: notificationsEnabled, opId: opId);
+  }
+
+  /// Shows an in-app dialog pointing the user to device Settings after an
+  /// "Don't ask again" permission denial.
+  Future<void> _showPermanentlyDeniedDialog() {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Notifications blocked'),
+          content: const Text(
+            'Notifications are blocked. To enable them, go to your device '
+            'Settings.',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Not now'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                await _openSettings();
+                if (!dialogContext.mounted) return;
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Open Settings'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _advance({required bool notificationsEnabled, int? opId}) async {
+    final int id = opId ?? ++_operationId;
+    if (opId == null) setState(() => _continuing = true);
 
     try {
       await ref
           .read(settingsProvider.notifier)
           .setNotificationsEnabled(value: notificationsEnabled);
 
-      if (!mounted || _operationId != opId) return;
+      if (!mounted || _operationId != id) return;
 
       final Preferences prefs = await ref.read(preferencesProvider.future);
 
       await prefs.setFirstLaunchDone();
 
-      if (!mounted || _operationId != opId) return;
+      if (!mounted || _operationId != id) return;
 
       unawaited(
         Navigator.of(context).pushReplacement(
@@ -82,7 +182,7 @@ class _NotificationOnboardingScreenState
         ),
       );
     } on Object {
-      if (!mounted || _operationId != opId) return;
+      if (!mounted || _operationId != id) return;
 
       setState(() => _continuing = false);
 
@@ -116,14 +216,14 @@ class _NotificationOnboardingScreenState
                 label: 'Default Notifications',
                 description:
                     'Enable 4 threshold alert notifications for UV changes.',
-                onPressed: _continuing ? null : () => _onPressed(true),
+                onPressed: _continuing ? null : _onDefaultPressed,
               ),
 
               _OptionButton(
                 icon: Icons.notifications_off,
                 label: 'No Notifications',
                 description: 'Skip notifications for now.',
-                onPressed: _continuing ? null : () => _onPressed(false),
+                onPressed: _continuing ? null : _onNonePressed,
               ),
 
               const _Note(),
