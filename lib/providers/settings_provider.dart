@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uvalert/providers/preferences_provider.dart';
 import 'package:uvalert/storage/preferences.dart';
 
+export 'package:uvalert/storage/preferences.dart' show ManualLocation;
+
 /// Holds the user-facing settings state.
 class SettingsState {
   /// Creates a [SettingsState] with all fields required.
@@ -21,21 +23,35 @@ class SettingsState {
   /// Whether GPS location is enabled. When `false`, [manualLocation] is used.
   final bool useGps;
 
-  /// Manually entered location string; `null` when not set.
-  final String? manualLocation;
+  /// The most recently confirmed location's name and coordinates, `null`
+  /// when none has ever been confirmed.
+  ///
+  /// Despite the name, this is set on confirmation from either onboarding
+  /// path (manual search or GPS-then-reverse-geocode), not only the manual
+  /// one -- it doubles as "last confirmed location" for restoring the
+  /// onboarding confirm card on back-navigation, which uses it regardless
+  /// of [useGps]. Only consult its coordinates for a fresh location fix
+  /// when [useGps] is `false`; in GPS mode, re-acquire a live position
+  /// instead, since this may hold a stale GPS fix from a previous
+  /// onboarding run. The onboarding confirm-card restore mitigates this by
+  /// silently re-fetching a fresh GPS position and name once restored (see
+  /// `LocationOnboardingScreen._refreshGpsConfirmationSilently`), but that
+  /// only refreshes what's shown on that screen -- the stored value here
+  /// can still lag until the next successful GPS confirmation.
+  final ManualLocation? manualLocation;
 
   /// Whether push notifications are enabled.
   final bool notificationsEnabled;
 
   /// Returns a copy of this state with the given fields replaced.
   ///
-  /// [manualLocation] defaults to the current value when omitted. To represent
-  /// "not set", pass `null` only at construction time -- this method cannot
-  /// clear [manualLocation] back to `null` once a value has been stored.
+  /// [manualLocation] defaults to the current value when omitted. To
+  /// represent "not set", pass `null` only at construction time -- this
+  /// method cannot clear it back to `null` once a value has been stored.
   SettingsState copyWith({
     ThemeMode? themeMode,
     bool? useGps,
-    String? manualLocation,
+    ManualLocation? manualLocation,
     bool? notificationsEnabled,
   }) {
     return SettingsState(
@@ -105,8 +121,8 @@ class SettingsNotifier extends Notifier<AsyncValue<SettingsState>> {
     update: (SettingsState s) => s.copyWith(useGps: value),
   );
 
-  /// Sets the manual location string.
-  Future<void> setManualLocation(String location) => _update(
+  /// Sets the manual location's name and coordinates.
+  Future<void> setManualLocation(ManualLocation location) => _update(
     persist: (Preferences prefs) => prefs.setManualLocation(location),
     update: (SettingsState s) => s.copyWith(manualLocation: location),
   );

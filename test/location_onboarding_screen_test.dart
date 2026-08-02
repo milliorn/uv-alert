@@ -39,7 +39,7 @@ class _NullResultLocationNotifier extends LocationNotifier {
 
 class _ThrowingSettingsNotifier extends SettingsNotifier {
   @override
-  Future<void> setManualLocation(String location) =>
+  Future<void> setManualLocation(ManualLocation location) =>
       Future<void>.error(Exception('settings write failed'));
 }
 
@@ -51,6 +51,12 @@ const String _proxyUrl = 'https://proxy.test';
 
 // _parseEntry assembles displayName as 'name, state, country'.
 const String _displayName = 'Fresno, California, US';
+
+// JSON shape Preferences.manualLocation expects; used to seed
+// SharedPreferences directly in tests that don't go through
+// SettingsNotifier.setManualLocation.
+const String _persistedManualLocationJson =
+    '{"name": "$_displayName", "lat": 36.75, "lon": -119.65}';
 
 // geocodeMultiple expects an array; reverseGeocode expects a single object.
 const String _validGeoArray =
@@ -975,7 +981,7 @@ void main() {
     'restoreConfirmedLocation: true restores confirm phase from settings',
     (WidgetTester tester) async {
       SharedPreferences.setMockInitialValues(<String, Object>{
-        'uvalert_manual_location': _displayName,
+        'uvalert_manual_location': _persistedManualLocationJson,
         'uvalert_use_gps': false,
       });
 
@@ -994,11 +1000,86 @@ void main() {
   );
 
   testWidgets(
+    'restoreConfirmedLocation: true in GPS mode shows the stale stored name '
+    'immediately, then silently refreshes to a fresh GPS-derived one',
+    (WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'uvalert_manual_location': _persistedManualLocationJson,
+        'uvalert_use_gps': true,
+      });
+
+      final FakeGeolocatorPlatform platform = FakeGeolocatorPlatform()
+        ..positionResult = fakePosition(lat: 51.5, lon: -0.1)
+        // Holds the silent refresh in flight so the assertion below can
+        // observe the pre-refresh state without it racing to completion.
+        ..positionDelay = const Duration(milliseconds: 50);
+
+      await tester.pumpWidget(
+        _wrap(
+          LocationOnboardingScreen(
+            restoreConfirmedLocation: true,
+            geocodingApi: _fakeGeocodingApi(
+              reverseBody:
+                  '{"lat":51.5,"lon":-0.1,'
+                  '"name":"London","state":"England","country":"GB"}',
+            ),
+          ),
+          locationFactory: () => FakeFixedLocationNotifier(platform: platform),
+        ),
+      );
+      // One extra pump lets settingsProvider resolve from loading to data
+      // and the post-frame callback fire, kicking off the silent refresh
+      // (which is now paused on positionDelay above).
+      await tester.pump();
+
+      // Before the silent refresh resolves, the stale stored name is shown
+      // immediately -- no spinner, no phase change.
+      expect(find.text(_displayName), findsOneWidget);
+
+      await tester.pumpAndSettle();
+
+      // Once the silent refresh completes, the confirm card updates in
+      // place to the fresh GPS-derived name.
+      expect(find.text(_displayName), findsNothing);
+      expect(find.text('London, England, GB'), findsOneWidget);
+      expect(find.widgetWithText(TextButton, 'Change'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'restoreConfirmedLocation: true in GPS mode keeps showing the stale '
+    'stored name when the silent refresh fails',
+    (WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'uvalert_manual_location': _persistedManualLocationJson,
+        'uvalert_use_gps': true,
+      });
+
+      await tester.pumpWidget(
+        _wrap(
+          const LocationOnboardingScreen(restoreConfirmedLocation: true),
+          // Default FakeGeolocatorPlatform has no positionResult set, so
+          // fetchGps() throws -- simulating a GPS fix that fails silently.
+          locationFactory: FakeFixedLocationNotifier.new,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(_displayName), findsOneWidget);
+      expect(find.widgetWithText(TextButton, 'Change'), findsOneWidget);
+      expect(
+        find.text('Something went wrong. Please try again.'),
+        findsNothing,
+      );
+    },
+  );
+
+  testWidgets(
     'restoreConfirmedLocation: false ignores settings and shows idle picker '
     'even when a location was previously confirmed',
     (WidgetTester tester) async {
       SharedPreferences.setMockInitialValues(<String, Object>{
-        'uvalert_manual_location': _displayName,
+        'uvalert_manual_location': _persistedManualLocationJson,
         'uvalert_use_gps': false,
       });
 

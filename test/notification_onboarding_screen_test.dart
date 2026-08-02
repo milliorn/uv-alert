@@ -169,7 +169,8 @@ void main() {
   testWidgets('tapping back restores the confirm phase when a location was '
       'already confirmed', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{
-      'uvalert_manual_location': 'Fresno, California, US',
+      'uvalert_manual_location':
+          '{"name": "Fresno, California, US", "lat": 36.75, "lon": -119.65}',
       'uvalert_use_gps': false,
     });
 

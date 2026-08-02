@@ -7,12 +7,15 @@ import 'package:uvalert/api/uv_api.dart';
 import 'package:uvalert/models/weather_alert.dart';
 import 'package:uvalert/providers/app_version_provider.dart';
 import 'package:uvalert/providers/location_provider.dart';
+import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/screens/dashboard_screen.dart';
 import 'package:uvalert/screens/settings_screen.dart';
+import 'package:uvalert/widgets/dashboard_footer.dart';
 import 'package:uvalert/widgets/dashboard_no_data_view.dart';
 
 import 'fakes/fake_fixed_location_notifier.dart';
+import 'fakes/fake_settings_notifier.dart';
 import 'fakes/fake_uv_data.dart';
 import 'fakes/fake_uv_notifier.dart';
 import 'fakes/mock_uv_api.dart';
@@ -38,11 +41,33 @@ void main() {
         overrides: [
           uvProvider.overrideWith(() => FakeDataUvNotifier(makeUvData())),
         ],
-        child: const MaterialApp(home: DashboardScreen()),
+        // Not const: every other call site in this file constructs
+        // DashboardScreen() inside a const tree, which the compiler
+        // canonicalizes into one shared instance -- coverage tooling then
+        // credits the constructor only once, and inconsistently. This one
+        // non-const call guarantees the constructor line is always counted.
+        // ignore: prefer_const_constructors
+        child: MaterialApp(home: DashboardScreen()),
       ),
     );
 
     expect(find.text('Dashboard'), findsOneWidget);
+  });
+
+  testWidgets('DashboardScreen renders the footer', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        // ignore: always_specify_types - Override not in flutter_riverpod public API
+        overrides: [
+          uvProvider.overrideWith(() => FakeDataUvNotifier(makeUvData())),
+        ],
+        child: const MaterialApp(home: DashboardScreen()),
+      ),
+    );
+
+    expect(find.byType(DashboardFooter), findsOneWidget);
   });
 
   testWidgets('DashboardScreen app bar has title and both icons', (
@@ -304,4 +329,119 @@ void main() {
       );
     },
   );
+
+  // ---------------------------------------------------------------------------
+  // Location restoration on cold launch
+  // ---------------------------------------------------------------------------
+
+  testWidgets('restores locationProvider from a saved manual location and '
+      'auto-fetches UV data', (WidgetTester tester) async {
+    final MockUvApi mockApi = MockUvApi();
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+      ),
+    ).thenAnswer((_) async => makeUvData());
+
+    final ProviderContainer container = ProviderContainer(
+      // ignore: always_specify_types - Override not in flutter_riverpod public API
+      overrides: [
+        uvProvider.overrideWith(() => UvNotifier(api: mockApi)),
+        locationProvider.overrideWith(LocationNotifier.new),
+        settingsProvider.overrideWith(
+          () => FakeManualLocationSettingsNotifier(
+            'New York, NY, US',
+            40.7128,
+            -74.006,
+          ),
+        ),
+        appVersionProvider.overrideWith((_) async => 'test-version'),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: DashboardScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(container.read(locationProvider), (lat: 40.7128, lon: -74.006));
+    verify(
+      () => mockApi.fetch(
+        lat: 40.7128,
+        lon: -74.006,
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+      ),
+    ).called(1);
+  });
+
+  testWidgets('does not restore locationProvider when useGps is true', (
+    WidgetTester tester,
+  ) async {
+    final ProviderContainer container = ProviderContainer(
+      // ignore: always_specify_types - Override not in flutter_riverpod public API
+      overrides: [
+        uvProvider.overrideWith(FakeErrorUvNotifier.new),
+        locationProvider.overrideWith(LocationNotifier.new),
+        settingsProvider.overrideWith(
+          () => FakeManualLocationSettingsNotifier.gps(
+            name: 'New York, NY, US',
+            lat: 40.7128,
+            lon: -74.006,
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    // useGps: true means the manual coordinates above must be ignored.
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: DashboardScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(container.read(locationProvider), isNull);
+  });
+
+  testWidgets('does not overwrite an already-set locationProvider on rebuild', (
+    WidgetTester tester,
+  ) async {
+    final ProviderContainer container = ProviderContainer(
+      // ignore: always_specify_types - Override not in flutter_riverpod public API
+      overrides: [
+        uvProvider.overrideWith(() => FakeDataUvNotifier(makeUvData())),
+        locationProvider.overrideWith(LocationNotifier.new),
+        settingsProvider.overrideWith(
+          () => FakeManualLocationSettingsNotifier(
+            'New York, NY, US',
+            40.7128,
+            -74.006,
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    container.read(locationProvider.notifier).setManual(lat: 1, lon: 2);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: DashboardScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(container.read(locationProvider), (lat: 1.0, lon: 2.0));
+  });
 }

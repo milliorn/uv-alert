@@ -12,6 +12,9 @@ const Color logoPurple = Color(0xFF9498ED);
 /// Base URL of the UV proxy API.
 const String proxyBaseUrl = String.fromEnvironment('PROXY_BASE_URL');
 
+/// URL of the uv-alert GitHub repository.
+const String githubRepoUrl = 'https://github.com/milliorn/uv-alert';
+
 /// HTTP header name used to identify the device to the proxy API.
 const String deviceIdHeader = 'X-Device-ID';
 
