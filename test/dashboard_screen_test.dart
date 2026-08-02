@@ -20,9 +20,12 @@ import 'fakes/fake_uv_data.dart';
 import 'fakes/fake_uv_notifier.dart';
 import 'fakes/mock_uv_api.dart';
 
-const WeatherAlert _heatAdvisory = WeatherAlert(
+final WeatherAlert _heatAdvisory = WeatherAlert(
   event: 'Heat Advisory',
   description: 'Dangerously high UV and heat index expected today.',
+  start: DateTime.utc(2026),
+  end: DateTime.utc(2026, 1, 2),
+  senderName: 'NWS Billings MT',
 );
 
 void main() {
@@ -138,17 +141,19 @@ void main() {
   testWidgets('renders the alert banner below the app bar when an active '
       'alert is passed in', (WidgetTester tester) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(home: DashboardScreen(activeAlert: _heatAdvisory)),
+      ProviderScope(
+        child: MaterialApp(
+          home: DashboardScreen(activeAlerts: <WeatherAlert>[_heatAdvisory]),
+        ),
       ),
     );
 
-    expect(find.text(_heatAdvisory.event), findsOneWidget);
+    expect(find.text('1 Active Alert · Heat Advisory'), findsOneWidget);
     expect(find.text(_heatAdvisory.description), findsOneWidget);
 
     final double appBarBottom = tester.getBottomLeft(find.byType(AppBar)).dy;
     final double bannerTop = tester
-        .getTopLeft(find.text(_heatAdvisory.event))
+        .getTopLeft(find.text('1 Active Alert · Heat Advisory'))
         .dy;
     expect(bannerTop, greaterThanOrEqualTo(appBarBottom));
   });

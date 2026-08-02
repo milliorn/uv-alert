@@ -1,65 +1,62 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:uvalert/models/weather_alert.dart';
+import 'package:uvalert/screens/alert_list_screen.dart';
+import 'package:uvalert/utils/weather_alert_priority.dart';
 
 /// Maximum lines shown for the alert description before truncating with an
 /// ellipsis, so an unusually long alert body can't grow the banner enough to
 /// crowd out the rest of the dashboard.
 const int _descriptionMaxLines = 3;
 
-/// A dismissible banner shown below the app bar when an active government
-/// weather alert exists.
+/// A dismissible banner shown below the app bar when one or more active
+/// government weather alerts exist.
 ///
-/// Renders nothing when [alert] is `null`. Dismissal is local, in-memory
-/// state: once dismissed, the banner stays hidden until a *different*
-/// [WeatherAlert] (by value) is passed in, at which point it reappears.
+/// Renders nothing when [alerts] is empty, or once every alert in it has
+/// been dismissed. When multiple alerts are active, the banner shows the
+/// count plus the top-priority alert (see [prioritizedAlerts]) and offers a
+/// "See more" action that opens [AlertListScreen] with the full list.
+///
+/// Dismissal is local, in-memory, per-alert state: dismissing the
+/// currently-shown top alert reveals the next-highest-priority one, if any.
+/// Because [WeatherAlert] equality includes its `start`/`end` window, a
+/// renewed alert with identical event/description text but a different
+/// window is a distinct value and is never masked by a prior dismissal.
 ///
 /// Built on [MaterialBanner] embedded directly in the widget tree (not
 /// shown via `ScaffoldMessenger.showMaterialBanner`), so it renders inline
 /// below the app bar and pushes the rest of the dashboard down, rather than
 /// floating on top of it.
 class WeatherAlertBanner extends StatefulWidget {
-  /// Creates a [WeatherAlertBanner] for [alert], or a hidden banner when
-  /// [alert] is `null`.
-  const WeatherAlertBanner({required this.alert, super.key});
+  /// Creates a [WeatherAlertBanner] for [alerts], or a hidden banner when
+  /// [alerts] is empty.
+  const WeatherAlertBanner({this.alerts = const <WeatherAlert>[], super.key});
 
-  /// The active alert to display, or `null` if there is none.
-  final WeatherAlert? alert;
+  /// The active alerts to display, if any.
+  final List<WeatherAlert> alerts;
 
   @override
   State<WeatherAlertBanner> createState() => _WeatherAlertBannerState();
 }
 
 class _WeatherAlertBannerState extends State<WeatherAlertBanner> {
-  WeatherAlert? _dismissedAlert;
-
-  @override
-  void didUpdateWidget(WeatherAlertBanner oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Compare against _dismissedAlert itself (not oldWidget.alert): a
-    // newly arrived alert that differs from whatever was last dismissed
-    // must reappear, even after intervening rebuilds -- including a
-    // transient null (e.g. a refresh that briefly reports no active
-    // alert). Comparing against oldWidget.alert instead would clear the
-    // dismissed marker on the null->same-alert transition, incorrectly
-    // resurfacing a banner the user already dismissed.
-    final WeatherAlert? newAlert = widget.alert;
-
-    if (newAlert != null && newAlert != _dismissedAlert) {
-      _dismissedAlert = null;
-    }
-  }
-
-  void _onDismiss() {
-    setState(() => _dismissedAlert = widget.alert);
-  }
+  final Set<WeatherAlert> _dismissed = <WeatherAlert>{};
 
   @override
   Widget build(BuildContext context) {
-    final WeatherAlert? alert = widget.alert;
+    final List<WeatherAlert> visible = prioritizedAlerts(
+      widget.alerts.where((WeatherAlert a) => !_dismissed.contains(a)).toList(),
+    );
 
-    if (alert == null || alert == _dismissedAlert) {
+    if (visible.isEmpty) {
       return const SizedBox.shrink();
     }
+
+    final WeatherAlert top = visible.first;
+    final String headline =
+        '${visible.length} Active Alert${visible.length == 1 ? '' : 's'} '
+        '· ${top.event}';
 
     final ThemeData theme = Theme.of(context);
     final ColorScheme colors = theme.colorScheme;
@@ -71,13 +68,13 @@ class _WeatherAlertBannerState extends State<WeatherAlertBanner> {
       ),
       content: Semantics(
         liveRegion: true,
-        label: '${alert.event}. ${alert.description}',
+        label: '$headline. ${top.description}',
         child: ExcludeSemantics(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Text(
-                alert.event,
+                headline,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.titleSmall?.copyWith(
@@ -86,7 +83,7 @@ class _WeatherAlertBannerState extends State<WeatherAlertBanner> {
                 ),
               ),
               Text(
-                alert.description,
+                top.description,
                 maxLines: _descriptionMaxLines,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodySmall?.copyWith(
@@ -98,10 +95,22 @@ class _WeatherAlertBannerState extends State<WeatherAlertBanner> {
         ),
       ),
       actions: <Widget>[
+        TextButton(
+          onPressed: () {
+            unawaited(
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => AlertListScreen(alerts: visible),
+                ),
+              ),
+            );
+          },
+          child: const Text('See more'),
+        ),
         IconButton(
           icon: Icon(Icons.close, color: colors.onErrorContainer),
           tooltip: 'Dismiss alert',
-          onPressed: _onDismiss,
+          onPressed: () => setState(() => _dismissed.add(top)),
         ),
       ],
     );

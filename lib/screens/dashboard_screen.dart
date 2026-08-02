@@ -15,14 +15,16 @@ import 'package:uvalert/widgets/weather_alert_banner.dart';
 class DashboardScreen extends ConsumerStatefulWidget {
   /// Creates a [DashboardScreen].
   ///
-  /// [activeAlert] is the government weather alert to surface in the
-  /// banner below the app bar, or `null` when there is none. Fetching and
-  /// parsing the real OWM `alerts` payload is out of scope for now -- see
-  /// [WeatherAlert].
-  const DashboardScreen({this.activeAlert, super.key});
+  /// [activeAlerts] are the government weather alerts to surface in the
+  /// banner below the app bar, if any. Fetching and parsing the real OWM
+  /// `alerts` payload is out of scope for now -- see [WeatherAlert].
+  const DashboardScreen({
+    this.activeAlerts = const <WeatherAlert>[],
+    super.key,
+  });
 
-  /// The active alert to show in the dashboard's banner, if any.
-  final WeatherAlert? activeAlert;
+  /// The active alerts to show in the dashboard's banner, if any.
+  final List<WeatherAlert> activeAlerts;
 
   @override
   ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
@@ -84,7 +86,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       body: SafeArea(
         child: Column(
           children: <Widget>[
-            WeatherAlertBanner(alert: widget.activeAlert),
+            WeatherAlertBanner(alerts: widget.activeAlerts),
             Expanded(
               child: showNoData
                   ? DashboardNoDataView(
