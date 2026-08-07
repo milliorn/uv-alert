@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.17.1](https://github.com/milliorn/uv-alert/compare/v1.17.0...v1.17.1) (2026-08-07)
+
+
+### Bug Fixes
+
+* **onboarding:** correct notification settings note copy ([#113](https://github.com/milliorn/uv-alert/issues/113)) ([5f803de](https://github.com/milliorn/uv-alert/commit/5f803de2ecae2d6f956c1aa56a2d6c44e8c6eb90)), closes [#64](https://github.com/milliorn/uv-alert/issues/64)
+
 ## [1.17.0](https://github.com/milliorn/uv-alert/compare/v1.16.0...v1.17.0) (2026-08-02)
 
 
