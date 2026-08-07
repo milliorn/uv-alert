@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:uvalert/constants.dart';
+import 'package:uvalert/providers/notification_permission_provider.dart';
 import 'package:uvalert/providers/preferences_provider.dart';
 import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/screens/dashboard_screen.dart';
@@ -40,13 +42,106 @@ class NotificationOnboardingScreen extends ConsumerStatefulWidget {
 class _NotificationOnboardingScreenState
     extends ConsumerState<NotificationOnboardingScreen> {
   bool _continuing = false;
+  int _operationId = 0;
 
-  void _onPressed(bool notificationsEnabled) {
+  void _onNoNotificationsPressed() {
     if (_continuing) return;
-    unawaited(_advance(notificationsEnabled: notificationsEnabled));
+
+    unawaited(_advance(notificationsEnabled: false));
   }
 
-  int _operationId = 0;
+  void _onDefaultPressed() {
+    if (_continuing) return;
+
+    unawaited(_requestPermissionAndAdvance());
+  }
+
+  // Runs [body] under the shared _continuing/_operationId guard: marks the
+  // screen busy, gives [body] a token to re-check after each await (so a
+  // navigation or dispose mid-flight is a no-op), and on failure resets
+  // _continuing and shows a generic error SnackBar. Returns null if the
+  // operation was superseded/unmounted or failed; callers that need to keep
+  // going (e.g. into a follow-up _advance call) should check for that.
+  Future<T?> _runGuarded<T>(Future<T> Function(int opId) body) async {
+    final int opId = ++_operationId;
+
+    setState(() => _continuing = true);
+
+    try {
+      final T result = await body(opId);
+
+      if (!mounted || _operationId != opId) return null;
+
+      return result;
+    } on Object catch (e, st) {
+      debugPrint('Notification onboarding error: $e\n$st');
+
+      if (!mounted || _operationId != opId) return null;
+
+      setState(() => _continuing = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Something went wrong. Please try again.'),
+        ),
+      );
+
+      return null;
+    }
+  }
+
+  Future<void> _requestPermissionAndAdvance() async {
+    final PermissionStatus? status = await _runGuarded(
+      (_) => ref
+          .read(notificationPermissionProvider)
+          .requestNotificationPermission(),
+    );
+
+    if (status == null) return;
+
+    if (status == PermissionStatus.permanentlyDenied) {
+      await _showPermanentlyDeniedDialog();
+
+      if (!mounted) return;
+    }
+
+    await _advance(notificationsEnabled: status == PermissionStatus.granted);
+  }
+
+  Future<void> _showPermanentlyDeniedDialog() {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          content: const Text(
+            'Notifications are blocked. To enable them, go to your device '
+            'Settings.',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Not Now'),
+            ),
+            TextButton(
+              onPressed: () {
+                unawaited(
+                  ref
+                      .read(notificationPermissionProvider)
+                      .openAppSettings()
+                      .catchError((Object e, StackTrace st) {
+                        debugPrint('openAppSettings failed: $e\n$st');
+                        return false;
+                      }),
+                );
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Open Settings'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   void _onBack() {
     unawaited(
@@ -60,10 +155,7 @@ class _NotificationOnboardingScreenState
   }
 
   Future<void> _advance({required bool notificationsEnabled}) async {
-    final int opId = ++_operationId;
-    setState(() => _continuing = true);
-
-    try {
+    await _runGuarded((int opId) async {
       await ref
           .read(settingsProvider.notifier)
           .setNotificationsEnabled(value: notificationsEnabled);
@@ -81,17 +173,7 @@ class _NotificationOnboardingScreenState
           MaterialPageRoute<void>(builder: (_) => const DashboardScreen()),
         ),
       );
-    } on Object {
-      if (!mounted || _operationId != opId) return;
-
-      setState(() => _continuing = false);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Something went wrong. Please try again.'),
-        ),
-      );
-    }
+    });
   }
 
   @override
@@ -116,14 +198,14 @@ class _NotificationOnboardingScreenState
                 label: 'Default Notifications',
                 description:
                     'Enable 4 threshold alert notifications for UV changes.',
-                onPressed: _continuing ? null : () => _onPressed(true),
+                onPressed: _continuing ? null : _onDefaultPressed,
               ),
 
               _OptionButton(
                 icon: Icons.notifications_off,
                 label: 'No Notifications',
                 description: 'Skip notifications for now.',
-                onPressed: _continuing ? null : () => _onPressed(false),
+                onPressed: _continuing ? null : _onNoNotificationsPressed,
               ),
 
               const _Note(),
