@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:permission_handler_platform_interface/permission_handler_platform_interface.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:permission_handler_platform_interface/permission_handler_platform_interface.dart'
+    show PermissionHandlerPlatform;
 
 /// Riverpod provider for [NotificationPermissionService].
 final Provider<NotificationPermissionService> notificationPermissionProvider =

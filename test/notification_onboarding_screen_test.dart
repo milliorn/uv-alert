@@ -219,6 +219,26 @@ void main() {
     expect(prefs.notificationsEnabled, isFalse);
   });
 
+  testWidgets('tapping Open Settings swallows an openAppSettings error', (
+    WidgetTester tester,
+  ) async {
+    final FakePermissionHandlerPlatform platform =
+        FakePermissionHandlerPlatform()
+          ..requestResult = PermissionStatus.permanentlyDenied
+          ..throwOnOpenAppSettings = Exception('boom');
+
+    await tester.pumpWidget(_wrap(permissionPlatform: platform));
+    await tester.tap(find.text('Default Notifications'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Open Settings'));
+    await tester.pumpAndSettle();
+
+    expect(platform.openAppSettingsCalled, isTrue);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.byType(DashboardScreen), findsOneWidget);
+  });
+
   testWidgets('tapping Not Now dismisses the dialog and advances', (
     WidgetTester tester,
   ) async {

@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:permission_handler_platform_interface/permission_handler_platform_interface.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:uvalert/constants.dart';
 import 'package:uvalert/providers/notification_permission_provider.dart';
 import 'package:uvalert/providers/preferences_provider.dart';
@@ -125,7 +125,13 @@ class _NotificationOnboardingScreenState
             TextButton(
               onPressed: () {
                 unawaited(
-                  ref.read(notificationPermissionProvider).openAppSettings(),
+                  ref
+                      .read(notificationPermissionProvider)
+                      .openAppSettings()
+                      .catchError((Object e, StackTrace st) {
+                        debugPrint('openAppSettings failed: $e\n$st');
+                        return false;
+                      }),
                 );
                 Navigator.of(dialogContext).pop();
               },

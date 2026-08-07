@@ -2,9 +2,11 @@ import 'package:permission_handler_platform_interface/permission_handler_platfor
 
 /// Configurable test double for [PermissionHandlerPlatform].
 ///
-/// plugin_platform_interface requires extending PermissionHandlerPlatform
-/// rather than implementing it, so Mocktail cannot be used here. Each field
-/// can be set per-test before the service under test runs.
+/// A hand-written fake (rather than a Mocktail mock via
+/// `MockPlatformInterfaceMixin`, as used for `UrlLauncherPlatform` in
+/// `dashboard_footer_test.dart`) so per-field defaults and call flags are
+/// simple properties. Each field can be set per-test before the service
+/// under test runs.
 class FakePermissionHandlerPlatform extends PermissionHandlerPlatform {
   /// Status returned by [requestPermissions] for [Permission.notification].
   PermissionStatus requestResult = PermissionStatus.granted;
@@ -20,6 +22,9 @@ class FakePermissionHandlerPlatform extends PermissionHandlerPlatform {
 
   /// When set, [requestPermissions] throws this instead of returning.
   Object? throwOnRequest;
+
+  /// When set, [openAppSettings] throws this instead of returning.
+  Object? throwOnOpenAppSettings;
 
   @override
   Future<Map<Permission, PermissionStatus>> requestPermissions(
@@ -40,6 +45,12 @@ class FakePermissionHandlerPlatform extends PermissionHandlerPlatform {
   @override
   Future<bool> openAppSettings() async {
     openAppSettingsCalled = true;
+
+    if (throwOnOpenAppSettings != null) {
+      // ignore: only_throw_errors (test fake injects arbitrary error values)
+      throw throwOnOpenAppSettings!;
+    }
+
     return openAppSettingsResult;
   }
 }
