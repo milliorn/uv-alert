@@ -247,7 +247,7 @@ class _Note extends StatelessWidget {
     final ThemeData theme = Theme.of(context);
 
     return Text(
-      'More notification options can be found in Settings on the Dashboard.',
+      'Notifications can be enabled, disabled, and customized in Settings.',
       textAlign: TextAlign.center,
       style: theme.textTheme.bodySmall?.copyWith(
         color: theme.colorScheme.onSurfaceVariant,
