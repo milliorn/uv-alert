@@ -61,7 +61,9 @@ void main() {
   testWidgets('shows settings note text', (WidgetTester tester) async {
     await tester.pumpWidget(_wrap());
     expect(
-      find.textContaining('More notification options can be found in Settings'),
+      find.text(
+        'Notifications can be enabled, disabled, and customized in Settings.',
+      ),
       findsOneWidget,
     );
   });
