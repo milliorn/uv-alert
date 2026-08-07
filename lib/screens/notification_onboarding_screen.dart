@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler_platform_interface/permission_handler_platform_interface.dart';
 import 'package:uvalert/constants.dart';
+import 'package:uvalert/providers/notification_permission_provider.dart';
 import 'package:uvalert/providers/preferences_provider.dart';
 import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/screens/dashboard_screen.dart';
@@ -46,7 +48,83 @@ class _NotificationOnboardingScreenState
     unawaited(_advance(notificationsEnabled: notificationsEnabled));
   }
 
+  void _onDefaultPressed() {
+    if (_continuing) return;
+    unawaited(_requestPermissionAndAdvance());
+  }
+
   int _operationId = 0;
+
+  Future<void> _requestPermissionAndAdvance() async {
+    final int opId = ++_operationId;
+    setState(() => _continuing = true);
+
+    final PermissionStatus status;
+
+    try {
+      status = await ref
+          .read(notificationPermissionProvider)
+          .requestNotificationPermission();
+    } on Object {
+      if (!mounted || _operationId != opId) return;
+
+      setState(() => _continuing = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Something went wrong. Please try again.'),
+        ),
+      );
+      return;
+    }
+
+    if (!mounted || _operationId != opId) return;
+
+    if (status == PermissionStatus.granted) {
+      await _advance(notificationsEnabled: true);
+      return;
+    }
+
+    if (status == PermissionStatus.permanentlyDenied) {
+      await _showPermanentlyDeniedDialog();
+
+      if (!mounted || _operationId != opId) return;
+
+      await _advance(notificationsEnabled: false);
+      return;
+    }
+
+    await _advance(notificationsEnabled: false);
+  }
+
+  Future<void> _showPermanentlyDeniedDialog() {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          content: const Text(
+            'Notifications are blocked. To enable them, go to your device '
+            'Settings.',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Not Now'),
+            ),
+            TextButton(
+              onPressed: () {
+                unawaited(
+                  ref.read(notificationPermissionProvider).openAppSettings(),
+                );
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Open Settings'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   void _onBack() {
     unawaited(
@@ -116,7 +194,7 @@ class _NotificationOnboardingScreenState
                 label: 'Default Notifications',
                 description:
                     'Enable 4 threshold alert notifications for UV changes.',
-                onPressed: _continuing ? null : () => _onPressed(true),
+                onPressed: _continuing ? null : _onDefaultPressed,
               ),
 
               _OptionButton(
