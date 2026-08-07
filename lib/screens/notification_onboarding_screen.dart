@@ -50,6 +50,7 @@ class _NotificationOnboardingScreenState
 
   void _onDefaultPressed() {
     if (_continuing) return;
+
     unawaited(_requestPermissionAndAdvance());
   }
 
@@ -57,6 +58,7 @@ class _NotificationOnboardingScreenState
 
   Future<void> _requestPermissionAndAdvance() async {
     final int opId = ++_operationId;
+
     setState(() => _continuing = true);
 
     final PermissionStatus status;
@@ -82,6 +84,7 @@ class _NotificationOnboardingScreenState
 
     if (status == PermissionStatus.granted) {
       await _advance(notificationsEnabled: true);
+
       return;
     }
 
@@ -91,6 +94,7 @@ class _NotificationOnboardingScreenState
       if (!mounted || _operationId != opId) return;
 
       await _advance(notificationsEnabled: false);
+
       return;
     }
 
