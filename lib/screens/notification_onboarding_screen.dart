@@ -46,7 +46,7 @@ class _NotificationOnboardingScreenState
 
   void _onNoNotificationsPressed() {
     if (_continuing) return;
-    
+
     unawaited(_advance(notificationsEnabled: false));
   }
 
@@ -65,7 +65,7 @@ class _NotificationOnboardingScreenState
   Future<T?> _runGuarded<T>(Future<T> Function(int opId) body) async {
     final int opId = ++_operationId;
 
-    if (!_continuing) setState(() => _continuing = true);
+    setState(() => _continuing = true);
 
     try {
       final T result = await body(opId);
