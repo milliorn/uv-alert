@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.18.0](https://github.com/milliorn/uv-alert/compare/v1.17.1...v1.18.0) (2026-08-07)
+
+
+### Features
+
+* **onboarding:** wire OS notification permission prompt ([#114](https://github.com/milliorn/uv-alert/issues/114)) ([9635541](https://github.com/milliorn/uv-alert/commit/96355415589de4472bf21097b1e6cbe7451121c2)), closes [#65](https://github.com/milliorn/uv-alert/issues/65)
+
 ## [1.17.1](https://github.com/milliorn/uv-alert/compare/v1.17.0...v1.17.1) (2026-08-07)
 
 
