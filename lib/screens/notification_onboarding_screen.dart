@@ -42,10 +42,12 @@ class NotificationOnboardingScreen extends ConsumerStatefulWidget {
 class _NotificationOnboardingScreenState
     extends ConsumerState<NotificationOnboardingScreen> {
   bool _continuing = false;
+  int _operationId = 0;
 
-  void _onPressed(bool notificationsEnabled) {
+  void _onNoNotificationsPressed() {
     if (_continuing) return;
-    unawaited(_advance(notificationsEnabled: notificationsEnabled));
+    
+    unawaited(_advance(notificationsEnabled: false));
   }
 
   void _onDefaultPressed() {
@@ -54,21 +56,27 @@ class _NotificationOnboardingScreenState
     unawaited(_requestPermissionAndAdvance());
   }
 
-  int _operationId = 0;
-
-  Future<void> _requestPermissionAndAdvance() async {
+  // Runs [body] under the shared _continuing/_operationId guard: marks the
+  // screen busy, gives [body] a token to re-check after each await (so a
+  // navigation or dispose mid-flight is a no-op), and on failure resets
+  // _continuing and shows a generic error SnackBar. Returns null if the
+  // operation was superseded/unmounted or failed; callers that need to keep
+  // going (e.g. into a follow-up _advance call) should check for that.
+  Future<T?> _runGuarded<T>(Future<T> Function(int opId) body) async {
     final int opId = ++_operationId;
 
-    setState(() => _continuing = true);
-
-    final PermissionStatus status;
+    if (!_continuing) setState(() => _continuing = true);
 
     try {
-      status = await ref
-          .read(notificationPermissionProvider)
-          .requestNotificationPermission();
-    } on Object {
-      if (!mounted || _operationId != opId) return;
+      final T result = await body(opId);
+
+      if (!mounted || _operationId != opId) return null;
+
+      return result;
+    } on Object catch (e, st) {
+      debugPrint('Notification onboarding error: $e\n$st');
+
+      if (!mounted || _operationId != opId) return null;
 
       setState(() => _continuing = false);
 
@@ -77,28 +85,27 @@ class _NotificationOnboardingScreenState
           content: Text('Something went wrong. Please try again.'),
         ),
       );
-      return;
+
+      return null;
     }
+  }
 
-    if (!mounted || _operationId != opId) return;
+  Future<void> _requestPermissionAndAdvance() async {
+    final PermissionStatus? status = await _runGuarded(
+      (_) => ref
+          .read(notificationPermissionProvider)
+          .requestNotificationPermission(),
+    );
 
-    if (status == PermissionStatus.granted) {
-      await _advance(notificationsEnabled: true);
-
-      return;
-    }
+    if (status == null) return;
 
     if (status == PermissionStatus.permanentlyDenied) {
       await _showPermanentlyDeniedDialog();
 
-      if (!mounted || _operationId != opId) return;
-
-      await _advance(notificationsEnabled: false);
-
-      return;
+      if (!mounted) return;
     }
 
-    await _advance(notificationsEnabled: false);
+    await _advance(notificationsEnabled: status == PermissionStatus.granted);
   }
 
   Future<void> _showPermanentlyDeniedDialog() {
@@ -142,10 +149,7 @@ class _NotificationOnboardingScreenState
   }
 
   Future<void> _advance({required bool notificationsEnabled}) async {
-    final int opId = ++_operationId;
-    setState(() => _continuing = true);
-
-    try {
+    await _runGuarded((int opId) async {
       await ref
           .read(settingsProvider.notifier)
           .setNotificationsEnabled(value: notificationsEnabled);
@@ -163,17 +167,7 @@ class _NotificationOnboardingScreenState
           MaterialPageRoute<void>(builder: (_) => const DashboardScreen()),
         ),
       );
-    } on Object {
-      if (!mounted || _operationId != opId) return;
-
-      setState(() => _continuing = false);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Something went wrong. Please try again.'),
-        ),
-      );
-    }
+    });
   }
 
   @override
@@ -205,7 +199,7 @@ class _NotificationOnboardingScreenState
                 icon: Icons.notifications_off,
                 label: 'No Notifications',
                 description: 'Skip notifications for now.',
-                onPressed: _continuing ? null : () => _onPressed(false),
+                onPressed: _continuing ? null : _onNoNotificationsPressed,
               ),
 
               const _Note(),
