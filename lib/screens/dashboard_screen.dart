@@ -70,11 +70,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             icon: const Icon(Icons.settings),
             tooltip: 'Open settings',
             onPressed: () {
-              unawaited(
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const SettingsScreen(),
-                  ),
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const SettingsScreen(),
                 ),
               );
             },

@@ -144,12 +144,10 @@ class _NotificationOnboardingScreenState
   }
 
   void _onBack() {
-    unawaited(
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(
-          builder: (_) =>
-              const LocationOnboardingScreen(restoreConfirmedLocation: true),
-        ),
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            const LocationOnboardingScreen(restoreConfirmedLocation: true),
       ),
     );
   }
@@ -168,10 +166,8 @@ class _NotificationOnboardingScreenState
 
       if (!mounted || _operationId != opId) return;
 
-      unawaited(
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute<void>(builder: (_) => const DashboardScreen()),
-        ),
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => const DashboardScreen()),
       );
     });
   }

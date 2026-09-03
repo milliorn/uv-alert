@@ -454,11 +454,9 @@ class _LocationOnboardingScreenState
 
       if (!mounted || _operationId != opId) return;
 
-      unawaited(
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute<void>(
-            builder: (_) => const NotificationOnboardingScreen(),
-          ),
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => const NotificationOnboardingScreen(),
         ),
       );
     } on Object catch (e, st) {
@@ -495,11 +493,9 @@ class _LocationOnboardingScreenState
 
   void _onBack() {
     if (_phase == _Phase.idle) {
-      unawaited(
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute<void>(
-            builder: (_) => const ThemeOnboardingScreen(),
-          ),
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => const ThemeOnboardingScreen(),
         ),
       );
       return;

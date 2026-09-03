@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uvalert/constants.dart';
@@ -67,11 +65,9 @@ class _ThemeOnboardingScreenState extends ConsumerState<ThemeOnboardingScreen> {
 
       if (!mounted) return;
 
-      unawaited(
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute<void>(
-            builder: (_) => const LocationOnboardingScreen(),
-          ),
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => const LocationOnboardingScreen(),
         ),
       );
     } on Object {
