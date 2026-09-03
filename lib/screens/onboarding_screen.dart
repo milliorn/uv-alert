@@ -96,11 +96,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
       if (!mounted) return;
 
-      unawaited(
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute<void>(
-            builder: (_) => _onboardingDestination(preferences),
-          ),
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => _onboardingDestination(preferences),
         ),
       );
     } on TimeoutException {
