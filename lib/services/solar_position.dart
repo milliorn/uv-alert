@@ -175,19 +175,35 @@ double _solarDeclinationDegrees(int dayOfYear) {
 /// Computes the UTC [DateTime] for [SolarEvent] at [lat]/[lon] on [date],
 /// or `null` if that event does not occur that day (e.g. polar day/night).
 ///
+/// The returned map always has all 10 [SolarEvent] keys, but values are
+/// only guaranteed non-null away from the polar circles -- callers must
+/// null-check each lookup (e.g. `events[SolarEvent.sunset]`) rather than
+/// force-unwrapping, since any event can be `null` near the poles.
+///
+/// [date] is converted to UTC before use, so its calendar day is always the
+/// UTC calendar day regardless of the [DateTime]'s original time zone.
+///
 /// All angular math (declination, hour angle, elevation) is performed in
 /// degrees and converted to radians immediately before any trigonometric
 /// call. The returned times are derived from [lon] (`lon / 15` degrees of
 /// longitude per hour of solar offset from UTC), not the location's IANA
 /// timezone -- this service has no access to that.
+///
+/// [lat] must be finite and within `[-90, 90]`.
 Map<SolarEvent, DateTime?> solarEventTimes({
   required double lat,
   required double lon,
   required DateTime date,
 }) {
-  final int dayOfYear = _dayOfYear(date);
+  assert(
+    lat.isFinite && lat >= -90 && lat <= 90,
+    'lat must be finite and within [-90, 90], got $lat',
+  );
+
+  final DateTime utc = date.toUtc();
+  final int dayOfYear = _dayOfYear(utc);
   final double declinationDegrees = _solarDeclinationDegrees(dayOfYear);
-  final DateTime utcMidnight = DateTime.utc(date.year, date.month, date.day);
+  final DateTime utcMidnight = DateTime.utc(utc.year, utc.month, utc.day);
 
   return <SolarEvent, DateTime?>{
     for (final MapEntry<SolarEvent, ({double elevationDegrees, bool isMorning})>
@@ -226,7 +242,11 @@ DateTime? _eventTime({
       (math.sin(elevationRad) - math.sin(latRad) * math.sin(decRad)) /
       (math.cos(latRad) * math.cos(decRad));
 
-  if (cosHourAngle < -1 || cosHourAngle > 1) return null;
+  // Written as a positive containment check (rather than negated `< -1 ||
+  // > 1`) so that NaN -- which compares `false` to every relational
+  // operator -- correctly falls into the "return null" branch instead of
+  // silently passing through to `acos`.
+  if (!(cosHourAngle >= -1 && cosHourAngle <= 1)) return null;
 
   final double hourAngleDegrees = _radToDeg(math.acos(cosHourAngle));
 
@@ -255,12 +275,23 @@ DateTime? _eventTime({
 /// This is the inverse of [solarEventTimes]: given a time, it reports the
 /// sun's elevation, using the same declination/hour-angle trigonometry via
 /// shared private helpers. Negative values mean the sun is below the
-/// horizon.
+/// horizon. The inverse relationship is only exact within a single UTC
+/// calendar day -- feeding an evening [SolarEvent]'s time back in near a
+/// UTC-day boundary may use a slightly different day-of-year's declination
+/// than [solarEventTimes] used to derive that time, a sub-degree difference
+/// well within this approximation's existing tolerance.
+///
+/// [lat] must be finite and within `[-90, 90]`.
 double solarElevationDegrees({
   required double lat,
   required double lon,
   required DateTime utcTime,
 }) {
+  assert(
+    lat.isFinite && lat >= -90 && lat <= 90,
+    'lat must be finite and within [-90, 90], got $lat',
+  );
+
   final DateTime utc = utcTime.toUtc();
   final int dayOfYear = _dayOfYear(utc);
   final double declinationDegrees = _solarDeclinationDegrees(dayOfYear);

@@ -85,18 +85,13 @@ void main() {
     });
 
     test('events occur in chronological order', () {
-      final List<DateTime> ordered = <SolarEvent>[
-        SolarEvent.astronomicalDawn,
-        SolarEvent.nauticalDawn,
-        SolarEvent.civilDawn,
-        SolarEvent.sunriseStart,
-        SolarEvent.sunriseEnd,
-        SolarEvent.sunsetStart,
-        SolarEvent.sunset,
-        SolarEvent.civilDusk,
-        SolarEvent.nauticalDusk,
-        SolarEvent.astronomicalDusk,
-      ].map((SolarEvent e) => events[e]!).toList();
+      // Derived from `SolarEvent.values` (rather than a hand-written
+      // literal) so this assertion stays in sync with the enum's
+      // declaration order -- which its doc comment claims is already
+      // chronological -- instead of silently drifting from it.
+      final List<DateTime> ordered = SolarEvent.values
+          .map((SolarEvent e) => events[e]!)
+          .toList();
 
       for (int i = 1; i < ordered.length; i++) {
         expect(
@@ -229,6 +224,73 @@ void main() {
       expect(events[SolarEvent.sunriseStart], isNull);
       expect(events[SolarEvent.sunset], isNull);
       expect(events[SolarEvent.civilDawn], isNull);
+    });
+  });
+
+  group('invalid lat input', () {
+    test('solarEventTimes rejects NaN lat via assertion', () {
+      expect(
+        () => solarEventTimes(
+          lat: double.nan,
+          lon: 0,
+          date: DateTime.utc(2024, 6, 21),
+        ),
+        throwsAssertionError,
+      );
+    });
+
+    test('solarEventTimes rejects out-of-range lat via assertion', () {
+      expect(
+        () => solarEventTimes(
+          lat: 200,
+          lon: 0,
+          date: DateTime.utc(2024, 6, 21),
+        ),
+        throwsAssertionError,
+      );
+    });
+
+    test('solarElevationDegrees rejects NaN lat via assertion', () {
+      expect(
+        () => solarElevationDegrees(
+          lat: double.nan,
+          lon: 0,
+          utcTime: DateTime.utc(2024, 6, 21),
+        ),
+        throwsAssertionError,
+      );
+    });
+
+    test('solarElevationDegrees rejects out-of-range lat via assertion', () {
+      expect(
+        () => solarElevationDegrees(
+          lat: -200,
+          lon: 0,
+          utcTime: DateTime.utc(2024, 6, 21),
+        ),
+        throwsAssertionError,
+      );
+    });
+  });
+
+  group('local-time date normalization', () {
+    test('solarEventTimes produces the same result for an equivalent local '
+        'or UTC date', () {
+      final DateTime utcDate = DateTime.utc(2024, 6, 21);
+      final DateTime localEquivalent = utcDate.toLocal();
+
+      final Map<SolarEvent, DateTime?> fromUtc = solarEventTimes(
+        lat: _lat,
+        lon: _lon,
+        date: utcDate,
+      );
+      final Map<SolarEvent, DateTime?> fromLocal = solarEventTimes(
+        lat: _lat,
+        lon: _lon,
+        date: localEquivalent,
+      );
+
+      expect(fromLocal, fromUtc);
     });
   });
 }
