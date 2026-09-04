@@ -45,6 +45,12 @@ analyzer:
     unawaited_futures: error
     parameter_assignments: error
     only_throw_errors: error
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - linux/**
 
 linter:
   rules:
