@@ -159,10 +159,13 @@ _eventDefinitions = <SolarEvent, ({double elevationDegrees, bool isMorning})>{
 
 /// The day-of-year for [date], where January 1st is day 1.
 ///
-/// Computed relative to the start of [date]'s own UTC year so it is
-/// unaffected by [date]'s time-of-day component.
-int _dayOfYear(DateTime date) =>
-    date.difference(DateTime.utc(date.year)).inDays + 1;
+/// [date] is converted to UTC internally, so callers may pass a [DateTime]
+/// in any time zone. Computed relative to the start of that UTC year so it
+/// is unaffected by [date]'s time-of-day component.
+int _dayOfYear(DateTime date) {
+  final DateTime utc = date.toUtc();
+  return utc.difference(DateTime.utc(utc.year)).inDays + 1;
+}
 
 /// The approximate solar declination (degrees) on the given day-of-year,
 /// using a single-sine-wave approximation (not a full ephemeris).
@@ -189,7 +192,10 @@ double _solarDeclinationDegrees(int dayOfYear) {
 /// longitude per hour of solar offset from UTC), not the location's IANA
 /// timezone -- this service has no access to that.
 ///
-/// [lat] must be finite and within `[-90, 90]`.
+/// [lat] must be finite and within `[-90, 90]`; violated in debug/test
+/// builds this throws via `assert`, but the check does not run in release
+/// builds, so callers remain responsible for validating [lat] upstream
+/// (e.g. before it leaves user input or device sensors).
 Map<SolarEvent, DateTime?> solarEventTimes({
   required double lat,
   required double lon,
@@ -281,7 +287,10 @@ DateTime? _eventTime({
 /// than [solarEventTimes] used to derive that time, a sub-degree difference
 /// well within this approximation's existing tolerance.
 ///
-/// [lat] must be finite and within `[-90, 90]`.
+/// [lat] must be finite and within `[-90, 90]`; violated in debug/test
+/// builds this throws via `assert`, but the check does not run in release
+/// builds, so callers remain responsible for validating [lat] upstream
+/// (e.g. before it leaves user input or device sensors).
 double solarElevationDegrees({
   required double lat,
   required double lon,
