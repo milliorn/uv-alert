@@ -122,22 +122,50 @@ class _UvHourlyChartState extends State<UvHourlyChart> {
   /// each re-sort and re-derive the full list.
   late List<_ChartPoint> _points;
 
+  /// `widget.uvData.sunrise` converted to location-local time. Cached
+  /// alongside [_points] (rather than recomputed in `build()`) since both
+  /// are pure functions of `widget.uvData` and only change via
+  /// [didUpdateWidget].
+  late DateTime _sunrise;
+
+  /// The chart's x-axis span, in hours from [_sunrise] to
+  /// `widget.uvData.sunset`. Cached alongside [_points]; see [_sunrise].
+  late double _sunsetHours;
+
   @override
   void initState() {
     super.initState();
-    _points = _computePoints();
+    _recomputeCachedFields();
   }
 
   @override
   void didUpdateWidget(UvHourlyChart oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.uvData != widget.uvData) {
-      _points = _computePoints();
+      _recomputeCachedFields();
       // The previous _scrubState references a _ChartPoint from the old
       // _points list; clear it rather than risk showing a stale value from
       // discarded data until the next touch callback.
       _scrubState = null;
     }
+  }
+
+  /// Recomputes [_points], [_sunrise], and [_sunsetHours] from
+  /// `widget.uvData`.
+  void _recomputeCachedFields() {
+    _sunrise = toLocationLocal(
+      widget.uvData.sunrise,
+      widget.uvData.timezoneOffset,
+    );
+
+    final DateTime sunset = toLocationLocal(
+      widget.uvData.sunset,
+      widget.uvData.timezoneOffset,
+    );
+    
+    _sunsetHours =
+        sunset.difference(_sunrise).inSeconds / Duration.secondsPerHour;
+    _points = _computePoints(_sunrise);
   }
 
   /// Builds a [_ChartPoint] for [entry], computing its location-local time
@@ -162,16 +190,15 @@ class _UvHourlyChartState extends State<UvHourlyChart> {
   /// that has no touched spot (e.g. a touch outside the plotted line), or
   /// whose reported spot index doesn't resolve to a current point.
   void _handleTouch(FlTouchEvent event, LineTouchResponse? response) {
-    final TouchLineBarSpot? spot =
+    final int index =
         (!event.isInterestedForInteractions ||
             response == null ||
             response.lineBarSpots == null ||
             response.lineBarSpots!.isEmpty)
-        ? null
-        : response.lineBarSpots!.first;
-    final int index = spot?.spotIndex ?? -1;
+        ? -1
+        : response.lineBarSpots!.first.spotIndex;
 
-    if (spot == null || index < 0 || index >= _points.length) {
+    if (index < 0 || index >= _points.length) {
       if (_scrubState != null) setState(() => _scrubState = null);
       return;
     }
@@ -185,13 +212,9 @@ class _UvHourlyChartState extends State<UvHourlyChart> {
   }
 
   /// Computes the chronologically sorted, sunrise-to-sunset [_ChartPoint]s
-  /// for `widget.uvData`.
-  List<_ChartPoint> _computePoints() {
-    final DateTime sunrise = toLocationLocal(
-      widget.uvData.sunrise,
-      widget.uvData.timezoneOffset,
-    );
-
+  /// for `widget.uvData`, given its already-converted location-local
+  /// [sunrise].
+  List<_ChartPoint> _computePoints(DateTime sunrise) {
     // UvData.hourly has no documented ordering guarantee, so sort
     // explicitly -- an out-of-order list would otherwise draw a zigzagging
     // line and expose semantics nodes to TalkBack in the wrong swipe order.
@@ -205,23 +228,11 @@ class _UvHourlyChartState extends State<UvHourlyChart> {
 
   @override
   Widget build(BuildContext context) {
-    final DateTime sunrise = toLocationLocal(
-      widget.uvData.sunrise,
-      widget.uvData.timezoneOffset,
-    );
-    final DateTime sunset = toLocationLocal(
-      widget.uvData.sunset,
-      widget.uvData.timezoneOffset,
-    );
-    final double sunsetHours =
-        sunset.difference(sunrise).inSeconds / Duration.secondsPerHour;
-    final List<_ChartPoint> points = _points;
-
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double hourInterval = _hourLabelInterval(
           constraints.maxWidth - _leftTitleReservedSize,
-          sunsetHours,
+          _sunsetHours,
         );
 
         return Stack(
@@ -230,7 +241,7 @@ class _UvHourlyChartState extends State<UvHourlyChart> {
               child: LineChart(
                 LineChartData(
                   minX: _chartXAxisMin,
-                  maxX: sunsetHours,
+                  maxX: _sunsetHours,
                   minY: _chartYAxisMin,
                   maxY: chartYAxisMax,
                   backgroundColor: Colors.transparent,
@@ -248,7 +259,7 @@ class _UvHourlyChartState extends State<UvHourlyChart> {
                         getTitlesWidget: (double value, TitleMeta meta) =>
                             _BottomTitle(
                               label: formatTime(
-                                sunrise.add(_hoursDuration(value)),
+                                _sunrise.add(_hoursDuration(value)),
                                 includeMinutes: false,
                               ),
                               meta: meta,
@@ -279,7 +290,7 @@ class _UvHourlyChartState extends State<UvHourlyChart> {
                   lineBarsData: <LineChartBarData>[
                     LineChartBarData(
                       spots: <FlSpot>[
-                        for (final _ChartPoint point in points)
+                        for (final _ChartPoint point in _points)
                           FlSpot(point.hours, point.entry.uvi),
                       ],
                       barWidth: _lineStrokeWidth,
@@ -293,7 +304,7 @@ class _UvHourlyChartState extends State<UvHourlyChart> {
                               int index,
                             ) => FlDotCirclePainter(
                               radius: _dotRadius,
-                              color: points[index].whoColor,
+                              color: _points[index].whoColor,
                             ),
                       ),
                     ),
@@ -307,7 +318,7 @@ class _UvHourlyChartState extends State<UvHourlyChart> {
                   left: _leftTitleReservedSize,
                   bottom: _bottomTitleReservedSize,
                 ),
-                child: _HourlyChartSemantics(points: points),
+                child: _HourlyChartSemantics(points: _points),
               ),
             ),
             if (_scrubState != null) _ScrubOverlay(scrub: _scrubState!),
