@@ -575,5 +575,61 @@ void main() {
         expect(tooltipData.getTooltipColor(spot), Colors.transparent);
       },
     );
+
+    testWidgets(
+      'updating uvData mid-scrub clears the scrub overlay and replots '
+      'against the new data',
+      (WidgetTester tester) async {
+        final UvData firstUvData = makeUvData(
+          sunrise: _sunrise,
+          sunset: _sunrise.add(const Duration(hours: 12)),
+          hourly: _hourlyFrom(_sunrise, 13, uviAt: (_) => 5),
+        );
+
+        await tester.pumpWidget(_wrap(firstUvData, width: 600));
+
+        final Offset onLine = pointOnFlatLine(tester, 5);
+        final TestGesture gesture = await tester.startGesture(
+          onLine - const Offset(30, 0),
+        );
+        await tester.pump();
+        await gesture.moveTo(onLine);
+        await tester.pump();
+
+        expect(
+          scrubLabelFinder(),
+          findsOneWidget,
+          reason: 'label should appear once the drag lands on the line',
+        );
+
+        // A new sunrise shifts _sunrise/_sunsetHours; didUpdateWidget must
+        // recompute the cached fields from this new uvData and discard the
+        // stale scrub state (which points at a _ChartPoint from the old
+        // _points list) rather than keep showing it.
+        final DateTime newSunrise = _sunrise.add(const Duration(hours: 1));
+        final UvData secondUvData = makeUvData(
+          sunrise: newSunrise,
+          sunset: newSunrise.add(const Duration(hours: 12)),
+          hourly: _hourlyFrom(newSunrise, 13, uviAt: (_) => 5),
+        );
+
+        await tester.pumpWidget(_wrap(secondUvData, width: 600));
+
+        expect(
+          scrubLabelFinder(),
+          findsNothing,
+          reason:
+              'scrub state referencing the old data must be cleared when '
+              'uvData changes',
+        );
+
+        // The new data still plots correctly after the cached fields were
+        // recomputed for it.
+        expect(_chartData(tester).lineBarsData.first.spots, hasLength(13));
+
+        await gesture.up();
+        await tester.pump();
+      },
+    );
   });
 }
