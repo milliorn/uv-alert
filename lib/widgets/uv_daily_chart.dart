@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:uvalert/models/uv_model.dart';
+import 'package:uvalert/utils/time_format.dart';
 import 'package:uvalert/utils/who_risk.dart';
 
 /// Number of days shown on the chart, left (current day) to right (last
@@ -74,12 +75,6 @@ class UvDailyChart extends StatelessWidget {
   /// [_daysShown] of what remains is shown.
   final UvData uvData;
 
-  /// Converts a UTC [time] to the data's location-local time, using
-  /// [UvData.timezoneOffset] rather than the device's own timezone, so the
-  /// chart reflects the queried location's day rather than the viewer's.
-  DateTime _toLocationLocal(DateTime time) =>
-      time.add(Duration(seconds: uvData.timezoneOffset));
-
   @override
   Widget build(BuildContext context) {
     // A cached UvData payload can still be "fresh" (within Cache's 24h TTL)
@@ -87,7 +82,10 @@ class UvDailyChart extends StatelessWidget {
     // still valid at 11am the next day. Drop any daily entry whose
     // location-local date is already in the past so a stale leading day is
     // never mistaken for "today" by virtue of being the leftmost bar.
-    final DateTime today = _toLocationLocal(DateTime.now().toUtc());
+    final DateTime today = toLocationLocal(
+      DateTime.now().toUtc(),
+      uvData.timezoneOffset,
+    );
     // DateTime.utc, not the local-time DateTime() constructor: `today` is
     // itself UTC-flagged (add() on a UTC DateTime preserves isUtc), and
     // comparing a UTC-flagged instant against a device-local-flagged one
@@ -110,7 +108,10 @@ class UvDailyChart extends StatelessWidget {
       if (points.length >= _daysShown) {
         break;
       }
-      final DateTime localTime = _toLocationLocal(entry.time);
+      final DateTime localTime = toLocationLocal(
+        entry.time,
+        uvData.timezoneOffset,
+      );
       if (localTime.isBefore(todayDate)) {
         continue;
       }

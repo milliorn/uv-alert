@@ -1,15 +1,21 @@
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/services/solar_position.dart';
+import 'package:uvalert/utils/time_format.dart';
 import 'package:uvalert/utils/who_risk.dart';
 
 /// UV index threshold below which UV exposure is considered safe without
 /// protection, and above which the dashboard hero surfaces "reached"/
 /// "dropped below" messaging (branches 7, 9, 10).
 ///
-/// A whole-number [int] (rather than [double]) so it interpolates into
-/// message text without a trailing ".0" (e.g. "UV index reached 3", not
-/// "reached 3.0"); compared against [UvForecastEntry.uvi] via
-/// [int.toDouble].
+/// This is an [int] because WHO's public UV scale and risk labels are
+/// whole-number based (Low is 0-2, Moderate is 3+ -- see [whoLowMax]), so
+/// "reached 3" is the correct wording for the moment a reading enters
+/// Moderate. The underlying [UvForecastEntry.uvi] comparisons throughout
+/// this file stay full-precision [double]s, not truncated to whole numbers
+/// -- only the threshold and displayed number are integers, so
+/// crossing-time predictions (e.g. branch 6's look-ahead) remain accurate
+/// down to the data's actual resolution rather than snapping to whole-hour
+/// boundaries.
 const int heroUnsafeUvThreshold = 3;
 
 /// UV index threshold used for the "will exceed" look-ahead messaging
@@ -27,9 +33,13 @@ const Duration heroLookAheadWindow = Duration(hours: 1);
 /// threshold crossings, then more solar events), returning the text of the
 /// first one that applies, or `null` if none do (branch 16, "silent").
 ///
-/// [now] must be UTC (e.g. `DateTime.now().toUtc()`, matching
-/// `dashboard_footer.dart`'s existing pattern) -- not device-local time,
-/// since [solarEvents] and [uvData]'s timestamps are both UTC.
+/// [now] should be UTC (e.g. `DateTime.now().toUtc()`, matching
+/// `dashboard_footer.dart`'s existing pattern), since [solarEvents] and
+/// [uvData]'s timestamps are both UTC -- converted internally via
+/// [DateTime.toUtc] regardless, matching [solarEventTimes] and
+/// [solarElevationDegrees]'s defensive handling of their own time
+/// parameters, so a caller passing device-local time by mistake still gets
+/// correct results rather than a silent wrong-day/wrong-time bug.
 ///
 /// Priority order (see `.private/architecture/SCREENS.md`'s "Hero" spec):
 /// 1. "Astronomical dawn begins at {time}"
@@ -65,60 +75,62 @@ String? heroConditionalLine({
   required Map<SolarEvent, DateTime?> solarEvents,
   required UvData uvData,
 }) {
+  final DateTime nowUtc = now.toUtc();
+
   String? upcoming(SolarEvent event, String Function(DateTime time) format) {
     final DateTime? time = solarEvents[event];
-    if (time == null || !now.isBefore(time)) return null;
+    if (time == null || !nowUtc.isBefore(time)) return null;
     return format(time);
   }
 
   final String? dawnLine =
       upcoming(
         SolarEvent.astronomicalDawn,
-        (DateTime t) => 'Astronomical dawn begins at ${_formatTime(t)}',
+        (DateTime t) => 'Astronomical dawn begins at ${formatTime(t)}',
       ) ??
       upcoming(
         SolarEvent.nauticalDawn,
-        (DateTime t) => 'Nautical dawn begins at ${_formatTime(t)}',
+        (DateTime t) => 'Nautical dawn begins at ${formatTime(t)}',
       ) ??
       upcoming(
         SolarEvent.civilDawn,
-        (DateTime t) => 'Civil dawn begins at ${_formatTime(t)}',
+        (DateTime t) => 'Civil dawn begins at ${formatTime(t)}',
       ) ??
       upcoming(
         SolarEvent.sunriseStart,
-        (DateTime t) => 'Sunrise begins at ${_formatTime(t)}',
+        (DateTime t) => 'Sunrise begins at ${formatTime(t)}',
       ) ??
       upcoming(
         SolarEvent.sunriseEnd,
-        (DateTime t) => 'Sunrise ends at ${_formatTime(t)}',
+        (DateTime t) => 'Sunrise ends at ${formatTime(t)}',
       );
 
   if (dawnLine != null) return dawnLine;
 
-  final String? uvLine = _uvThresholdLine(now: now, uvData: uvData);
+  final String? uvLine = _uvThresholdLine(now: nowUtc, uvData: uvData);
 
   if (uvLine != null) return uvLine;
 
   final String? duskLine =
       upcoming(
         SolarEvent.sunsetStart,
-        (DateTime t) => 'Sunset starts at ${_formatTime(t)}',
+        (DateTime t) => 'Sunset starts at ${formatTime(t)}',
       ) ??
       upcoming(
         SolarEvent.sunset,
-        (DateTime t) => 'Sunset at ${_formatTime(t)}',
+        (DateTime t) => 'Sunset at ${formatTime(t)}',
       ) ??
       upcoming(
         SolarEvent.civilDusk,
-        (DateTime t) => 'Civil dusk at ${_formatTime(t)}',
+        (DateTime t) => 'Civil dusk at ${formatTime(t)}',
       ) ??
       upcoming(
         SolarEvent.nauticalDusk,
-        (DateTime t) => 'Nautical dusk at ${_formatTime(t)}',
+        (DateTime t) => 'Nautical dusk at ${formatTime(t)}',
       ) ??
       upcoming(
         SolarEvent.astronomicalDusk,
-        (DateTime t) => 'Astronomical dusk at ${_formatTime(t)}',
+        (DateTime t) => 'Astronomical dusk at ${formatTime(t)}',
       );
 
   if (duskLine != null) return duskLine;
@@ -137,15 +149,40 @@ String? _uvThresholdLine({required DateTime now, required UvData uvData}) {
   final List<UvForecastEntry> sorted = <UvForecastEntry>[...hourly]
     ..sort((UvForecastEntry a, UvForecastEntry b) => a.time.compareTo(b.time));
 
-  final List<UvForecastEntry> past = <UvForecastEntry>[
-    for (final UvForecastEntry e in sorted)
-      if (!e.time.isAfter(now)) e,
-  ];
+  // "Today" is the location's local calendar day, via uvData.timezoneOffset
+  // -- not `now`'s UTC calendar day, which can be a different day than the
+  // location's "today" for any location far enough from UTC. Computed by
+  // shifting `now` to location-local time (via toLocationLocal) to find its
+  // local calendar day, then shifting that day's UTC midnight boundaries
+  // back by the same offset -- so todayStart/todayEnd remain UTC DateTimes
+  // directly comparable against hourly's UTC timestamps.
+  final DateTime nowLocal = toLocationLocal(now, uvData.timezoneOffset);
+  final Duration locationOffset = Duration(seconds: uvData.timezoneOffset);
+  final DateTime todayStart = DateTime.utc(
+    nowLocal.year,
+    nowLocal.month,
+    nowLocal.day,
+  ).subtract(locationOffset);
+  final DateTime todayEnd = todayStart.add(const Duration(days: 1));
 
-  final List<UvForecastEntry> future = <UvForecastEntry>[
-    for (final UvForecastEntry e in sorted)
-      if (e.time.isAfter(now)) e,
-  ];
+  // past/future/today are three views over the same sorted list -- built in
+  // a single pass since each entry can be classified independently instead
+  // of scanning `sorted` three separate times.
+  final List<UvForecastEntry> past = <UvForecastEntry>[];
+  final List<UvForecastEntry> future = <UvForecastEntry>[];
+  final List<UvForecastEntry> today = <UvForecastEntry>[];
+
+  for (final UvForecastEntry e in sorted) {
+    if (e.time.isAfter(now)) {
+      future.add(e);
+    } else {
+      past.add(e);
+    }
+
+    if (!e.time.isBefore(todayStart) && e.time.isBefore(todayEnd)) {
+      today.add(e);
+    }
+  }
 
   // Branch 6: "UV index will exceed 2 at [time]" -- the nearest future
   // entry whose uvi first crosses above heroRisingUvThreshold, within the
@@ -156,13 +193,15 @@ String? _uvThresholdLine({required DateTime now, required UvData uvData}) {
       : (future.isNotEmpty ? future.first.uvi : null);
 
   if (currentUvi != null && currentUvi <= heroRisingUvThreshold) {
-    for (final UvForecastEntry e in future) {
-      if (e.time.difference(now) > heroLookAheadWindow) break;
+    final UvForecastEntry? crossing = _firstFutureCrossing(
+      future,
+      now: now,
+      crosses: (UvForecastEntry e) => e.uvi > heroRisingUvThreshold,
+    );
 
-      if (e.uvi > heroRisingUvThreshold) {
-        return 'UV index will exceed $heroRisingUvThreshold at '
-            '${_formatTime(e.time)}';
-      }
+    if (crossing != null) {
+      return 'UV index will exceed $heroRisingUvThreshold at '
+          '${formatTime(crossing.time)}';
     }
   }
 
@@ -171,35 +210,20 @@ String? _uvThresholdLine({required DateTime now, required UvData uvData}) {
   // reading is still at/above it (i.e. we're in the unsafe window that
   // crossing started).
   if (currentUvi != null && currentUvi >= heroUnsafeUvThreshold) {
-    UvForecastEntry? crossing;
-
-    for (int i = 0; i < past.length; i++) {
-      final bool wasBelow = i == 0
-          ? past[i].uvi < heroUnsafeUvThreshold
-          : past[i - 1].uvi < heroUnsafeUvThreshold;
-
-      if (wasBelow && past[i].uvi >= heroUnsafeUvThreshold) {
-        crossing = past[i];
-      }
-    }
+    final UvForecastEntry? crossing = _mostRecentCrossing(
+      past,
+      wasBelow: (UvForecastEntry e) => e.uvi < heroUnsafeUvThreshold,
+      isAt: (UvForecastEntry e) => e.uvi >= heroUnsafeUvThreshold,
+    );
 
     if (crossing != null) {
       return 'UV index reached $heroUnsafeUvThreshold at '
-          '${_formatTime(crossing.time)}';
+          '${formatTime(crossing.time)}';
     }
   }
 
-  // Branch 8: "Today's peak: UV [x] at [time]" -- the max uvi among today's
-  // (location-local-agnostic; uses UTC calendar day of `now`) hourly
-  // entries.
-  final DateTime todayStart = DateTime.utc(now.year, now.month, now.day);
-  final DateTime todayEnd = todayStart.add(const Duration(days: 1));
-  
-  final List<UvForecastEntry> today = <UvForecastEntry>[
-    for (final UvForecastEntry e in sorted)
-      if (!e.time.isBefore(todayStart) && e.time.isBefore(todayEnd)) e,
-  ];
-
+  // Branch 8: "Today's peak: UV [x] at [time]" -- the max uvi among
+  // `today` (built above, in the location's local calendar day).
   if (today.isNotEmpty) {
     final UvForecastEntry peak = today.reduce(
       (UvForecastEntry a, UvForecastEntry b) => b.uvi > a.uvi ? b : a,
@@ -208,7 +232,7 @@ String? _uvThresholdLine({required DateTime now, required UvData uvData}) {
     // would announce a future peak as though it already happened.
     if (!now.isBefore(peak.time)) {
       final String peakUvi = truncateToTenth(peak.uvi).toStringAsFixed(1);
-      return "Today's peak: UV $peakUvi at ${_formatTime(peak.time)}";
+      return "Today's peak: UV $peakUvi at ${formatTime(peak.time)}";
     }
   }
 
@@ -216,13 +240,15 @@ String? _uvThresholdLine({required DateTime now, required UvData uvData}) {
   // entry within heroLookAheadWindow drops below heroUnsafeUvThreshold
   // while the current reading is still at/above it.
   if (currentUvi != null && currentUvi >= heroUnsafeUvThreshold) {
-    for (final UvForecastEntry e in future) {
-      if (e.time.difference(now) > heroLookAheadWindow) break;
+    final UvForecastEntry? crossing = _firstFutureCrossing(
+      future,
+      now: now,
+      crosses: (UvForecastEntry e) => e.uvi < heroUnsafeUvThreshold,
+    );
 
-      if (e.uvi < heroUnsafeUvThreshold) {
-        return 'UV index will drop below $heroUnsafeUvThreshold within '
-            'the hour';
-      }
+    if (crossing != null) {
+      return 'UV index will drop below $heroUnsafeUvThreshold within '
+          'the hour';
     }
   }
 
@@ -230,31 +256,66 @@ String? _uvThresholdLine({required DateTime now, required UvData uvData}) {
   // entry where uvi crossed down below heroUnsafeUvThreshold, when the
   // current reading is still below it.
   if (currentUvi != null && currentUvi < heroUnsafeUvThreshold) {
-    UvForecastEntry? crossing;
-  
-    for (int i = 1; i < past.length; i++) {
-      if (past[i - 1].uvi >= heroUnsafeUvThreshold &&
-          past[i].uvi < heroUnsafeUvThreshold) {
-        crossing = past[i];
-      }
-    }
+    final UvForecastEntry? crossing = _mostRecentCrossing(
+      past,
+      wasBelow: (UvForecastEntry e) => e.uvi >= heroUnsafeUvThreshold,
+      isAt: (UvForecastEntry e) => e.uvi < heroUnsafeUvThreshold,
+    );
 
     if (crossing != null) {
       return 'UV index dropped below $heroUnsafeUvThreshold at '
-          '${_formatTime(crossing.time)}';
+          '${formatTime(crossing.time)}';
     }
   }
 
   return null;
 }
 
-/// Formats [time] (UTC) as e.g. "2:00 PM", matching the hourly chart's own
-/// `_formatTime` convention (`lib/widgets/uv_hourly_chart.dart`) so the hero
-/// line and the chart use consistent time formatting.
-String _formatTime(DateTime time) {
-  final int hour24 = time.hour;
-  final int hour12 = hour24 % 12 == 0 ? 12 : hour24 % 12;
-  final String period = hour24 < 12 ? 'AM' : 'PM';
-  final String minutes = time.minute.toString().padLeft(2, '0');
-  return '$hour12:$minutes $period';
+/// The most recent entry in [past] (assumed sorted oldest-to-newest) where
+/// the entry before it satisfies [wasBelow] and the entry itself satisfies
+/// [isAt] -- i.e. the start of the current run of [isAt]-satisfying entries.
+///
+/// Starts comparing at index 1: with no earlier entry to compare against,
+/// `past[0]` alone can't tell us whether/when a crossing happened, only
+/// that it already satisfies [isAt] -- so it is deliberately never reported
+/// as a crossing.
+///
+/// Shared by branch 7 ("reached [heroUnsafeUvThreshold]", crossing up) and
+/// branch 10 ("dropped below [heroUnsafeUvThreshold]", crossing down),
+/// which differ only in the direction of [wasBelow]/[isAt].
+UvForecastEntry? _mostRecentCrossing(
+  List<UvForecastEntry> past, {
+  required bool Function(UvForecastEntry e) wasBelow,
+  required bool Function(UvForecastEntry e) isAt,
+}) {
+  UvForecastEntry? crossing;
+
+  for (int i = 1; i < past.length; i++) {
+    if (wasBelow(past[i - 1]) && isAt(past[i])) {
+      crossing = past[i];
+    }
+  }
+
+  return crossing;
+}
+
+/// The earliest entry in [future] (assumed sorted oldest-to-newest) within
+/// [heroLookAheadWindow] of [now] that satisfies [crosses], or `null` if
+/// none does before the window closes.
+///
+/// Shared by branch 6 ("will exceed [heroRisingUvThreshold]") and branch 9
+/// ("will drop below [heroUnsafeUvThreshold]"), which differ only in the
+/// [crosses] predicate and how the result is worded.
+UvForecastEntry? _firstFutureCrossing(
+  List<UvForecastEntry> future, {
+  required DateTime now,
+  required bool Function(UvForecastEntry e) crosses,
+}) {
+  for (final UvForecastEntry e in future) {
+    if (e.time.difference(now) > heroLookAheadWindow) break;
+
+    if (crosses(e)) return e;
+  }
+
+  return null;
 }

@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:uvalert/models/uv_model.dart';
+import 'package:uvalert/utils/time_format.dart';
 import 'package:uvalert/utils/who_risk.dart';
 
 /// Height reserved for the bottom (time) axis titles.
@@ -71,17 +72,14 @@ class UvHourlyChart extends StatelessWidget {
   /// [UvData.sunrise] and [UvData.sunset] are shown.
   final UvData uvData;
 
-  /// Converts a UTC [time] to the data's location-local time, using
-  /// [UvData.timezoneOffset] rather than the device's own timezone, so the
-  /// chart reflects the queried location's day rather than the viewer's.
-  DateTime _toLocationLocal(DateTime time) =>
-      time.add(Duration(seconds: uvData.timezoneOffset));
-
   /// Builds a [_ChartPoint] for [entry], computing its location-local time
   /// and WHO risk color once and reusing them for the plotted x-position
   /// and dot color.
   _ChartPoint _chartPoint(UvForecastEntry entry, DateTime sunrise) {
-    final DateTime localTime = _toLocationLocal(entry.time);
+    final DateTime localTime = toLocationLocal(
+      entry.time,
+      uvData.timezoneOffset,
+    );
     return (
       hours: localTime.difference(sunrise).inSeconds / Duration.secondsPerHour,
       localTime: localTime,
@@ -92,8 +90,14 @@ class UvHourlyChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final DateTime sunrise = _toLocationLocal(uvData.sunrise);
-    final DateTime sunset = _toLocationLocal(uvData.sunset);
+    final DateTime sunrise = toLocationLocal(
+      uvData.sunrise,
+      uvData.timezoneOffset,
+    );
+    final DateTime sunset = toLocationLocal(
+      uvData.sunset,
+      uvData.timezoneOffset,
+    );
     final double sunsetHours =
         sunset.difference(sunrise).inSeconds / Duration.secondsPerHour;
 
@@ -137,7 +141,7 @@ class UvHourlyChart extends StatelessWidget {
                         interval: hourInterval,
                         getTitlesWidget: (double value, TitleMeta meta) =>
                             _BottomTitle(
-                              label: _formatTime(
+                              label: formatTime(
                                 sunrise.add(_hoursDuration(value)),
                                 includeMinutes: false,
                               ),
@@ -256,19 +260,6 @@ double _hourLabelInterval(double plotAreaWidth, double sunsetHours) {
   return pixelsPerHour >= _minPixelsPerHourLabel ? 1 : 2;
 }
 
-/// Formats [time] as e.g. "2:00 PM" (or "2 PM" when [includeMinutes] is
-/// false), for use in axis labels and accessibility semantic labels.
-String _formatTime(DateTime time, {required bool includeMinutes}) {
-  final int hour24 = time.hour;
-  final int hour12 = hour24 % 12 == 0 ? 12 : hour24 % 12;
-  final String period = hour24 < 12 ? 'AM' : 'PM';
-
-  if (!includeMinutes) return '$hour12 $period';
-
-  final String minutes = time.minute.toString().padLeft(2, '0');
-  return '$hour12:$minutes $period';
-}
-
 /// An invisible, TalkBack-navigable overlay exposing one semantics node per
 /// hourly data point, so screen reader users can swipe through readings
 /// without needing the press-and-hold scrub interaction (out of scope for
@@ -298,7 +289,7 @@ class _HourlyChartSemantics extends StatelessWidget {
   }
 
   String _pointLabel(_ChartPoint point) {
-    final String time = _formatTime(point.localTime, includeMinutes: true);
+    final String time = formatTime(point.localTime);
     return '$time, ${uvIndexSemanticsPhrase(point.entry.uvi)}';
   }
 }

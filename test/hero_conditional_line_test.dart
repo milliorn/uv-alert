@@ -219,6 +219,166 @@ void main() {
 
       expect(line, 'UV index dropped below 3 at 11:40 AM');
     });
+
+    test('branch 7 wins over branch 9 when both guards are simultaneously '
+        'true (a brief spike then a forecast drop)', () {
+      // currentUvi (4, at _now) satisfies both branch 7's guard (>= 3, just
+      // crossed up 30 min ago) and branch 9's guard (>= 3, forecast to drop
+      // back below 3 within the look-ahead window) -- branch 7 must win per
+      // the documented priority order (7 before 9).
+      final UvData uvData = makeUvData(
+        hourly: <UvForecastEntry>[
+          UvForecastEntry(
+            time: _now.subtract(const Duration(minutes: 30)),
+            uvi: 2,
+          ),
+          UvForecastEntry(time: _now, uvi: 4),
+          UvForecastEntry(time: _now.add(const Duration(minutes: 30)), uvi: 2),
+        ],
+      );
+
+      final String? line = heroConditionalLine(
+        now: _now,
+        solarEvents: _noEvents(),
+        uvData: uvData,
+      );
+
+      expect(line, 'UV index reached 3 at 12:00 PM');
+    });
+
+    test('branch 7 fires at exactly currentUvi == 3 (the inclusive '
+        'lower-bound guard)', () {
+      final UvData uvData = makeUvData(
+        hourly: <UvForecastEntry>[
+          UvForecastEntry(
+            time: _now.subtract(const Duration(minutes: 30)),
+            uvi: 2,
+          ),
+          UvForecastEntry(time: _now, uvi: 3),
+        ],
+      );
+
+      final String? line = heroConditionalLine(
+        now: _now,
+        solarEvents: _noEvents(),
+        uvData: uvData,
+      );
+
+      expect(line, 'UV index reached 3 at 12:00 PM');
+    });
+
+    test('branch 6 does not fire at exactly currentUvi == 2 exceeding the '
+        'rising threshold (guard requires e.uvi > 2, strictly greater)', () {
+      final UvData uvData = makeUvData(
+        hourly: <UvForecastEntry>[
+          UvForecastEntry(time: _now, uvi: 1.5),
+          UvForecastEntry(time: _now.add(const Duration(minutes: 30)), uvi: 2),
+        ],
+      );
+
+      final String? line = heroConditionalLine(
+        now: _now,
+        solarEvents: _noEvents(),
+        uvData: uvData,
+      );
+
+      expect(line, isNull);
+    });
+
+    test('branch 7 reports the most recent of two up-crossings, not the '
+        'first', () {
+      // UV crosses to unsafe at 10am, drops back below 3 at 10:30am, then
+      // crosses up again at 11:45am and stays there -- the message should
+      // describe the crossing that started the *current* unsafe window
+      // (11:45am), not the earlier, since-ended one (10am).
+      final UvData uvData = makeUvData(
+        hourly: <UvForecastEntry>[
+          UvForecastEntry(
+            time: _now.subtract(const Duration(hours: 2)),
+            uvi: 2,
+          ),
+          UvForecastEntry(
+            time: _now.subtract(const Duration(hours: 1, minutes: 30)),
+            uvi: 3.5,
+          ),
+          UvForecastEntry(
+            time: _now.subtract(const Duration(hours: 1)),
+            uvi: 2,
+          ),
+          UvForecastEntry(
+            time: _now.subtract(const Duration(minutes: 15)),
+            uvi: 4,
+          ),
+          UvForecastEntry(time: _now, uvi: 4),
+        ],
+      );
+
+      final String? line = heroConditionalLine(
+        now: _now,
+        solarEvents: _noEvents(),
+        uvData: uvData,
+      );
+
+      expect(line, 'UV index reached 3 at 11:45 AM');
+    });
+
+    test("8. today's peak excludes a high reading that falls on the "
+        "location's local yesterday, even though it's the same UTC "
+        'calendar day as now', () {
+      // _now is 2024-06-01 12:00 UTC. At UTC+12, local time is 2024-06-02
+      // 00:00 -- just past local midnight, so the location's "today" is
+      // 2024-06-02, and everything before local midnight (all of UTC
+      // 2024-06-01) is the location's "yesterday". The 9-uvi entry (an hour
+      // before `_now`, still UTC 2024-06-01) is on the location's
+      // yesterday and must be excluded; the 3-uvi entry (an hour after
+      // local midnight) is on the location's today and already in the
+      // past, so it alone should be reported as the peak.
+      final UvData uvData = makeUvData(
+        timezoneOffset: 12 * 3600,
+        hourly: <UvForecastEntry>[
+          UvForecastEntry(
+            time: _now.subtract(const Duration(hours: 1)),
+            uvi: 9,
+          ),
+          UvForecastEntry(time: _now.add(const Duration(hours: 1)), uvi: 3),
+        ],
+      );
+
+      final String? line = heroConditionalLine(
+        now: _now.add(const Duration(hours: 2)),
+        solarEvents: _noEvents(),
+        uvData: uvData,
+      );
+
+      expect(line, "Today's peak: UV 3.0 at 1:00 PM");
+    });
+
+    test("8. today's peak correctly includes an entry that is today in "
+        "the location's local day but was excluded under the old "
+        'UTC-day logic', () {
+      // _now is 2024-06-01 12:00 UTC. At UTC-10, local time is 2024-06-01
+      // 02:00 -- so the location's "today" spans UTC 2024-06-01T10:00
+      // through UTC 2024-06-02T10:00. A UTC 2024-06-01T11:00 peak (an hour
+      // ago) is within that window and already in the past, so it should
+      // be reported.
+      final UvData uvData = makeUvData(
+        timezoneOffset: -10 * 3600,
+        hourly: <UvForecastEntry>[
+          UvForecastEntry(
+            time: _now.subtract(const Duration(hours: 1)),
+            uvi: 6.5,
+          ),
+        ],
+      );
+
+      final String? line = heroConditionalLine(
+        now: _now,
+        solarEvents: _noEvents(),
+        uvData: uvData,
+      );
+
+      expect(line, "Today's peak: UV 6.5 at 11:00 AM");
+    });
   });
 
   group('branch 11-15: sunset/dusk events', () {
@@ -418,6 +578,58 @@ void main() {
       );
 
       expect(line, isNull);
+    });
+  });
+
+  group('real solarEventTimes() polar output, fed through '
+      'heroConditionalLine', () {
+    test('stays silent (not a crash or a bogus event) at 85N in deep '
+        'winter, where every solar event is null', () {
+      // Same fixture as solar_position_test.dart's "returns null for events
+      // that do not occur during polar night" test -- confirmed there that
+      // every one of the 10 SolarEvent keys is null on this date/location.
+      final DateTime polarNow = DateTime.utc(2024, 12, 21, 12);
+      final Map<SolarEvent, DateTime?> events = solarEventTimes(
+        lat: 85,
+        lon: 0,
+        date: polarNow,
+      );
+
+      final String? line = heroConditionalLine(
+        now: polarNow,
+        solarEvents: events,
+        uvData: makeUvData(),
+      );
+
+      expect(line, isNull);
+    });
+
+    test('surfaces only the two non-null events (astronomical dawn/dusk) '
+        'at 80N in winter, where most solar events are null', () {
+      // Same fixture as solar_position_test.dart's "returns non-null
+      // astronomical dawn/dusk at 80N in winter" test -- confirmed there
+      // that astronomicalDawn/astronomicalDusk are non-null while
+      // sunriseStart/sunset/civilDawn (and by the same logic, the rest of
+      // the non-astronomical events) are null.
+      final DateTime polarDate = DateTime.utc(2024, 12, 21);
+      final Map<SolarEvent, DateTime?> events = solarEventTimes(
+        lat: 80,
+        lon: 0,
+        date: polarDate,
+      );
+
+      // Pick `now` just before the earlier of the two non-null events, so
+      // it is the one branch 1-5/11-15 upcoming-event check can find.
+      final DateTime justBeforeDawn = events[SolarEvent.astronomicalDawn]!
+          .subtract(const Duration(minutes: 1));
+
+      final String? line = heroConditionalLine(
+        now: justBeforeDawn,
+        solarEvents: events,
+        uvData: makeUvData(),
+      );
+
+      expect(line, contains('Astronomical dawn begins at'));
     });
   });
 }
