@@ -192,10 +192,11 @@ double _solarDeclinationDegrees(int dayOfYear) {
 /// longitude per hour of solar offset from UTC), not the location's IANA
 /// timezone -- this service has no access to that.
 ///
-/// [lat] must be finite and within `[-90, 90]`; violated in debug/test
-/// builds this throws via `assert`, but the check does not run in release
-/// builds, so callers remain responsible for validating [lat] upstream
-/// (e.g. before it leaves user input or device sensors).
+/// [lat] must be finite and within `[-90, 90]`, and [lon] must be finite
+/// and within `[-180, 180]`; violated in debug/test builds this throws via
+/// `assert`, but the check does not run in release builds, so callers
+/// remain responsible for validating [lat]/[lon] upstream (e.g. before they
+/// leave user input or device sensors).
 Map<SolarEvent, DateTime?> solarEventTimes({
   required double lat,
   required double lon,
@@ -204,6 +205,11 @@ Map<SolarEvent, DateTime?> solarEventTimes({
   assert(
     lat.isFinite && lat >= -90 && lat <= 90,
     'lat must be finite and within [-90, 90], got $lat',
+  );
+
+  assert(
+    lon.isFinite && lon >= -180 && lon <= 180,
+    'lon must be finite and within [-180, 180], got $lon',
   );
 
   final DateTime utc = date.toUtc();
@@ -287,10 +293,11 @@ DateTime? _eventTime({
 /// than [solarEventTimes] used to derive that time, a sub-degree difference
 /// well within this approximation's existing tolerance.
 ///
-/// [lat] must be finite and within `[-90, 90]`; violated in debug/test
-/// builds this throws via `assert`, but the check does not run in release
-/// builds, so callers remain responsible for validating [lat] upstream
-/// (e.g. before it leaves user input or device sensors).
+/// [lat] must be finite and within `[-90, 90]`, and [lon] must be finite
+/// and within `[-180, 180]`; violated in debug/test builds this throws via
+/// `assert`, but the check does not run in release builds, so callers
+/// remain responsible for validating [lat]/[lon] upstream (e.g. before they
+/// leave user input or device sensors).
 double solarElevationDegrees({
   required double lat,
   required double lon,
@@ -299,6 +306,11 @@ double solarElevationDegrees({
   assert(
     lat.isFinite && lat >= -90 && lat <= 90,
     'lat must be finite and within [-90, 90], got $lat',
+  );
+  
+  assert(
+    lon.isFinite && lon >= -180 && lon <= 180,
+    'lon must be finite and within [-180, 180], got $lon',
   );
 
   final DateTime utc = utcTime.toUtc();

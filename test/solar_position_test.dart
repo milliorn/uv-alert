@@ -273,6 +273,52 @@ void main() {
     });
   });
 
+  group('invalid lon input', () {
+    test('solarEventTimes rejects NaN lon via assertion', () {
+      expect(
+        () => solarEventTimes(
+          lat: _lat,
+          lon: double.nan,
+          date: DateTime.utc(2024, 6, 21),
+        ),
+        throwsAssertionError,
+      );
+    });
+
+    test('solarEventTimes rejects out-of-range lon via assertion', () {
+      expect(
+        () => solarEventTimes(
+          lat: _lat,
+          lon: 200,
+          date: DateTime.utc(2024, 6, 21),
+        ),
+        throwsAssertionError,
+      );
+    });
+
+    test('solarElevationDegrees rejects NaN lon via assertion', () {
+      expect(
+        () => solarElevationDegrees(
+          lat: _lat,
+          lon: double.nan,
+          utcTime: DateTime.utc(2024, 6, 21),
+        ),
+        throwsAssertionError,
+      );
+    });
+
+    test('solarElevationDegrees rejects out-of-range lon via assertion', () {
+      expect(
+        () => solarElevationDegrees(
+          lat: _lat,
+          lon: -200,
+          utcTime: DateTime.utc(2024, 6, 21),
+        ),
+        throwsAssertionError,
+      );
+    });
+  });
+
   group('local-time date normalization', () {
     test('solarEventTimes produces the same result for an equivalent local '
         'or UTC date', () {
