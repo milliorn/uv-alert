@@ -4,6 +4,29 @@ import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/utils/time_format.dart';
 import 'package:uvalert/utils/who_risk.dart';
 
+/// Width of the scrub interaction's vertical hairline.
+const double _hairlineWidth = 1;
+
+/// Radius of the filled dot drawn where the scrub hairline intersects the
+/// line chart.
+const double _scrubDotRadius = 4;
+
+/// Vertical gap between the scrub label and the top of the chart.
+const double _scrubLabelTopOffset = 4;
+
+/// Horizontal padding inside the scrub label's background pill.
+const double _scrubLabelPaddingHorizontal = 6;
+
+/// Vertical padding inside the scrub label's background pill.
+const double _scrubLabelPaddingVertical = 2;
+
+/// Corner radius of the scrub label's background pill.
+const double _scrubLabelBorderRadius = 4;
+
+/// Opacity of the scrub label's background pill, kept low so it reads as a
+/// plain text label rather than a decorative tooltip bubble.
+const double _scrubLabelBackgroundOpacity = 0.85;
+
 /// Height reserved for the bottom (time) axis titles.
 const double _bottomTitleReservedSize = 28;
 
@@ -57,13 +80,20 @@ typedef _ChartPoint = ({
   Color whoColor,
 });
 
-/// A static hourly UV index line chart, spanning sunrise to sunset.
+/// A hourly UV index line chart, spanning sunrise to sunset.
 ///
 /// Draws WHO risk-band background fills, an hourly (or every-2-hours,
 /// if labels would overlap) time axis, and a UV index axis at the WHO
-/// threshold boundaries. Does not support scrub/press interaction -- see
-/// the "Out of scope" note on the originating issue for that follow-up.
-class UvHourlyChart extends StatelessWidget {
+/// threshold boundaries. Supports a press-and-hold scrub interaction: a
+/// thin vertical hairline follows the finger, with a small filled dot where
+/// it intersects the line and a plain text label (no decorative tooltip
+/// bubble) showing the UV value and time at that point.
+///
+/// A [StatefulWidget] (rather than [StatelessWidget]) because the scrub
+/// interaction must track the touch position across a drag gesture's
+/// down/update/end events, which requires local state -- this is a
+/// structural change from the chart's prior static-only implementation.
+class UvHourlyChart extends StatefulWidget {
   /// Creates a [UvHourlyChart] from the hourly forecast entries in [uvData]
   /// that fall between its sunrise and sunset.
   const UvHourlyChart({required this.uvData, super.key});
@@ -72,13 +102,27 @@ class UvHourlyChart extends StatelessWidget {
   /// [UvData.sunrise] and [UvData.sunset] are shown.
   final UvData uvData;
 
+  @override
+  State<UvHourlyChart> createState() => _UvHourlyChartState();
+}
+
+/// The scrub interaction's current touch state: the touched [_ChartPoint]
+/// and the pixel `localPosition` (within the chart's own coordinate space)
+/// the hairline/label are drawn at. `null` (via
+/// `_UvHourlyChartState._scrubState`) when no scrub is in progress.
+typedef _ScrubState = ({_ChartPoint point, Offset localPosition});
+
+class _UvHourlyChartState extends State<UvHourlyChart> {
+  /// The current scrub touch state, or `null` when not actively touched.
+  _ScrubState? _scrubState;
+
   /// Builds a [_ChartPoint] for [entry], computing its location-local time
   /// and WHO risk color once and reusing them for the plotted x-position
   /// and dot color.
   _ChartPoint _chartPoint(UvForecastEntry entry, DateTime sunrise) {
     final DateTime localTime = toLocationLocal(
       entry.time,
-      uvData.timezoneOffset,
+      widget.uvData.timezoneOffset,
     );
     return (
       hours: localTime.difference(sunrise).inSeconds / Duration.secondsPerHour,
@@ -88,28 +132,67 @@ class UvHourlyChart extends StatelessWidget {
     );
   }
 
+  /// Updates [_scrubState] from a touch/pointer event reported by fl_chart's
+  /// [LineTouchData.touchCallback]. Clears the scrub state (hiding the
+  /// hairline/dot/label) on any event that ends or cancels the gesture, or
+  /// that has no touched spot (e.g. a touch outside the plotted line).
+  void _handleTouch(FlTouchEvent event, LineTouchResponse? response) {
+    if (!event.isInterestedForInteractions ||
+        response == null ||
+        response.lineBarSpots == null ||
+        response.lineBarSpots!.isEmpty) {
+      if (_scrubState != null) setState(() => _scrubState = null);
+      
+      return;
+    }
+
+    final TouchLineBarSpot spot = response.lineBarSpots!.first;
+    final int index = spot.spotIndex;
+
+    if (index < 0 || index >= _points.length) return;
+
+    setState(() {
+      _scrubState = (
+        point: _points[index],
+        localPosition: response.touchLocation,
+      );
+    });
+  }
+
+  /// The chronologically sorted, sunrise-to-sunset [_ChartPoint]s for
+  /// `widget.uvData`. Recomputed on every build -- cheap relative to a
+  /// widget rebuild, and keeps [_handleTouch] and [build] from needing to
+  /// pass this list back and forth.
+  List<_ChartPoint> get _points {
+    final DateTime sunrise = toLocationLocal(
+      widget.uvData.sunrise,
+      widget.uvData.timezoneOffset,
+    );
+
+    // UvData.hourly has no documented ordering guarantee, so sort
+    // explicitly -- an out-of-order list would otherwise draw a zigzagging
+    // line and expose semantics nodes to TalkBack in the wrong swipe order.
+    return <_ChartPoint>[
+      for (final UvForecastEntry entry in widget.uvData.hourly)
+        if (!entry.time.isBefore(widget.uvData.sunrise) &&
+            !entry.time.isAfter(widget.uvData.sunset))
+          _chartPoint(entry, sunrise),
+    ]..sort((_ChartPoint a, _ChartPoint b) => a.hours.compareTo(b.hours));
+  }
+
   @override
   Widget build(BuildContext context) {
     final DateTime sunrise = toLocationLocal(
-      uvData.sunrise,
-      uvData.timezoneOffset,
+      widget.uvData.sunrise,
+      widget.uvData.timezoneOffset,
     );
     final DateTime sunset = toLocationLocal(
-      uvData.sunset,
-      uvData.timezoneOffset,
+      widget.uvData.sunset,
+      widget.uvData.timezoneOffset,
     );
     final double sunsetHours =
         sunset.difference(sunrise).inSeconds / Duration.secondsPerHour;
-
-    // UvData.hourly has no documented ordering guarantee, so sort explicitly
-    // -- an out-of-order list would otherwise draw a zigzagging line and
-    // expose semantics nodes to TalkBack in the wrong swipe order.
-    final List<_ChartPoint> points = <_ChartPoint>[
-      for (final UvForecastEntry entry in uvData.hourly)
-        if (!entry.time.isBefore(uvData.sunrise) &&
-            !entry.time.isAfter(uvData.sunset))
-          _chartPoint(entry, sunrise),
-    ]..sort((_ChartPoint a, _ChartPoint b) => a.hours.compareTo(b.hours));
+    final List<_ChartPoint> points = _points;
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
@@ -159,7 +242,17 @@ class UvHourlyChart extends StatelessWidget {
                       ),
                     ),
                   ),
-                  lineTouchData: const LineTouchData(enabled: false),
+                  lineTouchData: LineTouchData(
+                    touchCallback: _handleTouch,
+                    // Suppresses fl_chart's own default indicator dot and
+                    // tooltip bubble entirely -- this widget draws its own
+                    // hairline/dot/label overlay below instead, per the
+                    // "no decorative bubble" requirement.
+                    handleBuiltInTouches: false,
+                    touchTooltipData: const LineTouchTooltipData(
+                      getTooltipColor: _transparentTooltip,
+                    ),
+                  ),
                   lineBarsData: <LineChartBarData>[
                     LineChartBarData(
                       spots: <FlSpot>[
@@ -194,9 +287,85 @@ class UvHourlyChart extends StatelessWidget {
                 child: _HourlyChartSemantics(points: points),
               ),
             ),
+            if (_scrubState != null) _ScrubOverlay(scrub: _scrubState!),
           ],
         );
       },
+    );
+  }
+}
+
+/// Always returns a fully transparent color, so
+/// [LineTouchData.touchTooltipData] never paints a visible tooltip bubble --
+/// [LineTouchData.handleBuiltInTouches] is `false` so this is normally
+/// unreachable, but pinning it explicitly (rather than leaving the default)
+/// guards against a decorative bubble reappearing if that ever changes.
+Color _transparentTooltip(LineBarSpot spot) => Colors.transparent;
+
+/// The scrub interaction's visual overlay: a thin vertical hairline at the
+/// touched x-position, a small filled dot where it intersects the line, and
+/// a plain text label (UV value + time) above the chart -- deliberately no
+/// decorative tooltip bubble, per the scrub interaction spec.
+class _ScrubOverlay extends StatelessWidget {
+  const _ScrubOverlay({required this.scrub});
+
+  final _ScrubState scrub;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    final double x = scrub.localPosition.dx;
+
+    return Positioned.fill(
+      child: Stack(
+        children: <Widget>[
+          Positioned(
+            left: x - _hairlineWidth / 2,
+            top: 0,
+            bottom: _bottomTitleReservedSize,
+            width: _hairlineWidth,
+            child: ColoredBox(color: colors.onSurface),
+          ),
+          Positioned(
+            left: x - _scrubDotRadius,
+            top: scrub.localPosition.dy - _scrubDotRadius,
+            width: _scrubDotRadius * 2,
+            height: _scrubDotRadius * 2,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: scrub.point.whoColor,
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: _scrubLabelTopOffset,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: _scrubLabelPaddingHorizontal,
+                  vertical: _scrubLabelPaddingVertical,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.surface.withValues(
+                    alpha: _scrubLabelBackgroundOpacity,
+                  ),
+                  borderRadius: BorderRadius.circular(_scrubLabelBorderRadius),
+                ),
+                child: Text(
+                  '${_scrubUvi(scrub.point)} · '
+                  '${formatTime(scrub.point.localTime)}',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: colors.onSurface),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -259,6 +428,11 @@ double _hourLabelInterval(double plotAreaWidth, double sunsetHours) {
 
   return pixelsPerHour >= _minPixelsPerHourLabel ? 1 : 2;
 }
+
+/// Formats [point]'s UV index to one decimal place, for the scrub
+/// interaction's label.
+String _scrubUvi(_ChartPoint point) =>
+    truncateToTenth(point.entry.uvi).toStringAsFixed(1);
 
 /// An invisible, TalkBack-navigable overlay exposing one semantics node per
 /// hourly data point, so screen reader users can swipe through readings
