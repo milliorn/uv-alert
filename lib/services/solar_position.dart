@@ -46,8 +46,11 @@ const double _sunriseStartElevationDegrees = -0.833;
 
 /// Elevation angle (degrees) marking the end of the visible solar disc at
 /// sunrise / start of sunset -- the opposite boundary from
-/// [_sunriseStartElevationDegrees], bracketing the ~2-minute solar disc
-/// transit.
+/// [_sunriseStartElevationDegrees]. This symmetric +/-0.833 degree
+/// simplification brackets a wider elevation range (~1.67 degrees) than the
+/// sun's actual ~0.53 degree angular diameter, so it does not model a
+/// precise ~2-minute transit -- consistent with this service's broader use
+/// of an approximate (not full-ephemeris) model.
 const double _sunriseEndElevationDegrees = 0.833;
 
 /// Elevation angle (degrees) marking civil dawn/dusk -- standard
