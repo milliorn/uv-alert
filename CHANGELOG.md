@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.20.0](https://github.com/milliorn/uv-alert/compare/v1.19.0...v1.20.0) (2026-09-05)
+
+
+### Features
+
+* add UV hero conditional line with solar-position-driven messaging ([#121](https://github.com/milliorn/uv-alert/issues/121)) ([ce1210a](https://github.com/milliorn/uv-alert/commit/ce1210a125741fe007b6c18dfdf69e246026f153))
+
 ## [1.19.0](https://github.com/milliorn/uv-alert/compare/v1.18.0...v1.19.0) (2026-09-05)
 
 
