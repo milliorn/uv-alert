@@ -193,24 +193,28 @@ double _solarDeclinationDegrees(int dayOfYear) {
 /// timezone -- this service has no access to that.
 ///
 /// [lat] must be finite and within `[-90, 90]`, and [lon] must be finite
-/// and within `[-180, 180]`; violated in debug/test builds this throws via
-/// `assert`, but the check does not run in release builds, so callers
-/// remain responsible for validating [lat]/[lon] upstream (e.g. before they
-/// leave user input or device sensors).
+/// and within `[-180, 180]`; violated, this throws [ArgumentError] in both
+/// debug and release builds.
 Map<SolarEvent, DateTime?> solarEventTimes({
   required double lat,
   required double lon,
   required DateTime date,
 }) {
-  assert(
-    lat.isFinite && lat >= -90 && lat <= 90,
-    'lat must be finite and within [-90, 90], got $lat',
-  );
+  if (!(lat.isFinite && lat >= -90 && lat <= 90)) {
+    throw ArgumentError.value(
+      lat,
+      'lat',
+      'must be finite and within [-90, 90]',
+    );
+  }
 
-  assert(
-    lon.isFinite && lon >= -180 && lon <= 180,
-    'lon must be finite and within [-180, 180], got $lon',
-  );
+  if (!(lon.isFinite && lon >= -180 && lon <= 180)) {
+    throw ArgumentError.value(
+      lon,
+      'lon',
+      'must be finite and within [-180, 180]',
+    );
+  }
 
   final DateTime utc = date.toUtc();
   final int dayOfYear = _dayOfYear(utc);
@@ -294,24 +298,28 @@ DateTime? _eventTime({
 /// well within this approximation's existing tolerance.
 ///
 /// [lat] must be finite and within `[-90, 90]`, and [lon] must be finite
-/// and within `[-180, 180]`; violated in debug/test builds this throws via
-/// `assert`, but the check does not run in release builds, so callers
-/// remain responsible for validating [lat]/[lon] upstream (e.g. before they
-/// leave user input or device sensors).
+/// and within `[-180, 180]`; violated, this throws [ArgumentError] in both
+/// debug and release builds.
 double solarElevationDegrees({
   required double lat,
   required double lon,
   required DateTime utcTime,
 }) {
-  assert(
-    lat.isFinite && lat >= -90 && lat <= 90,
-    'lat must be finite and within [-90, 90], got $lat',
-  );
-  
-  assert(
-    lon.isFinite && lon >= -180 && lon <= 180,
-    'lon must be finite and within [-180, 180], got $lon',
-  );
+  if (!(lat.isFinite && lat >= -90 && lat <= 90)) {
+    throw ArgumentError.value(
+      lat,
+      'lat',
+      'must be finite and within [-90, 90]',
+    );
+  }
+
+  if (!(lon.isFinite && lon >= -180 && lon <= 180)) {
+    throw ArgumentError.value(
+      lon,
+      'lon',
+      'must be finite and within [-180, 180]',
+    );
+  }
 
   final DateTime utc = utcTime.toUtc();
   final int dayOfYear = _dayOfYear(utc);

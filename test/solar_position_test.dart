@@ -228,95 +228,98 @@ void main() {
   });
 
   group('invalid lat input', () {
-    test('solarEventTimes rejects NaN lat via assertion', () {
+    test('solarEventTimes rejects NaN lat via ArgumentError', () {
       expect(
         () => solarEventTimes(
           lat: double.nan,
           lon: 0,
           date: DateTime.utc(2024, 6, 21),
         ),
-        throwsAssertionError,
+        throwsArgumentError,
       );
     });
 
-    test('solarEventTimes rejects out-of-range lat via assertion', () {
+    test('solarEventTimes rejects out-of-range lat via ArgumentError', () {
       expect(
-        () => solarEventTimes(
-          lat: 200,
-          lon: 0,
-          date: DateTime.utc(2024, 6, 21),
-        ),
-        throwsAssertionError,
+        () =>
+            solarEventTimes(lat: 200, lon: 0, date: DateTime.utc(2024, 6, 21)),
+        throwsArgumentError,
       );
     });
 
-    test('solarElevationDegrees rejects NaN lat via assertion', () {
+    test('solarElevationDegrees rejects NaN lat via ArgumentError', () {
       expect(
         () => solarElevationDegrees(
           lat: double.nan,
           lon: 0,
           utcTime: DateTime.utc(2024, 6, 21),
         ),
-        throwsAssertionError,
+        throwsArgumentError,
       );
     });
 
-    test('solarElevationDegrees rejects out-of-range lat via assertion', () {
-      expect(
-        () => solarElevationDegrees(
-          lat: -200,
-          lon: 0,
-          utcTime: DateTime.utc(2024, 6, 21),
-        ),
-        throwsAssertionError,
-      );
-    });
+    test(
+      'solarElevationDegrees rejects out-of-range lat via ArgumentError',
+      () {
+        expect(
+          () => solarElevationDegrees(
+            lat: -200,
+            lon: 0,
+            utcTime: DateTime.utc(2024, 6, 21),
+          ),
+          throwsArgumentError,
+        );
+      },
+    );
   });
 
   group('invalid lon input', () {
-    test('solarEventTimes rejects NaN lon via assertion', () {
+    test('solarEventTimes rejects NaN lon via ArgumentError', () {
       expect(
         () => solarEventTimes(
           lat: _lat,
           lon: double.nan,
           date: DateTime.utc(2024, 6, 21),
         ),
-        throwsAssertionError,
+        throwsArgumentError,
       );
     });
 
-    test('solarEventTimes rejects out-of-range lon via assertion', () {
+    test('solarEventTimes rejects out-of-range lon via ArgumentError', () {
       expect(
         () => solarEventTimes(
           lat: _lat,
           lon: 200,
           date: DateTime.utc(2024, 6, 21),
         ),
-        throwsAssertionError,
+        throwsArgumentError,
       );
     });
 
-    test('solarElevationDegrees rejects NaN lon via assertion', () {
+    test('solarElevationDegrees rejects NaN lon via ArgumentError', () {
       expect(
         () => solarElevationDegrees(
           lat: _lat,
           lon: double.nan,
           utcTime: DateTime.utc(2024, 6, 21),
         ),
-        throwsAssertionError,
+        throwsArgumentError,
       );
     });
 
-    test('solarElevationDegrees rejects out-of-range lon via assertion', () {
-      expect(
-        () => solarElevationDegrees(
-          lat: _lat,
-          lon: -200,
-          utcTime: DateTime.utc(2024, 6, 21),
-        ),
-        throwsAssertionError,
-      );
-    });
+    test(
+      'solarElevationDegrees rejects out-of-range lon via ArgumentError',
+      () {
+        expect(
+          () => solarElevationDegrees(
+            lat: _lat,
+            lon: -200,
+            utcTime: DateTime.utc(2024, 6, 21),
+          ),
+          throwsArgumentError,
+        );
+      },
+    );
   });
 
   group('local-time date normalization', () {
