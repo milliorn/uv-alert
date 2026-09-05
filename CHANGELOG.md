@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.19.0](https://github.com/milliorn/uv-alert/compare/v1.18.0...v1.19.0) (2026-09-05)
+
+
+### Features
+
+* **solar-position:** implement solar position calculations and event handling ([#120](https://github.com/milliorn/uv-alert/issues/120)) ([a3fbe05](https://github.com/milliorn/uv-alert/commit/a3fbe05916346a543a6db75819458811cae8651a))
+
 ## [1.18.0](https://github.com/milliorn/uv-alert/compare/v1.17.1...v1.18.0) (2026-08-07)
 
 
