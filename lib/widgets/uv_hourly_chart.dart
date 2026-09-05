@@ -116,6 +116,30 @@ class _UvHourlyChartState extends State<UvHourlyChart> {
   /// The current scrub touch state, or `null` when not actively touched.
   _ScrubState? _scrubState;
 
+  /// The chronologically sorted, sunrise-to-sunset [_ChartPoint]s for
+  /// `widget.uvData`. Computed in [initState]/[didUpdateWidget] rather than
+  /// per-build so repeated touch-move callbacks during a scrub drag don't
+  /// each re-sort and re-derive the full list.
+  late List<_ChartPoint> _points;
+
+  @override
+  void initState() {
+    super.initState();
+    _points = _computePoints();
+  }
+
+  @override
+  void didUpdateWidget(UvHourlyChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.uvData != widget.uvData) {
+      _points = _computePoints();
+      // The previous _scrubState references a _ChartPoint from the old
+      // _points list; clear it rather than risk showing a stale value from
+      // discarded data until the next touch callback.
+      _scrubState = null;
+    }
+  }
+
   /// Builds a [_ChartPoint] for [entry], computing its location-local time
   /// and WHO risk color once and reusing them for the plotted x-position
   /// and dot color.
@@ -135,35 +159,34 @@ class _UvHourlyChartState extends State<UvHourlyChart> {
   /// Updates [_scrubState] from a touch/pointer event reported by fl_chart's
   /// [LineTouchData.touchCallback]. Clears the scrub state (hiding the
   /// hairline/dot/label) on any event that ends or cancels the gesture, or
-  /// that has no touched spot (e.g. a touch outside the plotted line).
+  /// that has no touched spot (e.g. a touch outside the plotted line), or
+  /// whose reported spot index doesn't resolve to a current point.
   void _handleTouch(FlTouchEvent event, LineTouchResponse? response) {
-    if (!event.isInterestedForInteractions ||
-        response == null ||
-        response.lineBarSpots == null ||
-        response.lineBarSpots!.isEmpty) {
+    final TouchLineBarSpot? spot =
+        (!event.isInterestedForInteractions ||
+            response == null ||
+            response.lineBarSpots == null ||
+            response.lineBarSpots!.isEmpty)
+        ? null
+        : response.lineBarSpots!.first;
+    final int index = spot?.spotIndex ?? -1;
+
+    if (spot == null || index < 0 || index >= _points.length) {
       if (_scrubState != null) setState(() => _scrubState = null);
-      
       return;
     }
-
-    final TouchLineBarSpot spot = response.lineBarSpots!.first;
-    final int index = spot.spotIndex;
-
-    if (index < 0 || index >= _points.length) return;
 
     setState(() {
       _scrubState = (
         point: _points[index],
-        localPosition: response.touchLocation,
+        localPosition: response!.touchLocation,
       );
     });
   }
 
-  /// The chronologically sorted, sunrise-to-sunset [_ChartPoint]s for
-  /// `widget.uvData`. Recomputed on every build -- cheap relative to a
-  /// widget rebuild, and keeps [_handleTouch] and [build] from needing to
-  /// pass this list back and forth.
-  List<_ChartPoint> get _points {
+  /// Computes the chronologically sorted, sunrise-to-sunset [_ChartPoint]s
+  /// for `widget.uvData`.
+  List<_ChartPoint> _computePoints() {
     final DateTime sunrise = toLocationLocal(
       widget.uvData.sunrise,
       widget.uvData.timezoneOffset,
