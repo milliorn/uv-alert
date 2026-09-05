@@ -350,7 +350,7 @@ void main() {
         uvData: uvData,
       );
 
-      expect(line, "Today's peak: UV 3.0 at 1:00 PM");
+      expect(line, "Today's peak: UV 3.0 at 1:00 AM");
     });
 
     test("8. today's peak correctly includes an entry that is today in "
@@ -377,7 +377,7 @@ void main() {
         uvData: uvData,
       );
 
-      expect(line, "Today's peak: UV 6.5 at 11:00 AM");
+      expect(line, "Today's peak: UV 6.5 at 1:00 AM");
     });
   });
 

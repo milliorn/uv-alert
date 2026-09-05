@@ -80,7 +80,7 @@ String? heroConditionalLine({
   String? upcoming(SolarEvent event, String Function(DateTime time) format) {
     final DateTime? time = solarEvents[event];
     if (time == null || !nowUtc.isBefore(time)) return null;
-    return format(time);
+    return format(toLocationLocal(time, uvData.timezoneOffset));
   }
 
   final String? dawnLine =
@@ -149,6 +149,12 @@ String? _uvThresholdLine({required DateTime now, required UvData uvData}) {
   final List<UvForecastEntry> sorted = <UvForecastEntry>[...hourly]
     ..sort((UvForecastEntry a, UvForecastEntry b) => a.time.compareTo(b.time));
 
+  // Every displayed timestamp below is converted to the location's local
+  // time before formatting, matching the charts' display convention (see
+  // e.g. `UvHourlyChart`) -- `hourly` entries are UTC, but the UI always
+  // shows the queried location's wall-clock time, not UTC.
+  DateTime local(DateTime t) => toLocationLocal(t, uvData.timezoneOffset);
+
   // "Today" is the location's local calendar day, via uvData.timezoneOffset
   // -- not `now`'s UTC calendar day, which can be a different day than the
   // location's "today" for any location far enough from UTC. Computed by
@@ -201,7 +207,7 @@ String? _uvThresholdLine({required DateTime now, required UvData uvData}) {
 
     if (crossing != null) {
       return 'UV index will exceed $heroRisingUvThreshold at '
-          '${formatTime(crossing.time)}';
+          '${formatTime(local(crossing.time))}';
     }
   }
 
@@ -218,7 +224,7 @@ String? _uvThresholdLine({required DateTime now, required UvData uvData}) {
 
     if (crossing != null) {
       return 'UV index reached $heroUnsafeUvThreshold at '
-          '${formatTime(crossing.time)}';
+          '${formatTime(local(crossing.time))}';
     }
   }
 
@@ -232,7 +238,7 @@ String? _uvThresholdLine({required DateTime now, required UvData uvData}) {
     // would announce a future peak as though it already happened.
     if (!now.isBefore(peak.time)) {
       final String peakUvi = truncateToTenth(peak.uvi).toStringAsFixed(1);
-      return "Today's peak: UV $peakUvi at ${formatTime(peak.time)}";
+      return "Today's peak: UV $peakUvi at ${formatTime(local(peak.time))}";
     }
   }
 
@@ -264,7 +270,7 @@ String? _uvThresholdLine({required DateTime now, required UvData uvData}) {
 
     if (crossing != null) {
       return 'UV index dropped below $heroUnsafeUvThreshold at '
-          '${formatTime(crossing.time)}';
+          '${formatTime(local(crossing.time))}';
     }
   }
 

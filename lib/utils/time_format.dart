@@ -11,6 +11,7 @@ String formatTime(DateTime time, {bool includeMinutes = true}) {
   if (!includeMinutes) return '$hour12 $period';
 
   final String minutes = time.minute.toString().padLeft(2, '0');
+  
   return '$hour12:$minutes $period';
 }
 
@@ -20,5 +21,9 @@ String formatTime(DateTime time, {bool includeMinutes = true}) {
 /// rather than the viewer's. Shared by `UvHourlyChart`, `UvDailyChart`, and
 /// `heroConditionalLine`'s "today's peak" branch, all of which need the
 /// location's local calendar day rather than `now`'s UTC calendar day.
+///
+/// [time] is converted to UTC first (a no-op if it already is) so the
+/// result is always UTC-flagged, matching callers that rely on that
+/// invariant (e.g. `UvDailyChart`'s use of `add()` preserving `isUtc`).
 DateTime toLocationLocal(DateTime time, int timezoneOffsetSeconds) =>
-    time.add(Duration(seconds: timezoneOffsetSeconds));
+    time.toUtc().add(Duration(seconds: timezoneOffsetSeconds));
