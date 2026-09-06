@@ -80,10 +80,10 @@ class WeatherAlert {
         ? senderNameValue
         : null;
     final Object? tagsValue = json['tags'];
-    final List<String> tags =
-        (tagsValue is List<dynamic> ? tagsValue : const <Object>[])
-            .whereType<String>()
-            .toList();
+    final List<String> tags = List<String>.unmodifiable(
+      (tagsValue is List<dynamic> ? tagsValue : const <Object>[])
+          .whereType<String>(),
+    );
 
     return WeatherAlert(
       id: _synthesizeId(senderName, event, start),
