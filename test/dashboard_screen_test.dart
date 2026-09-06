@@ -139,11 +139,19 @@ void main() {
     expect(find.text(_heatAdvisory.event), findsNothing);
   });
 
-  testWidgets('renders the alert banner below the app bar when an active '
-      'alert is passed in', (WidgetTester tester) async {
+  testWidgets('renders the alert banner below the app bar when uvProvider '
+      'has an active alert', (WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
-        child: MaterialApp(home: DashboardScreen(activeAlert: _heatAdvisory)),
+        // ignore: always_specify_types - Override not in flutter_riverpod public API
+        overrides: [
+          uvProvider.overrideWith(
+            () => FakeDataUvNotifier(
+              makeUvData(alerts: <WeatherAlert>[_heatAdvisory]),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: DashboardScreen()),
       ),
     );
 
