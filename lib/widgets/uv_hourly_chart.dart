@@ -162,7 +162,7 @@ class _UvHourlyChartState extends State<UvHourlyChart> {
       widget.uvData.sunset,
       widget.uvData.timezoneOffset,
     );
-    
+
     _sunsetHours =
         sunset.difference(_sunrise).inSeconds / Duration.secondsPerHour;
     _points = _computePoints(_sunrise);
@@ -321,7 +321,12 @@ class _UvHourlyChartState extends State<UvHourlyChart> {
                 child: _HourlyChartSemantics(points: _points),
               ),
             ),
-            if (_scrubState != null) _ScrubOverlay(scrub: _scrubState!),
+            if (_scrubState != null)
+              ExcludeSemantics(
+                child: IgnorePointer(
+                  child: _ScrubOverlay(scrub: _scrubState!),
+                ),
+              ),
           ],
         );
       },
