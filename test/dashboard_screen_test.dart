@@ -26,6 +26,7 @@ final WeatherAlert _heatAdvisory = WeatherAlert(
   description: 'Dangerously high UV and heat index expected today.',
   start: DateTime.utc(2024, 6),
   end: DateTime.utc(2024, 6, 2),
+  senderName: 'NWS',
 );
 
 void main() {

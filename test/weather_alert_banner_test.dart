@@ -13,7 +13,7 @@ final WeatherAlert _heatAdvisory = WeatherAlert(
 );
 
 final WeatherAlert _floodWarning = WeatherAlert(
-  id: 'NWS|Flood Warning|2024-06-01T00:00:00.000Z',
+  id: '|Flood Warning|2024-06-01T00:00:00.000Z',
   event: 'Flood Warning',
   description: 'Heavy rainfall may cause flash flooding.',
   start: DateTime.utc(2024, 6),

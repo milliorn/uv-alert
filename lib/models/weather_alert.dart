@@ -31,7 +31,7 @@ DateTime _requireEpochSeconds(Map<String, Object?> json, String field) {
       'field $field must be an int, got ${value.runtimeType}',
     );
   }
-  
+
   return fromEpochSeconds(value);
 }
 
@@ -62,8 +62,14 @@ class WeatherAlert {
   /// empty, and any non-string entry within it is silently dropped, since
   /// tags are non-critical metadata not worth failing the whole alert over.
   ///
-  /// [id] is synthesized (OWM has no native alert id) as
-  /// `'$senderName|$event|${start.toIso8601String()}'`.
+  /// [id] is synthesized (OWM has no native alert id) from `senderName`,
+  /// `event`, and `start`. Each part is escaped (`|` and `\` are backslash-
+  /// escaped) before joining with `|`, so a delimiter character embedded in
+  /// a free-form source field can't shift the field boundary and collide
+  /// two distinct alerts onto the same id; an absent `senderName` joins as
+  /// an empty segment rather than the literal string `"null"`, so two
+  /// senderless alerts still only collide when `event` and `start` also
+  /// match exactly.
   factory WeatherAlert.fromJson(Map<String, Object?> json) {
     final String event = _requireString(json, 'event');
     final String description = _requireString(json, 'description');
@@ -73,12 +79,14 @@ class WeatherAlert {
     final String? senderName = senderNameValue is String
         ? senderNameValue
         : null;
-    final List<String> tags = (json['tags'] as List<dynamic>? ?? <Object>[])
-        .whereType<String>()
-        .toList();
+    final Object? tagsValue = json['tags'];
+    final List<String> tags =
+        (tagsValue is List<dynamic> ? tagsValue : const <Object>[])
+            .whereType<String>()
+            .toList();
 
     return WeatherAlert(
-      id: '$senderName|$event|${start.toIso8601String()}',
+      id: _synthesizeId(senderName, event, start),
       event: event,
       description: description,
       start: start,
@@ -88,12 +96,29 @@ class WeatherAlert {
     );
   }
 
+  static String _escapeIdPart(String part) =>
+      part.replaceAll(r'\', r'\\').replaceAll('|', r'\|');
+
+  static String _synthesizeId(
+    String? senderName,
+    String event,
+    DateTime start,
+  ) {
+    final String senderPart = senderName == null
+        ? ''
+        : _escapeIdPart(senderName);
+    return '$senderPart|${_escapeIdPart(event)}|${start.toIso8601String()}';
+  }
+
   /// Synthesized stable identity for this alert.
   ///
-  /// OWM's `alerts[]` entries have no native id, so this is derived as
-  /// `'$senderName|$event|${start.toIso8601String()}'` -- a plain,
-  /// directly-debuggable string rather than a hash int, so it reads
-  /// predictably in logs and unit tests.
+  /// OWM's `alerts[]` entries have no native id, so [WeatherAlert.fromJson]
+  /// derives one from `senderName`, `event`, and `start` (see
+  /// [_synthesizeId]) -- a plain, directly-debuggable string rather than a
+  /// hash int, so it reads predictably in logs and unit tests. Callers that
+  /// construct a [WeatherAlert] directly (e.g. in tests) are responsible for
+  /// keeping [id] consistent with those three fields themselves, since the
+  /// constructor does not re-derive or validate it.
   final String id;
 
   /// Short alert name, e.g. "Heat Advisory".

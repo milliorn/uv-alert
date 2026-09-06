@@ -2,6 +2,30 @@ import 'package:flutter/foundation.dart';
 import 'package:uvalert/models/weather_alert.dart';
 import 'package:uvalert/utils/epoch.dart';
 
+/// Parses `rawAlerts` into [WeatherAlert]s, skipping and logging any entry
+/// that is malformed (not a map, or missing/wrong-typed required fields)
+/// rather than aborting the whole parse -- one bad alert shouldn't take down
+/// the rest of the dashboard. Logging is unconditional (not gated on
+/// [kDebugMode]) so a dropped alert always leaves a trace, including in
+/// release builds. Only [FormatException] -- the exception type a malformed
+/// field value actually produces -- is caught; a non-map entry is filtered
+/// out via an `is` check rather than a cast, and any other [Error] indicates
+/// a genuine bug and is left to propagate.
+List<WeatherAlert> _parseAlerts(List<dynamic>? rawAlerts) {
+  return List<WeatherAlert>.unmodifiable(
+    (rawAlerts ?? <Object>[]).whereType<Map<String, Object?>>().map((
+      Map<String, Object?> a,
+    ) {
+      try {
+        return WeatherAlert.fromJson(a);
+      } on FormatException catch (e) {
+        debugPrint('UvData.fromJson: skipping malformed alert: $e');
+        return null;
+      }
+    }).whereType<WeatherAlert>(),
+  );
+}
+
 /// A single UV index reading at a point in time.
 @immutable
 class UvForecastEntry {
@@ -64,10 +88,10 @@ class UvData {
   ///
   /// Throws [FormatException] if the required `fetched_at` field is absent.
   ///
-  /// Each entry in `alerts` is parsed independently: a malformed entry
-  /// (e.g. missing a required field) is skipped and logged rather than
-  /// aborting the whole parse, since one bad alert shouldn't take down the
-  /// rest of the dashboard.
+  /// Each entry in `alerts` is parsed independently via [_parseAlerts]: a
+  /// malformed entry (e.g. missing a required field) is skipped and logged
+  /// rather than aborting the whole parse, since one bad alert shouldn't
+  /// take down the rest of the dashboard.
   factory UvData.fromJson(Map<String, Object?> json) {
     final Map<String, Object?> current =
         json['current']! as Map<String, Object?>;
@@ -92,18 +116,7 @@ class UvData {
       fetchedAt: json['fetched_at'] != null
           ? fromEpochSeconds(json['fetched_at']! as int)
           : throw const FormatException('missing required field: fetched_at'),
-      alerts: List<WeatherAlert>.unmodifiable(
-        (json['alerts'] as List<dynamic>? ?? <Object>[]).map((dynamic a) {
-          try {
-            return WeatherAlert.fromJson(a as Map<String, Object?>);
-          } on Object catch (e) {
-            if (kDebugMode) {
-              debugPrint('UvData.fromJson: skipping malformed alert: $e');
-            }
-            return null;
-          }
-        }).whereType<WeatherAlert>(),
-      ),
+      alerts: _parseAlerts(json['alerts'] as List<dynamic>?),
     );
   }
 
@@ -137,11 +150,10 @@ class UvData {
   /// Active government weather alerts for this location.
   ///
   /// Unlike every other field on [UvData], this is an optional constructor
-  /// parameter (defaulting to an empty list) rather than `required`. OWM's
-  /// `alerts` field is itself optional in the source payload (most
-  /// locations have no active alerts most of the time), and making this
-  /// field required here would force every existing `makeUvData()` call
-  /// site across the test suite to pass it explicitly.
+  /// parameter defaulting to an empty list rather than `required`, mirroring
+  /// OWM's own `alerts` field being optional in the source payload: most
+  /// locations have no active alerts most of the time, so "no alerts" is
+  /// the natural default rather than something every caller must state.
   final List<WeatherAlert> alerts;
 
   /// Serializes this instance to a JSON map.
