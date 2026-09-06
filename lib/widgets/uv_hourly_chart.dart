@@ -348,7 +348,10 @@ class _ScrubOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
-    final double x = scrub.localPosition.dx;
+    // fl_chart's touchLocation is relative to the plot area inside its axis
+    // title margins, but this overlay is positioned in the outer Stack, so
+    // the left-title reservation must be added back in.
+    final double x = scrub.localPosition.dx + _leftTitleReservedSize;
 
     return Positioned.fill(
       child: ExcludeSemantics(
