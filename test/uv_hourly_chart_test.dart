@@ -11,6 +11,18 @@ import 'fakes/fake_uv_data.dart';
 /// Sunrise used by [makeUvData]'s defaults, so hourly fixtures line up.
 final DateTime _sunrise = DateTime.utc(2024, 6, 1, 6);
 
+/// Mirrors `UvHourlyChart`'s own private `_leftTitleReservedSize` --
+/// duplicated here (rather than imported, since it is a private widget
+/// implementation detail) so scrub-interaction tests can compute a touch
+/// point inside the chart's actual plot area. See the `pointOnFlatLine`
+/// helper (in the "scrub interaction" test group) for why the reservation
+/// matters for touch coordinates.
+const double _leftTitleReservedSize = 32;
+
+/// Mirrors `UvHourlyChart`'s own private `_bottomTitleReservedSize`. See
+/// `_leftTitleReservedSize`.
+const double _bottomTitleReservedSize = 28;
+
 List<UvForecastEntry> _hourlyFrom(
   DateTime sunrise,
   int count, {
@@ -366,5 +378,258 @@ void main() {
         handle.dispose();
       }
     });
+  });
+
+  group('scrub interaction', () {
+    /// Finds the scrub label's [Text] widget, if currently rendered. The
+    /// label text is "{uvi} · {time}", so any [Text] containing the
+    /// middle-dot separator is unambiguously the scrub label (axis labels
+    /// never contain it).
+    Finder scrubLabelFinder() => find.textContaining('·');
+
+    /// A screen point that lands on the plotted line for a flat [uvi] value.
+    ///
+    /// fl_chart's `LineChart` reserves space for its axis titles as margin
+    /// *around* its actual plot area (`AxisChartScaffoldWidget._stackWidgets`
+    /// insets the chart's internal render box by
+    /// `titlesData.allSidesPadding`, which is exactly [_leftTitleReservedSize]
+    /// / [_bottomTitleReservedSize] here) -- so the plot area is smaller
+    /// than, and inset within, the outer [LineChart] widget's own rendered
+    /// [Rect]. Touch/pixel coordinates inside fl_chart (e.g.
+    /// [LineTouchData.touchCallback]'s `localPosition`) are relative to that
+    /// inner plot area, not the outer widget's bounds -- so this must
+    /// subtract the same reserved sizes before mapping [uvi] onto a pixel
+    /// position, or the computed point lands outside fl_chart's own
+    /// touch-spot threshold around the intended data point.
+    Offset pointOnFlatLine(WidgetTester tester, double uvi) {
+      final Rect outerRect = tester.getRect(find.byType(LineChart));
+      final Rect plotRect = Rect.fromLTRB(
+        outerRect.left + _leftTitleReservedSize,
+        outerRect.top,
+        outerRect.right,
+        outerRect.bottom - _bottomTitleReservedSize,
+      );
+      final LineChartData data = _chartData(tester);
+      final double yFraction = (uvi - data.minY) / (data.maxY - data.minY);
+
+      return Offset(
+        plotRect.center.dx,
+        plotRect.bottom - yFraction * plotRect.height,
+      );
+    }
+
+    testWidgets(
+      'drag gesture shows the hairline, dot, and label; release hides them',
+      (WidgetTester tester) async {
+        // A flat 5.0 UV line across a wide sunrise-to-sunset window, so a
+        // drag anywhere near the horizontal middle of the chart lands on a
+        // plotted point regardless of fl_chart's exact internal layout.
+        final UvData uvData = makeUvData(
+          sunrise: _sunrise,
+          sunset: _sunrise.add(const Duration(hours: 12)),
+          hourly: _hourlyFrom(_sunrise, 13, uviAt: (_) => 5),
+        );
+
+        await tester.pumpWidget(_wrap(uvData, width: 600));
+
+        // Before any touch: no scrub overlay.
+        expect(scrubLabelFinder(), findsNothing);
+
+        final Offset onLine = pointOnFlatLine(tester, 5);
+
+        // fl_chart's LineChart registers a plain press as a tap, not a pan
+        // -- its PanGestureRecognizer only wins the gesture arena (over the
+        // competing tap/long-press recognizers) once the pointer moves past
+        // Flutter's built-in pan-slop threshold. So the press starts
+        // slightly off the target point, then moves onto it by more than
+        // that threshold, and only the state *after* that move is asserted
+        // -- a bare startGesture (with no follow-up move) never triggers
+        // the scrub overlay, by design of the underlying pan recognizer.
+        final TestGesture gesture = await tester.startGesture(
+          onLine - const Offset(30, 0),
+        );
+        await tester.pump();
+        await gesture.moveTo(onLine);
+        await tester.pump();
+
+        expect(
+          scrubLabelFinder(),
+          findsOneWidget,
+          reason: 'label should appear once the drag lands on the line',
+        );
+
+        await gesture.up();
+        await tester.pump();
+
+        expect(
+          scrubLabelFinder(),
+          findsNothing,
+          reason: 'label should disappear once the touch is released',
+        );
+      },
+    );
+
+    testWidgets('a touch that lands off the plotted line does not show the '
+        'scrub overlay', (WidgetTester tester) async {
+      final UvData uvData = makeUvData(
+        sunrise: _sunrise,
+        sunset: _sunrise.add(const Duration(hours: 12)),
+        hourly: _hourlyFrom(_sunrise, 13, uviAt: (_) => 5),
+      );
+
+      await tester.pumpWidget(_wrap(uvData, width: 600));
+
+      // Top-left corner of the chart: far outside the plotted line's touch
+      // threshold, and outside the axis-title-reserved plot area entirely.
+      final Offset topLeft = tester.getTopLeft(find.byType(UvHourlyChart));
+      final TestGesture gesture = await tester.startGesture(
+        topLeft + const Offset(1, 1),
+      );
+      await tester.pump();
+
+      expect(scrubLabelFinder(), findsNothing);
+
+      await gesture.up();
+      await tester.pump();
+    });
+
+    testWidgets('renders without a scrub overlay when hourly is empty', (
+      WidgetTester tester,
+    ) async {
+      final UvData uvData = makeUvData(
+        sunrise: _sunrise,
+        sunset: _sunrise.add(const Duration(hours: 12)),
+      );
+
+      await tester.pumpWidget(_wrap(uvData, width: 600));
+
+      final Offset center = tester.getCenter(find.byType(UvHourlyChart));
+      final TestGesture gesture = await tester.startGesture(center);
+      await tester.pump();
+
+      expect(scrubLabelFinder(), findsNothing);
+
+      await gesture.up();
+      await tester.pump();
+    });
+
+    testWidgets(
+      'the accessibility semantics overlay is unaffected by the scrub '
+      'interaction and still exposes one node per hourly point',
+      (WidgetTester tester) async {
+        final UvData uvData = makeUvData(
+          sunrise: _sunrise,
+          sunset: _sunrise.add(const Duration(hours: 2)),
+          hourly: _hourlyFrom(_sunrise, 3, uviAt: (_) => 5),
+        );
+
+        final SemanticsHandle handle = tester.ensureSemantics();
+        try {
+          await tester.pumpWidget(_wrap(uvData, width: 600));
+
+          final Offset onLine = pointOnFlatLine(tester, 5);
+          final TestGesture gesture = await tester.startGesture(
+            onLine - const Offset(30, 0),
+          );
+          await tester.pump();
+          await gesture.moveTo(onLine);
+          await tester.pump();
+
+          expect(
+            tester.getSemantics(
+              find.bySemanticsLabel(RegExp('6:00 AM, UV index 5.0, Moderate')),
+            ),
+            matchesSemantics(label: '6:00 AM, UV index 5.0, Moderate risk'),
+          );
+
+          await gesture.up();
+          await tester.pump();
+        } finally {
+          handle.dispose();
+        }
+      },
+    );
+
+    testWidgets(
+      'the tooltip color callback returns transparent, guarding against a '
+      "decorative bubble reappearing if handleBuiltInTouches's default ever "
+      'changes',
+      (WidgetTester tester) async {
+        final UvData uvData = makeUvData(
+          sunrise: _sunrise,
+          sunset: _sunrise.add(const Duration(hours: 2)),
+          hourly: _hourlyFrom(_sunrise, 3),
+        );
+
+        await tester.pumpWidget(_wrap(uvData, width: 600));
+
+        final LineTouchTooltipData tooltipData = _chartData(
+          tester,
+        ).lineTouchData.touchTooltipData;
+        final LineBarSpot spot = LineBarSpot(
+          _chartData(tester).lineBarsData.first,
+          0,
+          const FlSpot(0, 5),
+        );
+
+        expect(tooltipData.getTooltipColor(spot), Colors.transparent);
+      },
+    );
+
+    testWidgets(
+      'updating uvData mid-scrub clears the scrub overlay and replots '
+      'against the new data',
+      (WidgetTester tester) async {
+        final UvData firstUvData = makeUvData(
+          sunrise: _sunrise,
+          sunset: _sunrise.add(const Duration(hours: 12)),
+          hourly: _hourlyFrom(_sunrise, 13, uviAt: (_) => 5),
+        );
+
+        await tester.pumpWidget(_wrap(firstUvData, width: 600));
+
+        final Offset onLine = pointOnFlatLine(tester, 5);
+        final TestGesture gesture = await tester.startGesture(
+          onLine - const Offset(30, 0),
+        );
+        await tester.pump();
+        await gesture.moveTo(onLine);
+        await tester.pump();
+
+        expect(
+          scrubLabelFinder(),
+          findsOneWidget,
+          reason: 'label should appear once the drag lands on the line',
+        );
+
+        // A new sunrise shifts _sunrise/_sunsetHours; didUpdateWidget must
+        // recompute the cached fields from this new uvData and discard the
+        // stale scrub state (which points at a _ChartPoint from the old
+        // _points list) rather than keep showing it.
+        final DateTime newSunrise = _sunrise.add(const Duration(hours: 1));
+        final UvData secondUvData = makeUvData(
+          sunrise: newSunrise,
+          sunset: newSunrise.add(const Duration(hours: 12)),
+          hourly: _hourlyFrom(newSunrise, 13, uviAt: (_) => 5),
+        );
+
+        await tester.pumpWidget(_wrap(secondUvData, width: 600));
+
+        expect(
+          scrubLabelFinder(),
+          findsNothing,
+          reason:
+              'scrub state referencing the old data must be cleared when '
+              'uvData changes',
+        );
+
+        // The new data still plots correctly after the cached fields were
+        // recomputed for it.
+        expect(_chartData(tester).lineBarsData.first.spots, hasLength(13));
+
+        await gesture.up();
+        await tester.pump();
+      },
+    );
   });
 }
