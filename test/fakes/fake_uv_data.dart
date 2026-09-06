@@ -1,5 +1,6 @@
 import 'package:mocktail/mocktail.dart';
 import 'package:uvalert/models/uv_model.dart';
+import 'package:uvalert/models/weather_alert.dart';
 
 /// Mocktail fallback value for [UvData].
 class FakeUvData extends Fake implements UvData {}
@@ -17,6 +18,7 @@ UvData makeUvData({
   String timezone = 'UTC',
   int timezoneOffset = 0,
   DateTime? fetchedAt,
+  List<WeatherAlert> alerts = const <WeatherAlert>[],
 }) {
   return UvData(
     currentUvi: currentUvi,
@@ -28,5 +30,6 @@ UvData makeUvData({
     timezone: timezone,
     timezoneOffset: timezoneOffset,
     fetchedAt: fetchedAt ?? DateTime.utc(2024, 6, 1, 12),
+    alerts: alerts,
   );
 }

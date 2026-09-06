@@ -20,9 +20,12 @@ import 'fakes/fake_uv_data.dart';
 import 'fakes/fake_uv_notifier.dart';
 import 'fakes/mock_uv_api.dart';
 
-const WeatherAlert _heatAdvisory = WeatherAlert(
+final WeatherAlert _heatAdvisory = WeatherAlert(
+  id: 'NWS|Heat Advisory|2024-06-01T00:00:00.000Z',
   event: 'Heat Advisory',
   description: 'Dangerously high UV and heat index expected today.',
+  start: DateTime.utc(2024, 6),
+  end: DateTime.utc(2024, 6, 2),
 );
 
 void main() {
@@ -138,7 +141,7 @@ void main() {
   testWidgets('renders the alert banner below the app bar when an active '
       'alert is passed in', (WidgetTester tester) async {
     await tester.pumpWidget(
-      const ProviderScope(
+      ProviderScope(
         child: MaterialApp(home: DashboardScreen(activeAlert: _heatAdvisory)),
       ),
     );

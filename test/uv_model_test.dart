@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uvalert/models/uv_model.dart';
+import 'package:uvalert/models/weather_alert.dart';
 
 const int _secondsPerHour = 3600;
 const int _utcMinus5OffsetSeconds = -5 * _secondsPerHour;
@@ -22,6 +23,16 @@ void main() {
     'timezone': 'America/New_York',
     'timezone_offset': _utcMinus5OffsetSeconds,
     'fetched_at': 1699963200,
+    'alerts': <Map<String, Object?>>[
+      <String, Object?>{
+        'sender_name': 'NWS Billings MT',
+        'event': 'Heat Advisory',
+        'description': 'Dangerously high UV expected today.',
+        'start': 1700000000,
+        'end': 1700050000,
+        'tags': <String>['Extreme heat warning'],
+      },
+    ],
   };
 
   group('UvForecastEntry', () {
@@ -90,6 +101,8 @@ void main() {
       expect(data.daily.length, 1);
       expect(data.hourly[1].uvi, 8.2);
       expect(data.daily[0].uvi, 9.1);
+      expect(data.alerts.length, 1);
+      expect(data.alerts.single.event, 'Heat Advisory');
     });
 
     test('fromJson throws FormatException when fetched_at is absent', () {
@@ -120,6 +133,54 @@ void main() {
       expect(data.daily.clear, throwsUnsupportedError);
     });
 
+    test('fromJson defaults alerts to empty when absent', () {
+      final Map<String, Object?> json = Map<String, Object?>.from(sampleJson)
+        ..remove('alerts');
+
+      final UvData data = UvData.fromJson(json);
+
+      expect(data.alerts, isEmpty);
+    });
+
+    test('alerts list is unmodifiable', () {
+      final UvData data = UvData.fromJson(sampleJson);
+      final WeatherAlert extra = WeatherAlert.fromJson(const <String, Object?>{
+        'event': 'Flood Warning',
+        'description': 'Heavy rainfall expected.',
+        'start': 1700000000,
+        'end': 1700050000,
+      });
+
+      expect(() => data.alerts.add(extra), throwsUnsupportedError);
+    });
+
+    test('fromJson skips a malformed alert entry and keeps well-formed ones, '
+        'without throwing', () {
+      final Map<String, Object?> json = Map<String, Object?>.from(sampleJson);
+      json['alerts'] = <Map<String, Object?>>[
+        // Well-formed.
+        <String, Object?>{
+          'sender_name': 'NWS Billings MT',
+          'event': 'Heat Advisory',
+          'description': 'Dangerously high UV expected today.',
+          'start': 1700000000,
+          'end': 1700050000,
+        },
+        // Malformed: missing required `event` field.
+        <String, Object?>{
+          'description': 'Missing the event field.',
+          'start': 1700000000,
+          'end': 1700050000,
+        },
+      ];
+
+      late final UvData data;
+      expect(() => data = UvData.fromJson(json), returnsNormally);
+
+      expect(data.alerts.length, 1);
+      expect(data.alerts.single.event, 'Heat Advisory');
+    });
+
     test('equal when all fields match', () {
       final UvData a = UvData.fromJson(sampleJson);
       final UvData b = UvData.fromJson(sampleJson);
@@ -138,6 +199,16 @@ void main() {
       expect(a, isNot(equals(b)));
     });
 
+    test('not equal when alerts differ', () {
+      final UvData a = UvData.fromJson(sampleJson);
+      final UvData b = UvData.fromJson(<String, Object?>{
+        ...sampleJson,
+        'alerts': const <Map<String, Object?>>[],
+      });
+
+      expect(a, isNot(equals(b)));
+    });
+
     test('toJson round-trips through fromJson', () {
       final UvData original = UvData.fromJson(sampleJson);
       final UvData restored = UvData.fromJson(original.toJson());
@@ -151,6 +222,7 @@ void main() {
       expect(restored.hourly.length, original.hourly.length);
       expect(restored.daily.length, original.daily.length);
       expect(restored.fetchedAt, original.fetchedAt);
+      expect(restored.alerts, original.alerts);
     });
   });
 }
