@@ -321,12 +321,7 @@ class _UvHourlyChartState extends State<UvHourlyChart> {
                 child: _HourlyChartSemantics(points: _points),
               ),
             ),
-            if (_scrubState != null)
-              ExcludeSemantics(
-                child: IgnorePointer(
-                  child: _ScrubOverlay(scrub: _scrubState!),
-                ),
-              ),
+            if (_scrubState != null) _ScrubOverlay(scrub: _scrubState!),
           ],
         );
       },
@@ -356,54 +351,60 @@ class _ScrubOverlay extends StatelessWidget {
     final double x = scrub.localPosition.dx;
 
     return Positioned.fill(
-      child: Stack(
-        children: <Widget>[
-          Positioned(
-            left: x - _hairlineWidth / 2,
-            top: 0,
-            bottom: _bottomTitleReservedSize,
-            width: _hairlineWidth,
-            child: ColoredBox(color: colors.onSurface),
-          ),
-          Positioned(
-            left: x - _scrubDotRadius,
-            top: scrub.localPosition.dy - _scrubDotRadius,
-            width: _scrubDotRadius * 2,
-            height: _scrubDotRadius * 2,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: scrub.point.whoColor,
+      child: ExcludeSemantics(
+        child: IgnorePointer(
+          child: Stack(
+            children: <Widget>[
+              Positioned(
+                left: x - _hairlineWidth / 2,
+                top: 0,
+                bottom: _bottomTitleReservedSize,
+                width: _hairlineWidth,
+                child: ColoredBox(color: colors.onSurface),
               ),
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            top: _scrubLabelTopOffset,
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: _scrubLabelPaddingHorizontal,
-                  vertical: _scrubLabelPaddingVertical,
-                ),
-                decoration: BoxDecoration(
-                  color: colors.surface.withValues(
-                    alpha: _scrubLabelBackgroundOpacity,
+              Positioned(
+                left: x - _scrubDotRadius,
+                top: scrub.localPosition.dy - _scrubDotRadius,
+                width: _scrubDotRadius * 2,
+                height: _scrubDotRadius * 2,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: scrub.point.whoColor,
                   ),
-                  borderRadius: BorderRadius.circular(_scrubLabelBorderRadius),
-                ),
-                child: Text(
-                  '${_scrubUvi(scrub.point)} · '
-                  '${formatTime(scrub.point.localTime)}',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: colors.onSurface),
                 ),
               ),
-            ),
+              Positioned(
+                left: 0,
+                right: 0,
+                top: _scrubLabelTopOffset,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: _scrubLabelPaddingHorizontal,
+                      vertical: _scrubLabelPaddingVertical,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colors.surface.withValues(
+                        alpha: _scrubLabelBackgroundOpacity,
+                      ),
+                      borderRadius: BorderRadius.circular(
+                        _scrubLabelBorderRadius,
+                      ),
+                    ),
+                    child: Text(
+                      '${_scrubUvi(scrub.point)} · '
+                      '${formatTime(scrub.point.localTime)}',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: colors.onSurface),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
