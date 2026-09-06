@@ -80,7 +80,7 @@ typedef _ChartPoint = ({
   Color whoColor,
 });
 
-/// A hourly UV index line chart, spanning sunrise to sunset.
+/// An hourly UV index line chart, spanning sunrise to sunset.
 ///
 /// Draws WHO risk-band background fills, an hourly (or every-2-hours,
 /// if labels would overlap) time axis, and a UV index axis at the WHO
