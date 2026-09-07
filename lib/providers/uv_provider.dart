@@ -192,7 +192,12 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
       // data instead of wiping it -- the plain AsyncValue.error factory
       // always produces hasValue == false, which would incorrectly trip
       // DashboardNoDataView (see UvStateQueries.isNoData) even when good
-      // data already exists.
+      // data already exists. It is marked @internal upstream, but has no
+      // public equivalent; this is the same mechanism riverpod's own
+      // AsyncNotifier machinery applies automatically when build() throws,
+      // applied manually here since the exception originates in an awaited
+      // microtask rather than build() itself.
+      // ignore: invalid_use_of_internal_member
       state = AsyncValue<UvData>.error(e, st).copyWithPrevious(state);
       return;
     }
