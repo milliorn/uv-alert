@@ -148,7 +148,12 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
     final int generation = ++_fetchGeneration;
 
     if (!ref.mounted) return;
-    state = const AsyncValue<UvData>.loading();
+    // Preserve prior value/error through the loading transition (mirrors
+    // build()'s stateOrNull ?? loading() fallback) so a manual refresh
+    // doesn't itself wipe hasValue before _fetchWith's own error handling
+    // ever runs.
+    // ignore: invalid_use_of_internal_member
+    state = const AsyncValue<UvData>.loading().copyWithPrevious(state);
 
     await _fetchWith(
       api: api,
