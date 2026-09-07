@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.21.0](https://github.com/milliorn/uv-alert/compare/v1.20.0...v1.21.0) (2026-09-07)
+
+
+### Features
+
+* fetch and parse OWM alerts payload into the dashboard ([#126](https://github.com/milliorn/uv-alert/issues/126)) ([6de37e9](https://github.com/milliorn/uv-alert/commit/6de37e9e35c8362100390c4b15ff8877aa4d48c0)), closes [#100](https://github.com/milliorn/uv-alert/issues/100)
+
 ## [1.20.0](https://github.com/milliorn/uv-alert/compare/v1.19.0...v1.20.0) (2026-09-05)
 
 
