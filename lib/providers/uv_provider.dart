@@ -187,7 +187,13 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
       );
     } on Object catch (e, st) {
       if (!ref.mounted || isStale()) return;
-      state = AsyncValue<UvData>.error(e, st);
+      // copyWithPrevious preserves hasValue/value from the prior successful
+      // state, so a transient refresh failure falls back to stale cached
+      // data instead of wiping it -- the plain AsyncValue.error factory
+      // always produces hasValue == false, which would incorrectly trip
+      // DashboardNoDataView (see UvStateQueries.isNoData) even when good
+      // data already exists.
+      state = AsyncValue<UvData>.error(e, st).copyWithPrevious(state);
       return;
     }
 
