@@ -1,10 +1,30 @@
 import 'package:flutter/foundation.dart';
-import 'package:uvalert/constants.dart';
+import 'package:uvalert/models/weather_alert.dart';
+import 'package:uvalert/utils/epoch.dart';
 
-DateTime _fromEpochSeconds(int s) =>
-    DateTime.fromMillisecondsSinceEpoch(s * msPerSecond, isUtc: true);
-
-int _toEpochSeconds(DateTime dt) => dt.millisecondsSinceEpoch ~/ msPerSecond;
+/// Parses `rawAlerts` into [WeatherAlert]s, skipping and logging any entry
+/// that is malformed (not a map, or missing/wrong-typed required fields)
+/// rather than aborting the whole parse -- one bad alert shouldn't take down
+/// the rest of the dashboard. Logging is unconditional (not gated on
+/// [kDebugMode]) so a dropped alert always leaves a trace, including in
+/// release builds. Only [FormatException] -- the exception type a malformed
+/// field value actually produces -- is caught; a non-map entry is filtered
+/// out via an `is` check rather than a cast, and any other [Error] indicates
+/// a genuine bug and is left to propagate.
+List<WeatherAlert> _parseAlerts(List<dynamic>? rawAlerts) {
+  return List<WeatherAlert>.unmodifiable(
+    (rawAlerts ?? <Object>[]).whereType<Map<String, Object?>>().map((
+      Map<String, Object?> a,
+    ) {
+      try {
+        return WeatherAlert.fromJson(a);
+      } on FormatException catch (e) {
+        debugPrint('UvData.fromJson: skipping malformed alert: $e');
+        return null;
+      }
+    }).whereType<WeatherAlert>(),
+  );
+}
 
 /// A single UV index reading at a point in time.
 @immutable
@@ -15,7 +35,7 @@ class UvForecastEntry {
   /// Deserializes a [UvForecastEntry] from a JSON map.
   factory UvForecastEntry.fromJson(Map<String, Object?> json) {
     return UvForecastEntry(
-      time: _fromEpochSeconds(json['dt']! as int),
+      time: fromEpochSeconds(json['dt']! as int),
       uvi: (json['uvi']! as num).toDouble(),
     );
   }
@@ -28,7 +48,7 @@ class UvForecastEntry {
 
   /// Serializes this entry to a JSON map.
   Map<String, Object?> toJson() => <String, Object?>{
-    'dt': _toEpochSeconds(time),
+    'dt': toEpochSeconds(time),
     'uvi': uvi,
   };
 
@@ -61,19 +81,25 @@ class UvData {
     required this.timezone,
     required this.timezoneOffset,
     required this.fetchedAt,
+    this.alerts = const <WeatherAlert>[],
   });
 
   /// Deserializes a [UvData] from a JSON map.
   ///
   /// Throws [FormatException] if the required `fetched_at` field is absent.
+  ///
+  /// Each entry in `alerts` is parsed independently via [_parseAlerts]: a
+  /// malformed entry (e.g. missing a required field) is skipped and logged
+  /// rather than aborting the whole parse, since one bad alert shouldn't
+  /// take down the rest of the dashboard.
   factory UvData.fromJson(Map<String, Object?> json) {
     final Map<String, Object?> current =
         json['current']! as Map<String, Object?>;
 
     return UvData(
       currentUvi: (current['uvi']! as num).toDouble(),
-      sunrise: _fromEpochSeconds(current['sunrise']! as int),
-      sunset: _fromEpochSeconds(current['sunset']! as int),
+      sunrise: fromEpochSeconds(current['sunrise']! as int),
+      sunset: fromEpochSeconds(current['sunset']! as int),
       clouds: (current['clouds']! as num).toInt(),
       hourly: List<UvForecastEntry>.unmodifiable(
         (json['hourly'] as List<dynamic>? ?? <Object>[]).map<UvForecastEntry>(
@@ -88,8 +114,13 @@ class UvData {
       timezone: json['timezone']! as String,
       timezoneOffset: json['timezone_offset']! as int,
       fetchedAt: json['fetched_at'] != null
-          ? _fromEpochSeconds(json['fetched_at']! as int)
+          ? fromEpochSeconds(json['fetched_at']! as int)
           : throw const FormatException('missing required field: fetched_at'),
+      alerts: _parseAlerts(
+        json['alerts'] is List<dynamic>
+            ? json['alerts']! as List<dynamic>
+            : null,
+      ),
     );
   }
 
@@ -120,20 +151,30 @@ class UvData {
   /// When this data was fetched from the server, in UTC.
   final DateTime fetchedAt;
 
+  /// Active government weather alerts for this location.
+  ///
+  /// Unlike every other field on [UvData], this is an optional constructor
+  /// parameter defaulting to an empty list rather than `required`, mirroring
+  /// OWM's own `alerts` field being optional in the source payload: most
+  /// locations have no active alerts most of the time, so "no alerts" is
+  /// the natural default rather than something every caller must state.
+  final List<WeatherAlert> alerts;
+
   /// Serializes this instance to a JSON map.
   Map<String, Object?> toJson() {
     return <String, Object?>{
       'current': <String, num>{
         'uvi': currentUvi,
-        'sunrise': _toEpochSeconds(sunrise),
-        'sunset': _toEpochSeconds(sunset),
+        'sunrise': toEpochSeconds(sunrise),
+        'sunset': toEpochSeconds(sunset),
         'clouds': clouds,
       },
       'hourly': hourly.map((UvForecastEntry h) => h.toJson()).toList(),
       'daily': daily.map((UvForecastEntry d) => d.toJson()).toList(),
       'timezone': timezone,
       'timezone_offset': timezoneOffset,
-      'fetched_at': _toEpochSeconds(fetchedAt),
+      'fetched_at': toEpochSeconds(fetchedAt),
+      'alerts': alerts.map((WeatherAlert a) => a.toJson()).toList(),
     };
   }
 
@@ -153,7 +194,8 @@ class UvData {
       other.timezoneOffset == timezoneOffset &&
       other.fetchedAt == fetchedAt &&
       listEquals(other.hourly, hourly) &&
-      listEquals(other.daily, daily);
+      listEquals(other.daily, daily) &&
+      listEquals(other.alerts, alerts);
 
   // Override hashCode whenever == is overridden. Dart requires that objects
   // which are == produce the same hashCode, otherwise Sets and Maps break.
@@ -168,5 +210,6 @@ class UvData {
     fetchedAt,
     ...hourly,
     ...daily,
+    ...alerts,
   ]);
 }

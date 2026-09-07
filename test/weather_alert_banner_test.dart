@@ -3,14 +3,21 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:uvalert/models/weather_alert.dart';
 import 'package:uvalert/widgets/weather_alert_banner.dart';
 
-const WeatherAlert _heatAdvisory = WeatherAlert(
+final WeatherAlert _heatAdvisory = WeatherAlert(
+  id: 'NWS|Heat Advisory|2024-06-01T00:00:00.000Z',
   event: 'Heat Advisory',
   description: 'Dangerously high UV and heat index expected today.',
+  start: DateTime.utc(2024, 6),
+  end: DateTime.utc(2024, 6, 2),
+  senderName: 'NWS',
 );
 
-const WeatherAlert _floodWarning = WeatherAlert(
+final WeatherAlert _floodWarning = WeatherAlert(
+  id: '|Flood Warning|2024-06-01T00:00:00.000Z',
   event: 'Flood Warning',
   description: 'Heavy rainfall may cause flash flooding.',
+  start: DateTime.utc(2024, 6),
+  end: DateTime.utc(2024, 6, 2),
 );
 
 Widget _wrap(WeatherAlert? alert) => MaterialApp(
@@ -79,8 +86,11 @@ void main() {
         // _heatAdvisory, defeating the point of this test.
         // ignore: prefer_const_literals_to_create_immutables
         WeatherAlert.fromJson(<String, Object?>{
+          'sender_name': 'NWS',
           'event': 'Heat Advisory',
           'description': 'Dangerously high UV and heat index expected today.',
+          'start': 1717200000,
+          'end': 1717286400,
         }),
       ),
     );

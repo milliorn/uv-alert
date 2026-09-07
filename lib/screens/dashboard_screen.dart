@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uvalert/models/weather_alert.dart';
+import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
@@ -14,15 +14,7 @@ import 'package:uvalert/widgets/weather_alert_banner.dart';
 /// The main screen shown after onboarding completes.
 class DashboardScreen extends ConsumerStatefulWidget {
   /// Creates a [DashboardScreen].
-  ///
-  /// [activeAlert] is the government weather alert to surface in the
-  /// banner below the app bar, or `null` when there is none. Fetching and
-  /// parsing the real OWM `alerts` payload is out of scope for now -- see
-  /// [WeatherAlert].
-  const DashboardScreen({this.activeAlert, super.key});
-
-  /// The active alert to show in the dashboard's banner, if any.
-  final WeatherAlert? activeAlert;
+  const DashboardScreen({super.key});
 
   @override
   ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
@@ -53,7 +45,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       _restoreLocationIfNeeded(ref, next);
     });
 
-    final bool showNoData = ref.watch(uvProvider).isNoData;
+    final AsyncValue<UvData> uvState = ref.watch(uvProvider);
+    final bool showNoData = uvState.isNoData;
     final LocationState location = ref.watch(locationProvider);
 
     return Scaffold(
@@ -71,9 +64,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             tooltip: 'Open settings',
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const SettingsScreen(),
-                ),
+                MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
               );
             },
           ),
@@ -82,7 +73,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       body: SafeArea(
         child: Column(
           children: <Widget>[
-            WeatherAlertBanner(alert: widget.activeAlert),
+            // uvProvider's UvData.alerts is the real fetch/parse path for
+            // government weather alerts (see WeatherAlert.fromJson,
+            // UvData.fromJson) -- only the single first alert is surfaced
+            // here since WeatherAlertBanner still only accepts one; showing
+            // more than one, plus a full alert list, is issue #99.
+            WeatherAlertBanner(alert: uvState.value?.alerts.firstOrNull),
             Expanded(
               child: showNoData
                   ? DashboardNoDataView(

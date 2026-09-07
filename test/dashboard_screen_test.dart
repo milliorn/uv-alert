@@ -20,9 +20,13 @@ import 'fakes/fake_uv_data.dart';
 import 'fakes/fake_uv_notifier.dart';
 import 'fakes/mock_uv_api.dart';
 
-const WeatherAlert _heatAdvisory = WeatherAlert(
+final WeatherAlert _heatAdvisory = WeatherAlert(
+  id: 'NWS|Heat Advisory|2024-06-01T00:00:00.000Z',
   event: 'Heat Advisory',
   description: 'Dangerously high UV and heat index expected today.',
+  start: DateTime.utc(2024, 6),
+  end: DateTime.utc(2024, 6, 2),
+  senderName: 'NWS',
 );
 
 void main() {
@@ -135,11 +139,19 @@ void main() {
     expect(find.text(_heatAdvisory.event), findsNothing);
   });
 
-  testWidgets('renders the alert banner below the app bar when an active '
-      'alert is passed in', (WidgetTester tester) async {
+  testWidgets('renders the alert banner below the app bar when uvProvider '
+      'has an active alert', (WidgetTester tester) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(home: DashboardScreen(activeAlert: _heatAdvisory)),
+      ProviderScope(
+        // ignore: always_specify_types - Override not in flutter_riverpod public API
+        overrides: [
+          uvProvider.overrideWith(
+            () => FakeDataUvNotifier(
+              makeUvData(alerts: <WeatherAlert>[_heatAdvisory]),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: DashboardScreen()),
       ),
     );
 
