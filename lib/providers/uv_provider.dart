@@ -151,9 +151,7 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
       ).wait;
     } on Object catch (e, st) {
       if (!ref.mounted) return;
-      // See the matching comment below on copyWithPrevious's use.
-      // ignore: invalid_use_of_internal_member
-      state = AsyncValue<UvData>.error(e, st).copyWithPrevious(state);
+      state = _errorPreservingPrevious(e, st);
       return;
     }
 
