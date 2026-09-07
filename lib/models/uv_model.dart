@@ -116,7 +116,11 @@ class UvData {
       fetchedAt: json['fetched_at'] != null
           ? fromEpochSeconds(json['fetched_at']! as int)
           : throw const FormatException('missing required field: fetched_at'),
-      alerts: _parseAlerts(json['alerts'] as List<dynamic>?),
+      alerts: _parseAlerts(
+        json['alerts'] is List<dynamic>
+            ? json['alerts']! as List<dynamic>
+            : null,
+      ),
     );
   }
 

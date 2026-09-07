@@ -181,6 +181,45 @@ void main() {
       expect(data.alerts.single.event, 'Heat Advisory');
     });
 
+    test('fromJson skips an alert with an out-of-range epoch timestamp and '
+        'keeps well-formed ones, without throwing', () {
+      final Map<String, Object?> json = Map<String, Object?>.from(sampleJson);
+      json['alerts'] = <Map<String, Object?>>[
+        // Well-formed.
+        <String, Object?>{
+          'sender_name': 'NWS Billings MT',
+          'event': 'Heat Advisory',
+          'description': 'Dangerously high UV expected today.',
+          'start': 1700000000,
+          'end': 1700050000,
+        },
+        // Malformed: `start` is outside the range DateTime can represent.
+        <String, Object?>{
+          'sender_name': 'NWS Billings MT',
+          'event': 'Flood Warning',
+          'description': 'Out-of-range start time.',
+          'start': 9223372036854775807,
+          'end': 1700050000,
+        },
+      ];
+
+      late final UvData data;
+      expect(() => data = UvData.fromJson(json), returnsNormally);
+
+      expect(data.alerts.length, 1);
+      expect(data.alerts.single.event, 'Heat Advisory');
+    });
+
+    test('fromJson treats a non-list alerts value as absent (empty)', () {
+      final Map<String, Object?> json = Map<String, Object?>.from(sampleJson);
+      json['alerts'] = 'not a list';
+
+      late final UvData data;
+      expect(() => data = UvData.fromJson(json), returnsNormally);
+
+      expect(data.alerts, isEmpty);
+    });
+
     test('equal when all fields match', () {
       final UvData a = UvData.fromJson(sampleJson);
       final UvData b = UvData.fromJson(sampleJson);
