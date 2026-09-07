@@ -15,10 +15,12 @@ const int _maxEpochSeconds = 8640000000000000 ~/ msPerSecond;
 ///
 /// Throws [FormatException] if [s] is outside the range that can be
 /// converted to a valid [DateTime], so callers that catch [FormatException]
-/// to skip a malformed payload entry also catch this case, rather than
-/// either an uncaught [RangeError] from [DateTime.fromMillisecondsSinceEpoch]
-/// or a silently-wrapped, wrong [DateTime] from integer overflow in the
-/// seconds-to-milliseconds multiplication.
+/// to skip a malformed payload entry also catch this case. The check runs
+/// on [s] itself, before the seconds-to-milliseconds multiplication below,
+/// so an extreme [s] can't first silently overflow that multiplication (on
+/// a native 64-bit [int], overflow wraps around rather than throwing) into
+/// some in-range value that would then produce a wrong [DateTime] instead
+/// of the intended [RangeError]/[FormatException].
 DateTime fromEpochSeconds(int s) {
   if (s.abs() > _maxEpochSeconds) {
     throw FormatException('epoch seconds value out of range: $s');
