@@ -77,6 +77,19 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
   Future<UvApi> _resolveApi() async =>
       _api ?? await ref.read(uvApiProvider.future);
 
+  /// Builds an error [AsyncValue] that preserves hasValue/value from the
+  /// current state, so a transient failure falls back to stale cached data
+  /// instead of wiping it -- the plain AsyncValue.error factory always
+  /// produces hasValue == false, which would incorrectly trip
+  /// DashboardNoDataView (see UvStateQueries.isNoData) even when good data
+  /// already exists. copyWithPrevious is @internal upstream with no public
+  /// equivalent; this is the same mechanism riverpod's own AsyncNotifier
+  /// machinery applies automatically when build() throws, applied manually
+  /// here since these exceptions originate outside build() itself.
+  AsyncValue<UvData> _errorPreservingPrevious(Object e, StackTrace st) =>
+      // ignore: invalid_use_of_internal_member
+      AsyncValue<UvData>.error(e, st).copyWithPrevious(state);
+
   @override
   AsyncValue<UvData> build() {
     final LocationState location = ref.watch(locationProvider);
@@ -107,7 +120,7 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
             );
           } on Object catch (e, st) {
             if (!ref.mounted || generation != _fetchGeneration) return;
-            state = AsyncValue<UvData>.error(e, st);
+            state = _errorPreservingPrevious(e, st);
           }
         }),
       );
