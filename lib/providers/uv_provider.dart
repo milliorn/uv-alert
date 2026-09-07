@@ -87,6 +87,7 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
   /// machinery applies automatically when build() throws, applied manually
   /// here since these exceptions originate outside build() itself.
   AsyncValue<UvData> _errorPreservingPrevious(Object e, StackTrace st) =>
+      // copyWithPrevious is @internal with no public equivalent.
       // ignore: invalid_use_of_internal_member
       AsyncValue<UvData>.error(e, st).copyWithPrevious(state);
 
