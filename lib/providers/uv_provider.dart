@@ -205,18 +205,7 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
       );
     } on Object catch (e, st) {
       if (!ref.mounted || isStale()) return;
-      // copyWithPrevious preserves hasValue/value from the prior successful
-      // state, so a transient refresh failure falls back to stale cached
-      // data instead of wiping it -- the plain AsyncValue.error factory
-      // always produces hasValue == false, which would incorrectly trip
-      // DashboardNoDataView (see UvStateQueries.isNoData) even when good
-      // data already exists. It is marked @internal upstream, but has no
-      // public equivalent; this is the same mechanism riverpod's own
-      // AsyncNotifier machinery applies automatically when build() throws,
-      // applied manually here since the exception originates in an awaited
-      // microtask rather than build() itself.
-      // ignore: invalid_use_of_internal_member
-      state = AsyncValue<UvData>.error(e, st).copyWithPrevious(state);
+      state = _errorPreservingPrevious(e, st);
       return;
     }
 
