@@ -109,6 +109,52 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
+  // fetch() — error preserves prior successful data
+  // ---------------------------------------------------------------------------
+
+  test(
+    'a refresh failure preserves the prior successful data (hasValue stays '
+    'true)',
+    () async {
+      final UvData data = _makeData();
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+        ),
+      ).thenAnswer((_) async => data);
+
+      final ProviderContainer container = _makeContainerWith(mockApi);
+
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+      expect(container.read(uvProvider).value, data);
+
+      // Second fetch fails -- the notifier must fall back to the data above
+      // rather than discarding it.
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+        ),
+      ).thenThrow(UvApiException(503, 'unavailable'));
+
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+
+      final AsyncValue<UvData> result = container.read(uvProvider);
+      expect(result.hasError, isTrue);
+      expect(result.hasValue, isTrue);
+      expect(result.value, data);
+      // isNoData (hasError && !hasValue) must be false: there is stale data
+      // to fall back to, so DashboardNoDataView must not show.
+      expect(result.isNoData, isFalse);
+    },
+  );
+
+  // ---------------------------------------------------------------------------
   // uvApiProvider fallback — no constructor injection
   // ---------------------------------------------------------------------------
 
