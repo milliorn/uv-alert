@@ -69,7 +69,7 @@ void main() {
     expect(find.textContaining('null'), findsNothing);
   });
 
-  testWidgets('each alert card is keyed by the alert\'s stable id', (
+  testWidgets("each alert card is keyed by the alert's stable id", (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
