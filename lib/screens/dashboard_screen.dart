@@ -73,12 +73,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       body: SafeArea(
         child: Column(
           children: <Widget>[
-            // uvProvider's UvData.alerts is the real fetch/parse path for
-            // government weather alerts (see WeatherAlert.fromJson,
-            // UvData.fromJson) -- only the single first alert is surfaced
-            // here since WeatherAlertBanner still only accepts one; showing
-            // more than one, plus a full alert list, is issue #99.
-            WeatherAlertBanner(alert: uvState.value?.alerts.firstOrNull),
+            WeatherAlertBanner(alerts: uvState.value?.alerts ?? const <WeatherAlert>[]),
             Expanded(
               child: showNoData
                   ? DashboardNoDataView(

@@ -17,7 +17,7 @@ const double _alertCardSectionGap = 4;
 /// Full-screen list of every active government weather alert, with
 /// untruncated details -- event, full description, sender, and time window.
 ///
-/// Reached from [WeatherAlertBanner]'s "See more" action. A dedicated
+/// Reached from `WeatherAlertBanner`'s "See more" action. A dedicated
 /// [MaterialPageRoute] (own back-stack entry) rather than a modal/bottom
 /// sheet, so the list is easy to return to and revisit rather than a
 /// one-off glance.
