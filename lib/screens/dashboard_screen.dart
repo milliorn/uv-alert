@@ -50,53 +50,58 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final bool showNoData = uvState.isNoData;
     final LocationState location = ref.watch(locationProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.location_pin),
-          tooltip: 'Change location',
-          onPressed: () {},
-        ),
-        title: const Text('UV Alert'),
-        centerTitle: true,
-        actions: <Widget>[
-          IconButton(
-            icon: const Icon(Icons.settings),
-            tooltip: 'Open settings',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
-              );
-            },
+    return ProxyErrorToastListener(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.location_pin),
+            tooltip: 'Change location',
+            onPressed: () {},
           ),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: <Widget>[
-            // uvProvider's UvData.alerts is the real fetch/parse path for
-            // government weather alerts (see WeatherAlert.fromJson,
-            // UvData.fromJson) -- only the single first alert is surfaced
-            // here since WeatherAlertBanner still only accepts one; showing
-            // more than one, plus a full alert list, is issue #99.
-            WeatherAlertBanner(alert: uvState.value?.alerts.firstOrNull),
-            Expanded(
-              child: showNoData
-                  ? DashboardNoDataView(
-                      onRetry: () {
-                        if (location == null) return;
-
-                        unawaited(
-                          ref
-                              .read(uvProvider.notifier)
-                              .fetch(lat: location.lat, lon: location.lon),
-                        );
-                      },
-                    )
-                  : const Center(child: Text('Dashboard')),
+          title: const Text('UV Alert'),
+          centerTitle: true,
+          actions: <Widget>[
+            IconButton(
+              icon: const Icon(Icons.settings),
+              tooltip: 'Open settings',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SettingsScreen(),
+                  ),
+                );
+              },
             ),
-            const DashboardFooter(),
           ],
+        ),
+        body: SafeArea(
+          child: Column(
+            children: <Widget>[
+              const ProxyErrorBanner(),
+              // uvProvider's UvData.alerts is the real fetch/parse path for
+              // government weather alerts (see WeatherAlert.fromJson,
+              // UvData.fromJson) -- only the single first alert is surfaced
+              // here since WeatherAlertBanner still only accepts one; showing
+              // more than one, plus a full alert list, is issue #99.
+              WeatherAlertBanner(alert: uvState.value?.alerts.firstOrNull),
+              Expanded(
+                child: showNoData
+                    ? DashboardNoDataView(
+                        onRetry: () {
+                          if (location == null) return;
+
+                          unawaited(
+                            ref
+                                .read(uvProvider.notifier)
+                                .fetch(lat: location.lat, lon: location.lon),
+                          );
+                        },
+                      )
+                    : const Center(child: Text('Dashboard')),
+              ),
+              const DashboardFooter(),
+            ],
+          ),
         ),
       ),
     );
