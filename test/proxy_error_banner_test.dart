@@ -199,10 +199,7 @@ void main() {
   testWidgets('shows a toast once on the 1st 500/503/504 failure', (
     WidgetTester tester,
   ) async {
-    final ProviderContainer container = ProviderContainer(
-      // ignore: always_specify_types - Override not in flutter_riverpod public API
-      overrides: [uvProvider.overrideWith(() => UvNotifier())],
-    );
+    final ProviderContainer container = ProviderContainer();
     addTearDown(container.dispose);
 
     await tester.pumpWidget(
@@ -266,10 +263,7 @@ void main() {
   testWidgets('does not show a toast for 429, 502, or 400', (
     WidgetTester tester,
   ) async {
-    final ProviderContainer container = ProviderContainer(
-      // ignore: always_specify_types - Override not in flutter_riverpod public API
-      overrides: [uvProvider.overrideWith(() => UvNotifier())],
-    );
+    final ProviderContainer container = ProviderContainer();
     addTearDown(container.dispose);
 
     await tester.pumpWidget(
