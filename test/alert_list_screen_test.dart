@@ -76,10 +76,7 @@ void main() {
       _wrap(<WeatherAlert>[_heatAdvisory, _floodWarning]),
     );
 
-    final Finder heatCard = find.ancestor(
-      of: find.text(_heatAdvisory.event),
-      matching: find.byType(Card),
-    );
-    expect(tester.widget(heatCard).key, ValueKey<String>(_heatAdvisory.id));
+    expect(find.byKey(ValueKey<String>(_heatAdvisory.id)), findsOneWidget);
+    expect(find.byKey(ValueKey<String>(_floodWarning.id)), findsOneWidget);
   });
 }
