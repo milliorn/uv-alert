@@ -24,8 +24,7 @@ double _peakUviForDay(UvData data, DateTime atUtc) {
 
   final Iterable<double> todaysUvi = data.hourly
       .where(
-        (UvForecastEntry entry) =>
-            _localDate(entry.time, offset) == localToday,
+        (UvForecastEntry entry) => _localDate(entry.time, offset) == localToday,
       )
       .map((UvForecastEntry entry) => entry.uvi);
 
