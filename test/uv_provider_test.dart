@@ -264,15 +264,23 @@ void main() {
     },
   );
 
-  test('ProxyErrorState equality compares by field value', () {
-    expect(
-      const ProxyErrorState(consecutiveFailures: 2, lastStatusCode: 500),
-      const ProxyErrorState(consecutiveFailures: 2, lastStatusCode: 500),
+  test('ProxyErrorState equality and hashCode compare by field value', () {
+    const ProxyErrorState a = ProxyErrorState(
+      consecutiveFailures: 2,
+      lastStatusCode: 500,
     );
-    expect(
-      const ProxyErrorState(consecutiveFailures: 2, lastStatusCode: 500),
-      isNot(const ProxyErrorState(consecutiveFailures: 3, lastStatusCode: 500)),
+    const ProxyErrorState b = ProxyErrorState(
+      consecutiveFailures: 2,
+      lastStatusCode: 500,
     );
+    const ProxyErrorState different = ProxyErrorState(
+      consecutiveFailures: 3,
+      lastStatusCode: 500,
+    );
+
+    expect(a, b);
+    expect(a.hashCode, equals(b.hashCode));
+    expect(a, isNot(different));
   });
 
   // ---------------------------------------------------------------------------
