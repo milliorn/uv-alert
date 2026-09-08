@@ -10,6 +10,7 @@ import 'package:uvalert/screens/settings_screen.dart';
 import 'package:uvalert/widgets/dashboard_footer.dart';
 import 'package:uvalert/widgets/dashboard_hero.dart';
 import 'package:uvalert/widgets/dashboard_no_data_view.dart';
+import 'package:uvalert/widgets/proxy_error_banner.dart';
 import 'package:uvalert/widgets/weather_alert_banner.dart';
 
 /// The main screen shown after onboarding completes.
