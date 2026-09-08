@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uvalert/models/uv_model.dart';
+import 'package:uvalert/models/weather_alert.dart';
 import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
@@ -73,7 +74,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       body: SafeArea(
         child: Column(
           children: <Widget>[
-            WeatherAlertBanner(alerts: uvState.value?.alerts ?? const <WeatherAlert>[]),
+            WeatherAlertBanner(
+              alerts: uvState.value?.alerts ?? const <WeatherAlert>[],
+            ),
             Expanded(
               child: showNoData
                   ? DashboardNoDataView(
