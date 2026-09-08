@@ -144,7 +144,7 @@ class ProxyErrorToastListener extends ConsumerWidget {
   const ProxyErrorToastListener({required this.child, super.key});
 
   /// The widget below this one in the tree. Rendered unchanged; this widget
-  /// only adds a [ref.listen] side effect.
+  /// only adds a `ref.listen` side effect.
   final Widget child;
 
   @override
