@@ -77,19 +77,19 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
   Future<UvApi> _resolveApi() async =>
       _api ?? await ref.read(uvApiProvider.future);
 
-  /// Builds an error [AsyncValue] that preserves hasValue/value from the
-  /// current state, so a transient failure falls back to stale cached data
-  /// instead of wiping it -- the plain AsyncValue.error factory always
-  /// produces hasValue == false, which would incorrectly trip
-  /// DashboardNoDataView (see UvStateQueries.isNoData) even when good data
-  /// already exists. copyWithPrevious is @internal upstream with no public
-  /// equivalent; this is the same mechanism riverpod's own AsyncNotifier
-  /// machinery applies automatically when build() throws, applied manually
-  /// here since these exceptions originate outside build() itself.
-  AsyncValue<UvData> _errorPreservingPrevious(Object e, StackTrace st) =>
-      // copyWithPrevious is @internal with no public equivalent.
+  /// Merges [next] with the current state's value/error, so a transient
+  /// failure or a loading transition falls back to stale cached data instead
+  /// of wiping it -- the plain [AsyncValue.error]/[AsyncValue.loading]
+  /// factories always produce hasValue == false, which would incorrectly
+  /// trip DashboardNoDataView (see [UvStateQueries.isNoData]) even when good
+  /// data already exists. copyWithPrevious is @internal upstream with no
+  /// public equivalent; this is the same mechanism riverpod's own
+  /// AsyncNotifier machinery applies automatically when build() throws,
+  /// applied manually here since these transitions originate outside
+  /// build() itself.
+  AsyncValue<UvData> _withPrevious(AsyncValue<UvData> next) =>
       // ignore: invalid_use_of_internal_member
-      AsyncValue<UvData>.error(e, st).copyWithPrevious(state);
+      next.copyWithPrevious(state);
 
   @override
   AsyncValue<UvData> build() {
@@ -121,7 +121,7 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
             );
           } on Object catch (e, st) {
             if (!ref.mounted || generation != _fetchGeneration) return;
-            state = _errorPreservingPrevious(e, st);
+            state = _withPrevious(AsyncValue<UvData>.error(e, st));
           }
         }),
       );
@@ -152,7 +152,7 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
       ).wait;
     } on Object catch (e, st) {
       if (!ref.mounted) return;
-      state = _errorPreservingPrevious(e, st);
+      state = _withPrevious(AsyncValue<UvData>.error(e, st));
       return;
     }
 
@@ -166,8 +166,7 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
     // build()'s stateOrNull ?? loading() fallback) so a manual refresh
     // doesn't itself wipe hasValue before _fetchWith's own error handling
     // ever runs.
-    // ignore: invalid_use_of_internal_member
-    state = const AsyncValue<UvData>.loading().copyWithPrevious(state);
+    state = _withPrevious(const AsyncValue<UvData>.loading());
 
     await _fetchWith(
       api: api,
@@ -206,7 +205,7 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
       );
     } on Object catch (e, st) {
       if (!ref.mounted || isStale()) return;
-      state = _errorPreservingPrevious(e, st);
+      state = _withPrevious(AsyncValue<UvData>.error(e, st));
       return;
     }
 
