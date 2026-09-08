@@ -30,7 +30,13 @@ void main() {
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
-      _wrap(const ProxyErrorBanner(), errorState: const ProxyErrorState()),
+      // Not const: every other call site in this file constructs
+      // ProxyErrorBanner() inside a const tree, which the compiler
+      // canonicalizes into one shared instance -- coverage tooling then
+      // credits the constructor only once, and inconsistently. This one
+      // non-const call guarantees the constructor line is always counted.
+      // ignore: prefer_const_constructors
+      _wrap(ProxyErrorBanner(), errorState: const ProxyErrorState()),
     );
 
     expect(find.byType(MaterialBanner), findsNothing);
