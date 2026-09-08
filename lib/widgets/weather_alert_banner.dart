@@ -42,20 +42,16 @@ class WeatherAlertBanner extends StatefulWidget {
 }
 
 class _WeatherAlertBannerState extends State<WeatherAlertBanner> {
+  // Deliberately never pruned based on widget.alerts changing -- including
+  // a transition through an empty list. A refresh that briefly reports "no
+  // active alerts" before the same alert reappears must not resurface a
+  // banner the user already dismissed (mirrors the single-alert version's
+  // _dismissedAlert, which for the same reason compared against its own
+  // prior value rather than oldWidget.alert). Ids are already globally
+  // unique per alert identity (see WeatherAlert.id), so a dismissed id
+  // lingering here forever cannot later collide with a genuinely different
+  // alert -- unlike a positional index, there is no bound worth enforcing.
   final Set<String> _dismissedIds = <String>{};
-
-  @override
-  void didUpdateWidget(WeatherAlertBanner oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Drop dismissed ids that are no longer active, so the set doesn't grow
-    // unboundedly across a long dashboard session, and so an id that later
-    // gets reused (extremely unlikely given how id is synthesized, but not
-    // impossible) doesn't inherit a stale dismissal.
-    final Set<String> activeIds = widget.alerts
-        .map((WeatherAlert a) => a.id)
-        .toSet();
-    _dismissedIds.retainAll(activeIds);
-  }
 
   void _onDismiss(String id) {
     setState(() => _dismissedIds.add(id));
