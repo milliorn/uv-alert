@@ -155,6 +155,127 @@ void main() {
   );
 
   // ---------------------------------------------------------------------------
+  // proxyErrorProvider — consecutive-failure tracking
+  // ---------------------------------------------------------------------------
+
+  test('proxyErrorProvider starts at zero failures with no status code', () {
+    final ProviderContainer container = _makeContainerWith(mockApi);
+
+    final ProxyErrorState state = container.read(proxyErrorProvider);
+    expect(state.consecutiveFailures, 0);
+    expect(state.lastStatusCode, isNull);
+  });
+
+  test(
+    'a fetch failure increments consecutiveFailures and records the status '
+    'code',
+    () async {
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+        ),
+      ).thenThrow(UvApiException(500, 'server error'));
+
+      final ProviderContainer container = _makeContainerWith(mockApi);
+
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+
+      final ProxyErrorState state = container.read(proxyErrorProvider);
+      expect(state.consecutiveFailures, 1);
+      expect(state.lastStatusCode, 500);
+    },
+  );
+
+  test('consecutiveFailures accumulates across repeated failures', () async {
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+      ),
+    ).thenThrow(UvApiException(503, 'unavailable'));
+
+    final ProviderContainer container = _makeContainerWith(mockApi);
+
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+
+    final ProxyErrorState state = container.read(proxyErrorProvider);
+    expect(state.consecutiveFailures, 3);
+    expect(state.lastStatusCode, 503);
+  });
+
+  test('a successful fetch resets consecutiveFailures to zero', () async {
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+      ),
+    ).thenThrow(UvApiException(500, 'server error'));
+
+    final ProviderContainer container = _makeContainerWith(mockApi);
+
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+    expect(container.read(proxyErrorProvider).consecutiveFailures, 1);
+
+    final UvData data = _makeData();
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+      ),
+    ).thenAnswer((_) async => data);
+
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+
+    final ProxyErrorState state = container.read(proxyErrorProvider);
+    expect(state.consecutiveFailures, 0);
+    expect(state.lastStatusCode, isNull);
+  });
+
+  test(
+    '426 (force-update) is excluded from the consecutive-failure counter',
+    () async {
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+        ),
+      ).thenThrow(const UvApiForceUpdateException());
+
+      final ProviderContainer container = _makeContainerWith(mockApi);
+
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+
+      final ProxyErrorState state = container.read(proxyErrorProvider);
+      expect(state.consecutiveFailures, 0);
+      expect(state.lastStatusCode, isNull);
+    },
+  );
+
+  test('ProxyErrorState equality compares by field value', () {
+    expect(
+      const ProxyErrorState(consecutiveFailures: 2, lastStatusCode: 500),
+      const ProxyErrorState(consecutiveFailures: 2, lastStatusCode: 500),
+    );
+    expect(
+      const ProxyErrorState(consecutiveFailures: 2, lastStatusCode: 500),
+      isNot(const ProxyErrorState(consecutiveFailures: 3, lastStatusCode: 500)),
+    );
+  });
+
+  // ---------------------------------------------------------------------------
   // uvApiProvider fallback — no constructor injection
   // ---------------------------------------------------------------------------
 

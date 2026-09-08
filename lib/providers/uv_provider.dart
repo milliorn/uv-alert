@@ -276,11 +276,19 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
       );
     } on Object catch (e, st) {
       if (!ref.mounted || isStale()) return;
+      // 426 (force-update) is tracked separately via UvApiForceUpdateException
+      // and excluded from the consecutive-failure escalation counter -- it
+      // cannot self-heal via retry the way 429/500/502/503/504 might, and is
+      // handled by its own dedicated UI (docs/adr/0009-force-update-via-426.md).
+      if (e is UvApiException) {
+        ref.read(proxyErrorProvider.notifier).recordFailure(e.statusCode);
+      }
       state = _withPrevious(AsyncValue<UvData>.error(e, st));
       return;
     }
 
     if (!ref.mounted || isStale()) return;
+    ref.read(proxyErrorProvider.notifier).recordSuccess();
     state = AsyncValue<UvData>.data(data);
   }
 }
