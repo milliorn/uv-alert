@@ -67,7 +67,6 @@ void main() {
         final WeatherAlert earlier = _alert(
           event: 'Flood Warning',
           id: 'earlier',
-          start: DateTime.utc(2024, 6, 1),
         );
         final WeatherAlert later = _alert(
           event: 'Fire Warning',
