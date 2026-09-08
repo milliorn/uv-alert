@@ -88,6 +88,7 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
   /// applied manually here since these transitions originate outside
   /// build() itself.
   AsyncValue<UvData> _withPrevious(AsyncValue<UvData> next) =>
+      // copyWithPrevious is @internal with no public equivalent.
       // ignore: invalid_use_of_internal_member
       next.copyWithPrevious(state);
 
