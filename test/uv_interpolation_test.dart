@@ -92,10 +92,7 @@ void main() {
       'falls back to currentUvi as UVmax when hourly has no entry for the '
       'day',
       () {
-        final UvData data = makeUvData(
-          currentUvi: 4,
-          hourly: const <UvForecastEntry>[],
-        );
+        final UvData data = makeUvData(currentUvi: 4);
 
         final double elevation = solarElevationDegrees(
           lat: _lat,
