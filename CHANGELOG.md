@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.21.1](https://github.com/milliorn/uv-alert/compare/v1.21.0...v1.21.1) (2026-09-09)
+
+
+### Bug Fixes
+
+* preserve prior UV data on refresh error and add stale-data footer ([#128](https://github.com/milliorn/uv-alert/issues/128)) ([27ca8db](https://github.com/milliorn/uv-alert/commit/27ca8dbf97bd201bbd0c7ea4f295decf3b55f716))
+
 ## [1.21.0](https://github.com/milliorn/uv-alert/compare/v1.20.0...v1.21.0) (2026-09-07)
 
 
