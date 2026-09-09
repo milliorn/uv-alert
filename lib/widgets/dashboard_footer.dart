@@ -7,6 +7,8 @@ import 'package:uvalert/constants.dart';
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
+import 'package:uvalert/storage/cache.dart';
+import 'package:uvalert/utils/time_format.dart';
 
 /// Horizontal padding around the dashboard footer's content.
 const double dashboardFooterPaddingHorizontal = 16;
@@ -21,22 +23,27 @@ const Duration _relativeTimeRefreshInterval = Duration(minutes: 1);
 /// Number of minutes in an hour, used by [_formatRelativeTime].
 const int _minutesPerHour = 60;
 
-/// Number of hours in a day, used by [_formatRelativeTime].
-const int _hoursPerDay = 24;
-
 /// Minimum width and height (in density-independent pixels) for a tappable
 /// element, per ADR 0011's accessibility touch-target requirement.
 const double _minTouchTargetDp = 48;
+
+/// Text color for the stale-data warning variant of the updated line, per
+/// `.private/architecture/SCREENS.md`'s "amber/yellow" spec. No existing
+/// theme token covers this (`ColorScheme` has no warning color), so this
+/// uses a fixed Material amber shade directly rather than inventing a new
+/// theme-wide token for a single, non-error warning state.
+const Color _staleWarningColor = Colors.amber;
 
 /// Footer shown at the bottom of the dashboard screen, displaying when the
 /// UV data was last updated, the current location, a link to the project's
 /// GitHub repository, and a copyright notice.
 ///
 /// Renders the last-updated/location line whenever `uvProvider` has a
-/// cached value, with no check of how old it is -- there is currently no
-/// visual distinction between recently-fetched and long-stale data. A
-/// dedicated stale-data warning variant is a separate, not-yet-implemented
-/// feature.
+/// cached value. Staleness (`data.fetchedAt` older than [cacheMaxAgeHours])
+/// switches the line to "Last updated {date/time} · Data may be outdated"
+/// in [_staleWarningColor] instead of the muted fresh-data style -- this is
+/// a non-blocking, informational warning: the user can still see and
+/// interact with the stale cached data underneath.
 class DashboardFooter extends ConsumerStatefulWidget {
   /// Creates a [DashboardFooter].
   const DashboardFooter({super.key});
@@ -77,6 +84,10 @@ class _DashboardFooterState extends ConsumerState<DashboardFooter> {
     final TextStyle? mutedStyle = theme.textTheme.bodySmall?.copyWith(
       color: theme.colorScheme.onSurfaceVariant,
     );
+    final TextStyle? staleStyle = theme.textTheme.bodySmall?.copyWith(
+      color: _staleWarningColor,
+    );
+    final bool isStale = uvData != null && _isStale(uvData.fetchedAt);
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -87,10 +98,12 @@ class _DashboardFooterState extends ConsumerState<DashboardFooter> {
         children: <Widget>[
           if (uvData != null)
             Text(
-              _updatedLabel(uvData.fetchedAt, manualLocationName),
+              isStale
+                  ? _staleLabel(uvData.fetchedAt)
+                  : _updatedLabel(uvData.fetchedAt, manualLocationName),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: mutedStyle,
+              style: isStale ? staleStyle : mutedStyle,
             ),
           TextButton(
             style: TextButton.styleFrom(
@@ -129,8 +142,61 @@ String _updatedLabel(DateTime fetchedAt, String? manualLocation) {
       : 'Updated $relative · $cityState';
 }
 
+/// Whether [fetchedAt] (UTC) has exceeded [cacheMaxAgeHours] -- the same
+/// threshold and the same server-provided timestamp `Cache.isStale` checks,
+/// applied directly to the value already on hand here rather than reading
+/// `cacheProvider` (an extra async indirection this otherwise-synchronous
+/// widget doesn't need for a value it already has).
+bool _isStale(DateTime fetchedAt) =>
+    DateTime.now().toUtc().difference(fetchedAt) >=
+    const Duration(hours: cacheMaxAgeHours);
+
+/// Builds the "Last updated {date/time} · Data may be outdated" label shown
+/// when [fetchedAt] is stale.
+String _staleLabel(DateTime fetchedAt) =>
+    'Last updated ${_formatDateTime(fetchedAt)} · Data may be outdated';
+
+/// Abbreviated month names for [_formatDateTime], indexed by
+/// [DateTime.month] (1-12); index 0 is unused padding so the array can be
+/// indexed directly without an off-by-one subtraction at each call site.
+const List<String> _monthAbbreviations = <String>[
+  '',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+/// Formats [utc] (converted to the device's local time) as e.g.
+/// "Jun 1, 2:00 PM". No `intl` dependency is used elsewhere in this codebase
+/// for date formatting (only [formatTime] for time-of-day), so this follows
+/// the same hand-rolled convention rather than introducing one for a single
+/// label.
+String _formatDateTime(DateTime utc) {
+  final DateTime local = utc.toLocal();
+  final String month = _monthAbbreviations[local.month];
+
+  return '$month ${local.day}, ${formatTime(local)}';
+}
+
 /// Formats [fetchedAt] (UTC) relative to now, e.g. "just now", "5 mins ago",
-/// "3 hr ago", "2 d ago".
+/// "23 hr ago".
+///
+/// Never reaches a day-scale result in practice: `build()` only calls this
+/// for non-stale data (see [_isStale]), and staleness is defined as
+/// [fetchedAt] being at least [cacheMaxAgeHours] hours old -- the same
+/// threshold this function's hour branch caps out just under. A caller that
+/// bypassed that guard and passed a [fetchedAt] a day or more old would
+/// still get a (merely less specific) "N hr ago" result rather than a
+/// crash, since the hour branch has no upper bound of its own.
 String _formatRelativeTime(DateTime fetchedAt) {
   final Duration elapsed = DateTime.now().toUtc().difference(fetchedAt);
 
@@ -140,9 +206,7 @@ String _formatRelativeTime(DateTime fetchedAt) {
     return '${elapsed.inMinutes} mins ago';
   }
 
-  if (elapsed.inHours < _hoursPerDay) return '${elapsed.inHours} hr ago';
-
-  return '${elapsed.inDays} d ago';
+  return '${elapsed.inHours} hr ago';
 }
 
 /// Derives a "City, State" (or "City, Country" when there is no state)

@@ -71,7 +71,11 @@ void main() {
   for (final (Duration elapsed, String expectedSuffix) in <(Duration, String)>[
     (const Duration(minutes: 5), 'mins ago · Fresno, CA'),
     (const Duration(hours: 3), 'hr ago · Fresno, CA'),
-    (const Duration(days: 2), 'd ago · Fresno, CA'),
+    // Just under the 24 hr staleness threshold (cacheMaxAgeHours) -- past
+    // this, the footer switches to the stale-data variant instead (covered
+    // separately below), so this is the longest elapsed time that still
+    // renders the fresh "Updated ... ago" format.
+    (const Duration(hours: 23), 'hr ago · Fresno, CA'),
   ]) {
     testWidgets('formats elapsed time as "$expectedSuffix"', (
       WidgetTester tester,
@@ -88,6 +92,87 @@ void main() {
       expect(find.textContaining(expectedSuffix), findsOneWidget);
     });
   }
+
+  // ---------------------------------------------------------------------------
+  // Stale data (>24 hr old, per cacheMaxAgeHours)
+  // ---------------------------------------------------------------------------
+
+  testWidgets(
+    'shows the stale-data warning instead of the fresh label once data is '
+    '24 hr or older',
+    (WidgetTester tester) async {
+      final DateTime fetchedAt = DateTime.now().toUtc().subtract(
+        const Duration(hours: 24),
+      );
+
+      await tester.pumpWidget(
+        _wrap(
+          uvNotifier: () =>
+              FakeDataUvNotifier(makeUvData(fetchedAt: fetchedAt)),
+        ),
+      );
+
+      expect(find.textContaining('Data may be outdated'), findsOneWidget);
+      expect(find.textContaining('Updated'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    "stale-data label omits the fresh label's relative-time/city format",
+    (WidgetTester tester) async {
+      final DateTime fetchedAt = DateTime.utc(2024, 6, 1, 14);
+
+      await tester.pumpWidget(
+        _wrap(
+          uvNotifier: () =>
+              FakeDataUvNotifier(makeUvData(fetchedAt: fetchedAt)),
+        ),
+      );
+
+      expect(find.textContaining('Last updated'), findsOneWidget);
+      expect(find.textContaining('· Data may be outdated'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'stale-data warning is styled in amber rather than the muted fresh style',
+    (WidgetTester tester) async {
+      final DateTime fetchedAt = DateTime.now().toUtc().subtract(
+        const Duration(hours: 48),
+      );
+
+      await tester.pumpWidget(
+        _wrap(
+          uvNotifier: () =>
+              FakeDataUvNotifier(makeUvData(fetchedAt: fetchedAt)),
+        ),
+      );
+
+      final Text staleText = tester.widget(
+        find.textContaining('Data may be outdated'),
+      );
+      expect(staleText.style?.color, Colors.amber);
+    },
+  );
+
+  testWidgets(
+    'data just under the 24 hr threshold still renders the fresh label',
+    (WidgetTester tester) async {
+      final DateTime fetchedAt = DateTime.now().toUtc().subtract(
+        const Duration(hours: 23, minutes: 59),
+      );
+
+      await tester.pumpWidget(
+        _wrap(
+          uvNotifier: () =>
+              FakeDataUvNotifier(makeUvData(fetchedAt: fetchedAt)),
+        ),
+      );
+
+      expect(find.textContaining('Updated'), findsOneWidget);
+      expect(find.textContaining('Data may be outdated'), findsNothing);
+    },
+  );
 
   testWidgets(
     'periodic timer refreshes the label and is cancelled on dispose',
