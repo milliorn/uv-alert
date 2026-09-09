@@ -109,6 +109,178 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
+  // fetch() — error preserves prior successful data
+  // ---------------------------------------------------------------------------
+
+  test(
+    'a refresh failure preserves the prior successful data (hasValue stays '
+    'true)',
+    () async {
+      final UvData data = _makeData();
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+        ),
+      ).thenAnswer((_) async => data);
+
+      final ProviderContainer container = _makeContainerWith(mockApi);
+
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+      expect(container.read(uvProvider).value, data);
+
+      // Second fetch fails -- the notifier must fall back to the data above
+      // rather than discarding it.
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+        ),
+      ).thenThrow(UvApiException(503, 'unavailable'));
+
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+
+      final AsyncValue<UvData> result = container.read(uvProvider);
+      expect(result.hasError, isTrue);
+      expect(result.hasValue, isTrue);
+      expect(result.value, data);
+      // isNoData (hasError && !hasValue) must be false: there is stale data
+      // to fall back to, so DashboardNoDataView must not show.
+      expect(result.isNoData, isFalse);
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // build() auto-fetch — error preserves prior successful data
+  // ---------------------------------------------------------------------------
+
+  test(
+    'a location-triggered auto-fetch failure preserves prior successful '
+    'data (hasValue stays true)',
+    () async {
+      final UvData data = _makeData();
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+        ),
+      ).thenAnswer((_) async => data);
+
+      final ProviderContainer container = await _makeWarmContainerWith(
+        mockApi,
+      );
+
+      final Completer<UvData> firstDone = Completer<UvData>();
+      final Completer<AsyncValue<UvData>> errorDone =
+          Completer<AsyncValue<UvData>>();
+      container.listen<AsyncValue<UvData>>(uvProvider, (
+        _,
+        AsyncValue<UvData> next,
+      ) {
+        if (!firstDone.isCompleted) next.whenData<void>(firstDone.complete);
+        if (next.hasError && !errorDone.isCompleted) {
+          errorDone.complete(next);
+        }
+      });
+
+      // First location change succeeds, populating uvProvider with data.
+      container.read(locationProvider.notifier).setManual(lat: 1, lon: 2);
+      await firstDone.future;
+      expect(container.read(uvProvider).value, data);
+
+      // Second location change's auto-fetch fails -- the notifier must fall
+      // back to the data above rather than discarding it.
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+        ),
+      ).thenThrow(UvApiException(503, 'unavailable'));
+
+      container.read(locationProvider.notifier).setManual(lat: 10, lon: 20);
+
+      final AsyncValue<UvData> errorState = await errorDone.future;
+
+      expect(errorState.hasError, isTrue);
+      expect(errorState.hasValue, isTrue);
+      expect(errorState.value, data);
+      expect(errorState.isNoData, isFalse);
+    },
+  );
+
+  // ---------------------------------------------------------------------------
+  // fetch() loading transition — preserves prior error through retry
+  // ---------------------------------------------------------------------------
+
+  test(
+    'fetch() retrying after a no-data error keeps isNoData true while '
+    'loading, so DashboardNoDataView does not flash away mid-retry',
+    () async {
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+        ),
+      ).thenThrow(UvApiException(500, 'server error'));
+
+      final ProviderContainer container = _makeContainerWith(mockApi);
+
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+      expect(container.read(uvProvider).isNoData, isTrue);
+
+      // Retry stalls in-flight so the loading transition itself can be
+      // observed before it resolves.
+      final Completer<UvData> stall = Completer<UvData>();
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+        ),
+      ).thenAnswer((_) => stall.future);
+
+      final Completer<AsyncValue<UvData>> loadingCompleter =
+          Completer<AsyncValue<UvData>>();
+      container.listen<AsyncValue<UvData>>(uvProvider, (
+        _,
+        AsyncValue<UvData> next,
+      ) {
+        if (next.isLoading && !loadingCompleter.isCompleted) {
+          loadingCompleter.complete(next);
+        }
+      });
+
+      final Future<void> retry = container
+          .read(uvProvider.notifier)
+          .fetch(lat: 51.5, lon: -0.1);
+
+      final AsyncValue<UvData> loadingState = await loadingCompleter.future;
+      expect(loadingState.isLoading, isTrue);
+      expect(loadingState.hasValue, isFalse);
+      // copyWithPrevious carries the prior AsyncError's error forward onto
+      // the loading state (see riverpod's AsyncLoading.copyWithPrevious), so
+      // isNoData (hasError && !hasValue) stays true for the whole retry --
+      // DashboardNoDataView must not flip away until the retry actually
+      // resolves with data or the container drops the error.
+      expect(loadingState.isNoData, isTrue);
+
+      stall.complete(_makeData());
+      await retry;
+    },
+  );
+
+  // ---------------------------------------------------------------------------
   // uvApiProvider fallback — no constructor injection
   // ---------------------------------------------------------------------------
 
