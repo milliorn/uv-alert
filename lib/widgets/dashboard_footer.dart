@@ -39,11 +39,11 @@ const Color _staleWarningColor = Colors.amber;
 /// GitHub repository, and a copyright notice.
 ///
 /// Renders the last-updated/location line whenever `uvProvider` has a
-/// cached value. Staleness (`data.fetchedAt` older than [cacheMaxAgeHours])
-/// switches the line to "Last updated {date/time} · Data may be outdated"
-/// in [_staleWarningColor] instead of the muted fresh-data style -- this is
-/// a non-blocking, informational warning: the user can still see and
-/// interact with the stale cached data underneath.
+/// cached value. Staleness (`data.fetchedAt` at least [cacheMaxAgeHours]
+/// old) switches the line to "Last updated {date/time} · Data may be
+/// outdated" in [_staleWarningColor] instead of the muted fresh-data style
+/// -- this is a non-blocking, informational warning: the user can still
+/// see and interact with the stale cached data underneath.
 class DashboardFooter extends ConsumerStatefulWidget {
   /// Creates a [DashboardFooter].
   const DashboardFooter({super.key});

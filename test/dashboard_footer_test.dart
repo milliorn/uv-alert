@@ -94,7 +94,7 @@ void main() {
   }
 
   // ---------------------------------------------------------------------------
-  // Stale data (>24 hr old, per cacheMaxAgeHours)
+  // Stale data (24 hr or older, per cacheMaxAgeHours)
   // ---------------------------------------------------------------------------
 
   testWidgets(
