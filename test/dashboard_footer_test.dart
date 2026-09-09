@@ -135,6 +135,32 @@ void main() {
   );
 
   testWidgets(
+    "stale-data label formats the timestamp in the queried location's "
+    "timezone, not the device's",
+    (WidgetTester tester) async {
+      // 2024-06-01 23:00 UTC, at a +5-hour offset location: 2024-06-02
+      // 04:00 local -- a different calendar day than the UTC instant, so a
+      // device-local (rather than location-local) rendering is
+      // distinguishable by which day/hour shows up.
+      final DateTime fetchedAt = DateTime.utc(2024, 6, 1, 23);
+      const int timezoneOffsetSeconds = 5 * 60 * 60;
+
+      await tester.pumpWidget(
+        _wrap(
+          uvNotifier: () => FakeDataUvNotifier(
+            makeUvData(
+              fetchedAt: fetchedAt,
+              timezoneOffset: timezoneOffsetSeconds,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.textContaining('Jun 2, 4:00 AM'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
     'stale-data warning is styled in amber rather than the muted fresh style',
     (WidgetTester tester) async {
       final DateTime fetchedAt = DateTime.now().toUtc().subtract(
