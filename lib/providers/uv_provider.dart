@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uvalert/api/uv_api.dart';
 import 'package:uvalert/constants.dart';
@@ -54,6 +55,76 @@ extension UvStateQueries on AsyncValue<UvData> {
   /// Whether there is genuinely no UV data to show: the last fetch failed
   /// and no prior successful data exists to fall back to.
   bool get isNoData => hasError && !hasValue;
+}
+
+/// In-memory count of consecutive non-200 proxy responses, tracked so the
+/// dashboard can escalate its error UX (toast -> persistent banner) after
+/// repeated failures. See `docs/adr/0010-proxy-error-code-contract.md`.
+@immutable
+class ProxyErrorState {
+  /// Creates a [ProxyErrorState].
+  const ProxyErrorState({this.consecutiveFailures = 0, this.lastStatusCode});
+
+  /// Number of non-200 responses received back-to-back, with no successful
+  /// response in between. Reset to 0 on any 200 response.
+  final int consecutiveFailures;
+
+  /// The HTTP status code of the most recent failure, or `null` if the last
+  /// fetch succeeded (or none has completed yet).
+  final int? lastStatusCode;
+
+  // Override == for value equality, consistent with the rest of the
+  // codebase's model classes (see WeatherAlert, UvData) -- lets tests and
+  // ref.listen compare states directly rather than field-by-field.
+  @override
+  bool operator ==(Object other) =>
+      other is ProxyErrorState &&
+      other.consecutiveFailures == consecutiveFailures &&
+      other.lastStatusCode == lastStatusCode;
+
+  @override
+  int get hashCode => Object.hash(consecutiveFailures, lastStatusCode);
+}
+
+/// Riverpod provider for [ProxyErrorNotifier].
+final NotifierProvider<ProxyErrorNotifier, ProxyErrorState> proxyErrorProvider =
+    NotifierProvider<ProxyErrorNotifier, ProxyErrorState>(
+      ProxyErrorNotifier.new,
+    );
+
+/// Tracks consecutive proxy failures reported by [UvNotifier].
+///
+/// A companion notifier rather than a field on [UvNotifier] itself, so
+/// [uvProvider]'s existing `AsyncValue<UvData>` contract is untouched --
+/// widgets that already `ref.watch(uvProvider)` expecting only UV data are
+/// unaffected. [UvNotifier] reports outcomes via [recordFailure] and
+/// [recordSuccess] as they happen.
+class ProxyErrorNotifier extends Notifier<ProxyErrorState> {
+  @override
+  ProxyErrorState build() => const ProxyErrorState();
+
+  /// Records a non-200 proxy response, incrementing the consecutive-failure
+  /// count.
+  ///
+  /// [statusCode] 426 (app-version-too-old) must never be passed here --
+  /// it is handled separately via [UvApiForceUpdateException] and force-update
+  /// UI (see `docs/adr/0009-force-update-via-426.md`), and is explicitly
+  /// excluded from this escalation counter per issue #70's scope.
+  void recordFailure(int statusCode) {
+    state = ProxyErrorState(
+      consecutiveFailures: state.consecutiveFailures + 1,
+      lastStatusCode: statusCode,
+    );
+  }
+
+  /// Resets the consecutive-failure count to 0 after a successful fetch.
+  void recordSuccess() {
+    if (state.consecutiveFailures == 0 && state.lastStatusCode == null) {
+      return;
+    }
+
+    state = const ProxyErrorState();
+  }
 }
 
 /// Manages UV data state.
@@ -206,11 +277,22 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
       );
     } on Object catch (e, st) {
       if (!ref.mounted || isStale()) return;
+      // 426 (force-update) is tracked separately via UvApiForceUpdateException
+      // and excluded from the consecutive-failure escalation counter -- it
+      // cannot self-heal via retry the way 429/500/502/503/504 might, and is
+      // handled by its own dedicated UI (docs/adr/0009-force-update-via-426.md).
+      if (e is UvApiException) {
+        ref.read(proxyErrorProvider.notifier).recordFailure(e.statusCode);
+      }
+
       state = _withPrevious(AsyncValue<UvData>.error(e, st));
       return;
     }
 
     if (!ref.mounted || isStale()) return;
+
+    ref.read(proxyErrorProvider.notifier).recordSuccess();
+    
     state = AsyncValue<UvData>.data(data);
   }
 }
