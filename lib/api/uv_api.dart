@@ -105,16 +105,38 @@ class UvApi {
   }
 }
 
+/// Base for [UvApi.fetch] failures, declaring whether each one counts
+/// toward `ProxyErrorState`'s consecutive-failure escalation counter (see
+/// `docs/adr/0010-proxy-error-code-contract.md`).
+///
+/// Centralizing the policy here (rather than a catch site testing `is
+/// UvApiException` to infer it by type-hierarchy accident) means adding a
+/// new failure type forces an explicit choice via [countsTowardEscalation],
+/// instead of silently defaulting to "excluded" until some catch site is
+/// remembered to be updated.
+sealed class UvApiFailure implements Exception {
+  const UvApiFailure();
+
+  /// Whether this failure should increment `ProxyErrorState`'s
+  /// consecutive-failure count.
+  bool get countsTowardEscalation;
+}
+
 /// Thrown when the proxy returns 426 (app version too old).
 ///
-/// See `docs/adr/0009-force-update-via-426.md`.
-class UvApiForceUpdateException implements Exception {
+/// See `docs/adr/0009-force-update-via-426.md`. Excluded from the
+/// consecutive-failure counter: it can't self-heal via retry the way
+/// 429/500/502/503/504 might, and is handled by its own dedicated UI.
+class UvApiForceUpdateException extends UvApiFailure {
   /// Creates a [UvApiForceUpdateException].
   const UvApiForceUpdateException();
+
+  @override
+  bool get countsTowardEscalation => false;
 }
 
 /// Thrown when the UV API returns a non-200 status.
-class UvApiException implements Exception {
+class UvApiException extends UvApiFailure {
   /// Creates a [UvApiException] with the given [statusCode] and [body].
   UvApiException(this.statusCode, this.body);
 
@@ -123,6 +145,9 @@ class UvApiException implements Exception {
 
   /// The response body.
   final String body;
+
+  @override
+  bool get countsTowardEscalation => true;
 
   // Override toString for debuggability only - the app works without it.
   // Without this, logs and error messages show "Instance of 'UvApiException'"
@@ -137,13 +162,16 @@ class UvApiException implements Exception {
 /// response -- it must not count toward the
 /// `docs/adr/0010-proxy-error-code-contract.md` consecutive-failure
 /// escalation counter (see `ProxyErrorState` in `uv_provider.dart`).
-class UvApiParseException implements Exception {
+class UvApiParseException extends UvApiFailure {
   /// Creates a [UvApiParseException] with the given [body] or synthesized
   /// error message.
   UvApiParseException(this.body);
 
   /// The response body, or a synthesized error message.
   final String body;
+
+  @override
+  bool get countsTowardEscalation => false;
 
   @override
   String toString() => 'UvApiParseException: $body';

@@ -118,10 +118,6 @@ class ProxyErrorNotifier extends Notifier<ProxyErrorState> {
   }
 
   /// Resets the consecutive-failure count to 0 after a successful fetch.
-  ///
-  /// Riverpod skips notifying listeners when the new state equals the old
-  /// one (see [ProxyErrorState.==]), so this is already a no-op once
-  /// already at the zero state -- no separate guard is needed here.
   void recordSuccess() {
     state = const ProxyErrorState();
   }
@@ -277,11 +273,11 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
       );
     } on Object catch (e, st) {
       if (!ref.mounted || isStale()) return;
-      // 426 (force-update) is tracked separately via UvApiForceUpdateException
-      // and excluded from the consecutive-failure escalation counter -- it
-      // cannot self-heal via retry the way 429/500/502/503/504 might, and is
-      // handled by its own dedicated UI (docs/adr/0009-force-update-via-426.md).
-      if (e is UvApiException) {
+      // Whether a failure counts toward the escalation counter is declared
+      // on the exception itself (see UvApiFailure.countsTowardEscalation),
+      // not inferred here by type -- 426/parse failures opt out there, so
+      // adding a new failure type can't silently start or stop counting.
+      if (e is UvApiException && e.countsTowardEscalation) {
         ref.read(proxyErrorProvider.notifier).recordFailure(e.statusCode);
       }
 
