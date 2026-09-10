@@ -111,6 +111,11 @@ class ProxyErrorNotifier extends Notifier<ProxyErrorState> {
   /// UI (see `docs/adr/0009-force-update-via-426.md`), and is explicitly
   /// excluded from this escalation counter per issue #70's scope.
   void recordFailure(int statusCode) {
+    assert(
+      statusCode != httpUpgradeRequired,
+      'recordFailure must not be called with $httpUpgradeRequired '
+      '(force-update); it is tracked separately, not via this counter.',
+    );
     state = ProxyErrorState(
       consecutiveFailures: state.consecutiveFailures + 1,
       lastStatusCode: statusCode,
@@ -277,8 +282,18 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
       // on the exception itself (see UvApiFailure.countsTowardEscalation),
       // not inferred here by type -- 426/parse failures opt out there, so
       // adding a new failure type can't silently start or stop counting.
-      if (e is UvApiException && e.countsTowardEscalation) {
-        ref.read(proxyErrorProvider.notifier).recordFailure(e.statusCode);
+      // Switching on the sealed UvApiFailure (rather than `is UvApiException`)
+      // means the compiler flags this site if a future subtype is added.
+      if (e is UvApiFailure && e.countsTowardEscalation) {
+        final int code = switch (e) {
+          UvApiException(:final int statusCode) => statusCode,
+          UvApiForceUpdateException() ||
+          UvApiParseException() => throw StateError(
+            'countsTowardEscalation is false for $e; '
+            'statusCode should be unreachable',
+          ),
+        };
+        ref.read(proxyErrorProvider.notifier).recordFailure(code);
       }
 
       state = _withPrevious(AsyncValue<UvData>.error(e, st));
