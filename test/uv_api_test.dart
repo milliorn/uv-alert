@@ -341,12 +341,29 @@ void main() {
       expect(e.toString(), contains('404'));
       expect(e.toString(), contains('not found'));
     });
+
+    test('countsTowardEscalation is true', () {
+      final UvApiException e = UvApiException(500, 'server error');
+      expect(e.countsTowardEscalation, isTrue);
+    });
   });
 
   group('UvApiParseException', () {
     test('toString includes the body', () {
       final UvApiParseException e = UvApiParseException('parse error: bad');
       expect(e.toString(), contains('parse error: bad'));
+    });
+
+    test('countsTowardEscalation is false', () {
+      final UvApiParseException e = UvApiParseException('parse error: bad');
+      expect(e.countsTowardEscalation, isFalse);
+    });
+  });
+
+  group('UvApiForceUpdateException', () {
+    test('countsTowardEscalation is false', () {
+      const UvApiForceUpdateException e = UvApiForceUpdateException();
+      expect(e.countsTowardEscalation, isFalse);
     });
   });
 }
