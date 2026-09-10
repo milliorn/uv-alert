@@ -51,7 +51,7 @@ void main() {
 
   tearDown(resetMocktailState);
 
-  group('UvApi.fetch — cache hit', () {
+  group('UvApi.fetch -- cache hit', () {
     test('returns cached data without making a network request', () async {
       final UvData cached = _makeData();
       when(() => mockCache.isValid).thenReturn(true);
@@ -97,7 +97,7 @@ void main() {
     });
   });
 
-  group('UvApi.fetch — cache miss', () {
+  group('UvApi.fetch -- cache miss', () {
     setUp(() {
       when(() => mockCache.isValid).thenReturn(false);
       when(() => mockCache.store(any())).thenAnswer((_) async {});
@@ -165,7 +165,7 @@ void main() {
       );
     });
 
-    test('throws UvApiException on malformed JSON body', () async {
+    test('throws UvApiParseException on malformed JSON body', () async {
       final UvApi api = UvApi(
         cache: mockCache,
         proxyBaseUrl: 'http://example.com',
@@ -179,11 +179,11 @@ void main() {
           uuid: 'uuid-1',
           appVersion: 'test-version',
         ),
-        throwsA(isA<UvApiException>()),
+        throwsA(isA<UvApiParseException>()),
       );
     });
 
-    test('throws UvApiException when JSON is not an object', () async {
+    test('throws UvApiParseException when JSON is not an object', () async {
       for (final String body in <String>['[1,2,3]', '"a string"', '42']) {
         final UvApi api = UvApi(
           cache: mockCache,
@@ -198,8 +198,8 @@ void main() {
             uuid: 'uuid-1',
             appVersion: 'test-version',
           ),
-          throwsA(isA<UvApiException>()),
-          reason: 'expected UvApiException for body: $body',
+          throwsA(isA<UvApiParseException>()),
+          reason: 'expected UvApiParseException for body: $body',
         );
       }
     });
@@ -330,7 +330,7 @@ void main() {
         httpClient: client,
       ).dispose();
 
-      // ignore: unnecessary_lambdas — tear-off would invoke close() for real
+      // ignore: unnecessary_lambdas -- tear-off would invoke close() for real
       verifyNever(() => client.close());
     });
   });
@@ -340,6 +340,13 @@ void main() {
       final UvApiException e = UvApiException(404, 'not found');
       expect(e.toString(), contains('404'));
       expect(e.toString(), contains('not found'));
+    });
+  });
+
+  group('UvApiParseException', () {
+    test('toString includes the body', () {
+      final UvApiParseException e = UvApiParseException('parse error: bad');
+      expect(e.toString(), contains('parse error: bad'));
     });
   });
 }

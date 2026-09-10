@@ -65,7 +65,7 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // fetch() — success
+  // fetch() -- success
   // ---------------------------------------------------------------------------
 
   test('fetch() transitions state to AsyncData on success', () async {
@@ -88,7 +88,7 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // fetch() — error
+  // fetch() -- error
   // ---------------------------------------------------------------------------
 
   test('fetch() transitions state to AsyncError on failure', () async {
@@ -109,115 +109,107 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // fetch() — error preserves prior successful data
+  // fetch() -- error preserves prior successful data
   // ---------------------------------------------------------------------------
 
-  test(
-    'a refresh failure preserves the prior successful data (hasValue stays '
-    'true)',
-    () async {
-      final UvData data = _makeData();
-      when(
-        () => mockApi.fetch(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-          uuid: any(named: 'uuid'),
-          appVersion: any(named: 'appVersion'),
-        ),
-      ).thenAnswer((_) async => data);
+  test('a refresh failure preserves the prior successful data (hasValue stays '
+      'true)', () async {
+    final UvData data = _makeData();
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+      ),
+    ).thenAnswer((_) async => data);
 
-      final ProviderContainer container = _makeContainerWith(mockApi);
+    final ProviderContainer container = _makeContainerWith(mockApi);
 
-      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
-      expect(container.read(uvProvider).value, data);
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+    expect(container.read(uvProvider).value, data);
 
-      // Second fetch fails -- the notifier must fall back to the data above
-      // rather than discarding it.
-      when(
-        () => mockApi.fetch(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-          uuid: any(named: 'uuid'),
-          appVersion: any(named: 'appVersion'),
-        ),
-      ).thenThrow(UvApiException(503, 'unavailable'));
+    // Second fetch fails -- the notifier must fall back to the data above
+    // rather than discarding it.
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+      ),
+    ).thenThrow(UvApiException(503, 'unavailable'));
 
-      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
 
-      final AsyncValue<UvData> result = container.read(uvProvider);
-      expect(result.hasError, isTrue);
-      expect(result.hasValue, isTrue);
-      expect(result.value, data);
-      // isNoData (hasError && !hasValue) must be false: there is stale data
-      // to fall back to, so DashboardNoDataView must not show.
-      expect(result.isNoData, isFalse);
-    },
-  );
+    final AsyncValue<UvData> result = container.read(uvProvider);
+    expect(result.hasError, isTrue);
+    expect(result.hasValue, isTrue);
+    expect(result.value, data);
+    // isNoData (hasError && !hasValue) must be false: there is stale data
+    // to fall back to, so DashboardNoDataView must not show.
+    expect(result.isNoData, isFalse);
+  });
 
   // ---------------------------------------------------------------------------
-  // build() auto-fetch — error preserves prior successful data
+  // build() auto-fetch -- error preserves prior successful data
   // ---------------------------------------------------------------------------
 
-  test(
-    'a location-triggered auto-fetch failure preserves prior successful '
-    'data (hasValue stays true)',
-    () async {
-      final UvData data = _makeData();
-      when(
-        () => mockApi.fetch(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-          uuid: any(named: 'uuid'),
-          appVersion: any(named: 'appVersion'),
-        ),
-      ).thenAnswer((_) async => data);
+  test('a location-triggered auto-fetch failure preserves prior successful '
+      'data (hasValue stays true)', () async {
+    final UvData data = _makeData();
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+      ),
+    ).thenAnswer((_) async => data);
 
-      final ProviderContainer container = await _makeWarmContainerWith(
-        mockApi,
-      );
+    final ProviderContainer container = await _makeWarmContainerWith(mockApi);
 
-      final Completer<UvData> firstDone = Completer<UvData>();
-      final Completer<AsyncValue<UvData>> errorDone =
-          Completer<AsyncValue<UvData>>();
-      container.listen<AsyncValue<UvData>>(uvProvider, (
-        _,
-        AsyncValue<UvData> next,
-      ) {
-        if (!firstDone.isCompleted) next.whenData<void>(firstDone.complete);
-        if (next.hasError && !errorDone.isCompleted) {
-          errorDone.complete(next);
-        }
-      });
+    final Completer<UvData> firstDone = Completer<UvData>();
+    final Completer<AsyncValue<UvData>> errorDone =
+        Completer<AsyncValue<UvData>>();
+    container.listen<AsyncValue<UvData>>(uvProvider, (
+      _,
+      AsyncValue<UvData> next,
+    ) {
+      if (!firstDone.isCompleted) next.whenData<void>(firstDone.complete);
+      if (next.hasError && !errorDone.isCompleted) {
+        errorDone.complete(next);
+      }
+    });
 
-      // First location change succeeds, populating uvProvider with data.
-      container.read(locationProvider.notifier).setManual(lat: 1, lon: 2);
-      await firstDone.future;
-      expect(container.read(uvProvider).value, data);
+    // First location change succeeds, populating uvProvider with data.
+    container.read(locationProvider.notifier).setManual(lat: 1, lon: 2);
+    await firstDone.future;
+    expect(container.read(uvProvider).value, data);
 
-      // Second location change's auto-fetch fails -- the notifier must fall
-      // back to the data above rather than discarding it.
-      when(
-        () => mockApi.fetch(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-          uuid: any(named: 'uuid'),
-          appVersion: any(named: 'appVersion'),
-        ),
-      ).thenThrow(UvApiException(503, 'unavailable'));
+    // Second location change's auto-fetch fails -- the notifier must fall
+    // back to the data above rather than discarding it.
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+      ),
+    ).thenThrow(UvApiException(503, 'unavailable'));
 
-      container.read(locationProvider.notifier).setManual(lat: 10, lon: 20);
+    container.read(locationProvider.notifier).setManual(lat: 10, lon: 20);
 
-      final AsyncValue<UvData> errorState = await errorDone.future;
+    final AsyncValue<UvData> errorState = await errorDone.future;
 
-      expect(errorState.hasError, isTrue);
-      expect(errorState.hasValue, isTrue);
-      expect(errorState.value, data);
-      expect(errorState.isNoData, isFalse);
-    },
-  );
+    expect(errorState.hasError, isTrue);
+    expect(errorState.hasValue, isTrue);
+    expect(errorState.value, data);
+    expect(errorState.isNoData, isFalse);
+  });
 
   // ---------------------------------------------------------------------------
-  // fetch() loading transition — preserves prior error through retry
+  // fetch() loading transition -- preserves prior error through retry
   // ---------------------------------------------------------------------------
 
   test(
@@ -281,7 +273,7 @@ void main() {
   );
 
   // ---------------------------------------------------------------------------
-  // proxyErrorProvider — consecutive-failure tracking
+  // proxyErrorProvider -- consecutive-failure tracking
   // ---------------------------------------------------------------------------
 
   test('proxyErrorProvider starts at zero failures with no status code', () {
@@ -292,28 +284,25 @@ void main() {
     expect(state.lastStatusCode, isNull);
   });
 
-  test(
-    'a fetch failure increments consecutiveFailures and records the status '
-    'code',
-    () async {
-      when(
-        () => mockApi.fetch(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-          uuid: any(named: 'uuid'),
-          appVersion: any(named: 'appVersion'),
-        ),
-      ).thenThrow(UvApiException(500, 'server error'));
+  test('a fetch failure increments consecutiveFailures and records the status '
+      'code', () async {
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+      ),
+    ).thenThrow(UvApiException(500, 'server error'));
 
-      final ProviderContainer container = _makeContainerWith(mockApi);
+    final ProviderContainer container = _makeContainerWith(mockApi);
 
-      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
 
-      final ProxyErrorState state = container.read(proxyErrorProvider);
-      expect(state.consecutiveFailures, 1);
-      expect(state.lastStatusCode, 500);
-    },
-  );
+    final ProxyErrorState state = container.read(proxyErrorProvider);
+    expect(state.consecutiveFailures, 1);
+    expect(state.lastStatusCode, 500);
+  });
 
   test('consecutiveFailures accumulates across repeated failures', () async {
     when(
@@ -390,6 +379,83 @@ void main() {
     },
   );
 
+  test('a parse failure on a 200 response is not counted toward the '
+      'consecutive-failure counter', () async {
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+      ),
+    ).thenThrow(UvApiParseException('parse error: bad json'));
+
+    final ProviderContainer container = _makeContainerWith(mockApi);
+
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+
+    // The fetch itself still surfaces as an error to uvProvider ...
+    expect(container.read(uvProvider), isA<AsyncError<UvData>>());
+    // ... but proxyErrorProvider only tracks non-200 proxy responses, and
+    // a parse failure happens on an otherwise-successful 200.
+    final ProxyErrorState state = container.read(proxyErrorProvider);
+    expect(state.consecutiveFailures, 0);
+    expect(state.lastStatusCode, isNull);
+  });
+
+  test('a stale fetch failure does not mutate proxyErrorProvider', () async {
+    // fetch #1 reaches api.fetch and stalls there (past _fetchWith's
+    // entry staleness check); fetch #2 is triggered and resolves first,
+    // bumping _fetchGeneration. Fetch #1 is then released and throws --
+    // by then it is stale, so _fetchWith's second isStale() check (after
+    // the await) must discard it before recordFailure ever runs.
+    final Completer<void> stallFirst = Completer<void>();
+    final UvData data = _makeData();
+    int callCount = 0;
+
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+      ),
+    ).thenAnswer((_) async {
+      callCount++;
+      if (callCount == 1) {
+        await stallFirst.future;
+        throw UvApiException(500, 'server error');
+      }
+      return data;
+    });
+
+    final ProviderContainer container = await _makeWarmContainerWith(mockApi);
+
+    final Completer<UvData> secondDone = Completer<UvData>();
+    container.listen<AsyncValue<UvData>>(uvProvider, (
+      _,
+      AsyncValue<UvData> next,
+    ) {
+      if (!secondDone.isCompleted) next.whenData<void>(secondDone.complete);
+    });
+
+    container.read(locationProvider.notifier).setManual(lat: 1, lon: 2);
+    await Future<void>.delayed(Duration.zero);
+    container.read(locationProvider.notifier).setManual(lat: 10, lon: 20);
+
+    final UvData result = await secondDone.future;
+    expect(result, data);
+
+    // Release fetch #1 now that generation has moved on; its failure must
+    // not reach proxyErrorProvider.
+    stallFirst.complete();
+    await Future<void>.delayed(Duration.zero);
+
+    final ProxyErrorState state = container.read(proxyErrorProvider);
+    expect(state.consecutiveFailures, 0);
+    expect(state.lastStatusCode, isNull);
+  });
+
   test('ProxyErrorState equality and hashCode compare by field value', () {
     const ProxyErrorState a = ProxyErrorState(
       consecutiveFailures: 2,
@@ -410,7 +476,7 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // uvApiProvider fallback — no constructor injection
+  // uvApiProvider fallback -- no constructor injection
   // ---------------------------------------------------------------------------
 
   test('fetch() uses uvApiProvider when no api is injected', () async {
@@ -452,7 +518,7 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // cacheProvider and uvApiProvider — happy path via overrides
+  // cacheProvider and uvApiProvider -- happy path via overrides
   // ---------------------------------------------------------------------------
 
   test('cacheProvider resolves to a Cache backed by Preferences', () async {
@@ -485,7 +551,7 @@ void main() {
   );
 
   // ---------------------------------------------------------------------------
-  // uvApiProvider — empty proxyBaseUrl
+  // uvApiProvider -- empty proxyBaseUrl
   // ---------------------------------------------------------------------------
 
   test('uvApiProvider throws StateError when proxyBaseUrl is empty', () async {
@@ -501,7 +567,7 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // build() microtask — error path while container is still mounted
+  // build() microtask -- error path while container is still mounted
   // ---------------------------------------------------------------------------
 
   test(
@@ -540,7 +606,7 @@ void main() {
   );
 
   // ---------------------------------------------------------------------------
-  // Generation counter — stale microtask is discarded
+  // Generation counter -- stale microtask is discarded
   // ---------------------------------------------------------------------------
 
   test('rapid location changes discard the first stale fetch', () async {
@@ -579,7 +645,7 @@ void main() {
     container.read(locationProvider.notifier).setManual(lat: 1, lon: 2);
     container.read(locationProvider.notifier).setManual(lat: 10, lon: 20);
 
-    // Release fetch #1 (stale — discarded) and let fetch #2 run.
+    // Release fetch #1 (stale -- discarded) and let fetch #2 run.
     allowFirstFetch.complete();
 
     final UvData result = await secondDone.future;
@@ -597,7 +663,7 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // fetch() — error resolving dependencies (deviceId / api)
+  // fetch() -- error resolving dependencies (deviceId / api)
   // ---------------------------------------------------------------------------
 
   test(
@@ -624,7 +690,7 @@ void main() {
   );
 
   // ---------------------------------------------------------------------------
-  // _fetchWith guards — stale generation and unmounted container
+  // _fetchWith guards -- stale generation and unmounted container
   // ---------------------------------------------------------------------------
 
   test(

@@ -42,9 +42,14 @@ class UvApi {
   /// there is no header fallback, unlike [deviceIdHeader]/`uuid`).
   ///
   /// Throws [UvApiForceUpdateException] on a 426 response.
-  /// Throws [UvApiException] on any other non-200 response or unparseable
-  /// body. Throws a timeout exception when the request exceeds the
-  /// configured timeout.
+  /// Throws [UvApiException] on any other non-200 response.
+  /// Throws [UvApiParseException] when a 200 response's body is
+  /// unparseable -- kept distinct from [UvApiException] since it is not a
+  /// non-200 proxy response and must not count toward the
+  /// `docs/adr/0010-proxy-error-code-contract.md` consecutive-failure
+  /// escalation counter (see `ProxyErrorState` in `uv_provider.dart`).
+  /// Throws a timeout exception when the request exceeds the configured
+  /// timeout.
   Future<UvData> fetch({
     required double lat,
     required double lon,
@@ -85,14 +90,14 @@ class UvApi {
       final Object? decoded = jsonDecode(response.body);
 
       if (decoded is! Map<String, Object?>) {
-        throw UvApiException(response.statusCode, response.body);
+        throw UvApiParseException(response.body);
       }
 
       data = UvData.fromJson(decoded);
-    } on UvApiException {
+    } on UvApiParseException {
       rethrow;
     } on Object catch (e) {
-      throw UvApiException(response.statusCode, 'parse error: $e');
+      throw UvApiParseException('parse error: $e');
     }
 
     await _cache.store(data);
@@ -108,7 +113,7 @@ class UvApiForceUpdateException implements Exception {
   const UvApiForceUpdateException();
 }
 
-/// Thrown when the UV API returns a non-200 status or an unparseable body.
+/// Thrown when the UV API returns a non-200 status.
 class UvApiException implements Exception {
   /// Creates a [UvApiException] with the given [statusCode] and [body].
   UvApiException(this.statusCode, this.body);
@@ -116,7 +121,7 @@ class UvApiException implements Exception {
   /// The HTTP status code returned by the server.
   final int statusCode;
 
-  /// The response body, or a synthesized error message on parse failure.
+  /// The response body.
   final String body;
 
   // Override toString for debuggability only - the app works without it.
@@ -124,4 +129,22 @@ class UvApiException implements Exception {
   // which is useless. This makes it readable: "UvApiException(404): Not Found".
   @override
   String toString() => 'UvApiException($statusCode): $body';
+}
+
+/// Thrown when a 200 response's body is unparseable.
+///
+/// Kept distinct from [UvApiException] since this is not a non-200 proxy
+/// response -- it must not count toward the
+/// `docs/adr/0010-proxy-error-code-contract.md` consecutive-failure
+/// escalation counter (see `ProxyErrorState` in `uv_provider.dart`).
+class UvApiParseException implements Exception {
+  /// Creates a [UvApiParseException] with the given [body] or synthesized
+  /// error message.
+  UvApiParseException(this.body);
+
+  /// The response body, or a synthesized error message.
+  final String body;
+
+  @override
+  String toString() => 'UvApiParseException: $body';
 }

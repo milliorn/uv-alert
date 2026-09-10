@@ -118,11 +118,11 @@ class ProxyErrorNotifier extends Notifier<ProxyErrorState> {
   }
 
   /// Resets the consecutive-failure count to 0 after a successful fetch.
+  ///
+  /// Riverpod skips notifying listeners when the new state equals the old
+  /// one (see [ProxyErrorState.==]), so this is already a no-op once
+  /// already at the zero state -- no separate guard is needed here.
   void recordSuccess() {
-    if (state.consecutiveFailures == 0 && state.lastStatusCode == null) {
-      return;
-    }
-
     state = const ProxyErrorState();
   }
 }
@@ -292,7 +292,6 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
     if (!ref.mounted || isStale()) return;
 
     ref.read(proxyErrorProvider.notifier).recordSuccess();
-    
     state = AsyncValue<UvData>.data(data);
   }
 }
