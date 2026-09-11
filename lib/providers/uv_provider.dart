@@ -282,18 +282,10 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
       // on the exception itself (see UvApiFailure.countsTowardEscalation),
       // not inferred here by type -- 426/parse failures opt out there, so
       // adding a new failure type can't silently start or stop counting.
-      // Switching on the sealed UvApiFailure (rather than `is UvApiException`)
-      // means the compiler flags this site if a future subtype is added.
-      if (e is UvApiFailure && e.countsTowardEscalation) {
-        final int code = switch (e) {
-          UvApiException(:final int statusCode) => statusCode,
-          UvApiForceUpdateException() ||
-          UvApiParseException() => throw StateError(
-            'countsTowardEscalation is false for $e; '
-            'statusCode should be unreachable',
-          ),
-        };
-        ref.read(proxyErrorProvider.notifier).recordFailure(code);
+      // Today only UvApiException opts in, and it's the only UvApiFailure
+      // subtype that carries a statusCode to record.
+      if (e is UvApiException && e.countsTowardEscalation) {
+        ref.read(proxyErrorProvider.notifier).recordFailure(e.statusCode);
       }
 
       state = _withPrevious(AsyncValue<UvData>.error(e, st));
