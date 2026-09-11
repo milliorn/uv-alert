@@ -76,6 +76,7 @@ void main() {
         lon: any(named: 'lon'),
         uuid: any(named: 'uuid'),
         appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
       ),
     ).thenAnswer((_) async => data);
 
@@ -98,6 +99,7 @@ void main() {
         lon: any(named: 'lon'),
         uuid: any(named: 'uuid'),
         appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
       ),
     ).thenThrow(UvApiException(500, 'server error'));
 
@@ -121,6 +123,7 @@ void main() {
         lon: any(named: 'lon'),
         uuid: any(named: 'uuid'),
         appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
       ),
     ).thenAnswer((_) async => data);
 
@@ -137,6 +140,7 @@ void main() {
         lon: any(named: 'lon'),
         uuid: any(named: 'uuid'),
         appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
       ),
     ).thenThrow(UvApiException(503, 'unavailable'));
 
@@ -164,6 +168,7 @@ void main() {
         lon: any(named: 'lon'),
         uuid: any(named: 'uuid'),
         appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
       ),
     ).thenAnswer((_) async => data);
 
@@ -195,6 +200,7 @@ void main() {
         lon: any(named: 'lon'),
         uuid: any(named: 'uuid'),
         appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
       ),
     ).thenThrow(UvApiException(503, 'unavailable'));
 
@@ -222,6 +228,7 @@ void main() {
           lon: any(named: 'lon'),
           uuid: any(named: 'uuid'),
           appVersion: any(named: 'appVersion'),
+          meta: any(named: 'meta'),
         ),
       ).thenThrow(UvApiException(500, 'server error'));
 
@@ -239,6 +246,7 @@ void main() {
           lon: any(named: 'lon'),
           uuid: any(named: 'uuid'),
           appVersion: any(named: 'appVersion'),
+          meta: any(named: 'meta'),
         ),
       ).thenAnswer((_) => stall.future);
 
@@ -292,6 +300,7 @@ void main() {
         lon: any(named: 'lon'),
         uuid: any(named: 'uuid'),
         appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
       ),
     ).thenThrow(UvApiException(500, 'server error'));
 
@@ -311,6 +320,7 @@ void main() {
         lon: any(named: 'lon'),
         uuid: any(named: 'uuid'),
         appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
       ),
     ).thenThrow(UvApiException(503, 'unavailable'));
 
@@ -332,6 +342,7 @@ void main() {
         lon: any(named: 'lon'),
         uuid: any(named: 'uuid'),
         appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
       ),
     ).thenThrow(UvApiException(500, 'server error'));
 
@@ -347,6 +358,7 @@ void main() {
         lon: any(named: 'lon'),
         uuid: any(named: 'uuid'),
         appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
       ),
     ).thenAnswer((_) async => data);
 
@@ -367,6 +379,7 @@ void main() {
           lon: any(named: 'lon'),
           uuid: any(named: 'uuid'),
           appVersion: any(named: 'appVersion'),
+          meta: any(named: 'meta'),
         ),
       ).thenThrow(UvApiException(500, 'server error'));
 
@@ -376,15 +389,19 @@ void main() {
       expect(container.read(proxyErrorProvider).consecutiveFailures, 1);
 
       final UvData data = _makeData();
-      mockApi.wasLastFetchFromCache = true;
       when(
         () => mockApi.fetch(
           lat: any(named: 'lat'),
           lon: any(named: 'lon'),
           uuid: any(named: 'uuid'),
           appVersion: any(named: 'appVersion'),
+          meta: any(named: 'meta'),
         ),
-      ).thenAnswer((_) async => data);
+      ).thenAnswer((Invocation invocation) async {
+        (invocation.namedArguments[#meta] as UvApiFetchMeta?)?.wasFromCache =
+            true;
+        return data;
+      });
 
       await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
 
@@ -403,6 +420,7 @@ void main() {
           lon: any(named: 'lon'),
           uuid: any(named: 'uuid'),
           appVersion: any(named: 'appVersion'),
+          meta: any(named: 'meta'),
         ),
       ).thenThrow(const UvApiForceUpdateException());
 
@@ -424,6 +442,7 @@ void main() {
         lon: any(named: 'lon'),
         uuid: any(named: 'uuid'),
         appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
       ),
     ).thenThrow(UvApiParseException('parse error: bad json'));
 
@@ -456,6 +475,7 @@ void main() {
         lon: any(named: 'lon'),
         uuid: any(named: 'uuid'),
         appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
       ),
     ).thenAnswer((_) async {
       callCount++;
@@ -524,6 +544,7 @@ void main() {
         lon: any(named: 'lon'),
         uuid: any(named: 'uuid'),
         appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
       ),
     ).thenAnswer((_) async => data);
 
@@ -658,6 +679,7 @@ void main() {
         lon: any(named: 'lon'),
         uuid: any(named: 'uuid'),
         appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
       ),
     ).thenAnswer((_) async {
       callCount++;
@@ -695,6 +717,7 @@ void main() {
         lon: 20,
         uuid: 'test-uuid',
         appVersion: 'test-version',
+        meta: any(named: 'meta'),
       ),
     ).called(1);
   });
@@ -744,6 +767,7 @@ void main() {
           lon: any(named: 'lon'),
           uuid: any(named: 'uuid'),
           appVersion: any(named: 'appVersion'),
+          meta: any(named: 'meta'),
         ),
       ).thenAnswer((_) async {
         callCount++;
@@ -781,6 +805,7 @@ void main() {
           lon: 99,
           uuid: 'test-uuid',
           appVersion: 'test-version',
+          meta: any(named: 'meta'),
         ),
       ).called(1);
     },
@@ -802,6 +827,7 @@ void main() {
           lon: any(named: 'lon'),
           uuid: any(named: 'uuid'),
           appVersion: any(named: 'appVersion'),
+          meta: any(named: 'meta'),
         ),
       );
     },
@@ -819,6 +845,7 @@ void main() {
         lon: any(named: 'lon'),
         uuid: any(named: 'uuid'),
         appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
       ),
     ).thenAnswer((_) async => data);
 
@@ -845,6 +872,7 @@ void main() {
         lon: 20,
         uuid: 'test-uuid',
         appVersion: 'test-version',
+        meta: any(named: 'meta'),
       ),
     ).called(1);
     verifyNoMoreInteractions(mockApi);

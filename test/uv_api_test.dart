@@ -62,16 +62,17 @@ void main() {
         proxyBaseUrl: 'http://example.com',
       );
 
+      final UvApiFetchMeta meta = UvApiFetchMeta();
       final UvData result = await api.fetch(
         lat: 40.7,
         lon: -74,
         uuid: 'uuid-1',
         appVersion: 'test-version',
+        meta: meta,
       );
 
       expect(result.currentUvi, cached.currentUvi);
-      expect(api.wasLastFetchFromCache, isTrue);
-      
+      expect(meta.wasFromCache, isTrue);
       verifyNever(() => mockCache.store(any()));
     });
 
@@ -87,17 +88,79 @@ void main() {
         httpClient: mockClientReturning(200, jsonEncode(_apiJson())),
       );
 
+      final UvApiFetchMeta meta = UvApiFetchMeta();
       final UvData result = await api.fetch(
         lat: 40.7,
         lon: -74,
         uuid: 'uuid-1',
         appVersion: 'test-version',
+        meta: meta,
       );
 
       expect(result.currentUvi, 5.0);
-      expect(api.wasLastFetchFromCache, isFalse);
+      expect(meta.wasFromCache, isFalse);
       verify(() => mockCache.store(any())).called(1);
     });
+
+    test(
+      'overlapping calls on the same UvApi keep separate meta outcomes '
+      '(a slower network call is not clobbered by a faster concurrent '
+      'cache hit)',
+      () async {
+        // First call: cache miss, slow network response held open until
+        // released below.
+        final Completer<http.Response> networkGate =
+            Completer<http.Response>();
+        bool cacheValidForSecondCallOnward = false;
+
+        when(
+          () => mockCache.isValid,
+        ).thenAnswer((_) => cacheValidForSecondCallOnward);
+        when(() => mockCache.store(any())).thenAnswer((_) async {});
+
+        final UvApi api = UvApi(
+          cache: mockCache,
+          proxyBaseUrl: 'http://example.com',
+          httpClient: MockClient((_) => networkGate.future),
+        );
+
+        final UvApiFetchMeta slowNetworkMeta = UvApiFetchMeta();
+        final Future<UvData> slowNetworkFetch = api.fetch(
+          lat: 40.7,
+          lon: -74,
+          uuid: 'uuid-1',
+          appVersion: 'test-version',
+          meta: slowNetworkMeta,
+        );
+
+        // Second call starts while the first is still awaiting the network
+        // and completes via a cache hit before the first resolves.
+        cacheValidForSecondCallOnward = true;
+        final UvData cached = _makeData();
+        when(() => mockCache.read()).thenAnswer((_) async => cached);
+
+        final UvApiFetchMeta cacheHitMeta = UvApiFetchMeta();
+        final UvData cacheHitResult = await api.fetch(
+          lat: 40.7,
+          lon: -74,
+          uuid: 'uuid-1',
+          appVersion: 'test-version',
+          meta: cacheHitMeta,
+        );
+
+        expect(cacheHitResult.currentUvi, cached.currentUvi);
+        expect(cacheHitMeta.wasFromCache, isTrue);
+
+        // Now release the first call's network response.
+        networkGate.complete(http.Response(jsonEncode(_apiJson()), 200));
+        final UvData networkResult = await slowNetworkFetch;
+
+        expect(networkResult.currentUvi, 5.0);
+        // The cache-hit call's meta must not have leaked into the slower
+        // network call's own meta.
+        expect(slowNetworkMeta.wasFromCache, isFalse);
+      },
+    );
   });
 
   group('UvApi.fetch -- cache miss', () {
@@ -113,15 +176,17 @@ void main() {
         httpClient: mockClientReturning(200, jsonEncode(_apiJson())),
       );
 
+      final UvApiFetchMeta meta = UvApiFetchMeta();
       final UvData result = await api.fetch(
         lat: 40.7,
         lon: -74,
         uuid: 'uuid-1',
         appVersion: 'test-version',
+        meta: meta,
       );
 
       expect(result.currentUvi, 5.0);
-      expect(api.wasLastFetchFromCache, isFalse);
+      expect(meta.wasFromCache, isFalse);
       verify(() => mockCache.store(any())).called(1);
     });
 

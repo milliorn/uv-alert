@@ -5,6 +5,19 @@ import 'package:uvalert/constants.dart';
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/storage/cache.dart';
 
+/// Per-call metadata for [UvApi.fetch], filled in as the call completes.
+///
+/// Passed in fresh by the caller for each [UvApi.fetch] invocation (rather
+/// than read off a field on [UvApi] itself) so overlapping calls on the same
+/// shared [UvApi] instance -- e.g. a superseded fetch from a rapid location
+/// change racing a newer one, see `UvNotifier._fetchGeneration` in
+/// `uv_provider.dart` -- can't have one call's outcome clobber another's.
+class UvApiFetchMeta {
+  /// Whether the call this instance was passed to returned a cached value
+  /// instead of making a network request. `false` until that call completes.
+  bool wasFromCache = false;
+}
+
 /// HTTP client for fetching UV data from the proxy API.
 class UvApi {
   /// Creates a [UvApi] instance.
@@ -28,15 +41,6 @@ class UvApi {
   final http.Client _httpClient;
   final bool _ownsClient;
 
-  /// Whether the most recent [fetch] call returned a cached value instead of
-  /// making a network request. `false` until the first call completes.
-  ///
-  /// Callers must consult this before treating a successful [fetch] as
-  /// evidence the proxy is healthy -- a cache hit proves nothing about
-  /// current proxy state (see `ProxyErrorNotifier.recordSuccess` in
-  /// `uv_provider.dart`).
-  bool wasLastFetchFromCache = false;
-
   /// Releases the underlying HTTP client if this instance owns it.
   void dispose() {
     if (_ownsClient) _httpClient.close();
@@ -50,8 +54,11 @@ class UvApi {
   /// query string, not a header (confirmed against the deployed proxy;
   /// there is no header fallback, unlike [deviceIdHeader]/`uuid`).
   ///
-  /// Sets [wasLastFetchFromCache] to reflect whether this call's result came
-  /// from the cache or a network request.
+  /// If [meta] is passed, it is filled in to reflect whether this call's
+  /// result came from the cache or a network request -- a fresh [meta] per
+  /// call keeps that outcome tied to this invocation, since [UvApi] is
+  /// typically a single shared instance and calls can overlap (see
+  /// [UvApiFetchMeta]).
   ///
   /// Throws [UvApiForceUpdateException] on a 426 response.
   /// Throws [UvApiException] on any other non-200 response.
@@ -67,17 +74,18 @@ class UvApi {
     required double lon,
     required String uuid,
     required String appVersion,
+    UvApiFetchMeta? meta,
   }) async {
     if (_cache.isValid) {
       final UvData? cached = await _cache.read();
 
       if (cached != null) {
-        wasLastFetchFromCache = true;
+        meta?.wasFromCache = true;
         return cached;
       }
     }
 
-    wasLastFetchFromCache = false;
+    meta?.wasFromCache = false;
 
     final Uri uri = _uvUri.replace(
       queryParameters: <String, String>{

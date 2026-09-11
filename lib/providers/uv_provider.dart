@@ -268,6 +268,10 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
     if (!ref.mounted) return;
 
     final UvData data;
+    // Fresh per call, not a field on the shared UvApi instance, so an
+    // overlapping (superseded) fetch can't clobber this call's own
+    // cache-hit outcome before it's read below.
+    final UvApiFetchMeta meta = UvApiFetchMeta();
 
     try {
       data = await api.fetch(
@@ -275,6 +279,7 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
         lon: lon,
         uuid: uuid,
         appVersion: appVersion,
+        meta: meta,
       );
     } on Object catch (e, st) {
       if (!ref.mounted || isStale()) return;
@@ -296,8 +301,8 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
 
     // A cache hit proves nothing about current proxy health -- only a real
     // network response should clear the consecutive-failure streak (see
-    // UvApi.wasLastFetchFromCache).
-    if (!api.wasLastFetchFromCache) {
+    // UvApiFetchMeta).
+    if (!meta.wasFromCache) {
       ref.read(proxyErrorProvider.notifier).recordSuccess();
     }
     
