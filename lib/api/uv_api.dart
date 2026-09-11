@@ -28,6 +28,15 @@ class UvApi {
   final http.Client _httpClient;
   final bool _ownsClient;
 
+  /// Whether the most recent [fetch] call returned a cached value instead of
+  /// making a network request. `false` until the first call completes.
+  ///
+  /// Callers must consult this before treating a successful [fetch] as
+  /// evidence the proxy is healthy -- a cache hit proves nothing about
+  /// current proxy state (see `ProxyErrorNotifier.recordSuccess` in
+  /// `uv_provider.dart`).
+  bool wasLastFetchFromCache = false;
+
   /// Releases the underlying HTTP client if this instance owns it.
   void dispose() {
     if (_ownsClient) _httpClient.close();
@@ -40,6 +49,9 @@ class UvApi {
   /// `docs/adr/0009-force-update-via-426.md`. The proxy reads this from the
   /// query string, not a header (confirmed against the deployed proxy;
   /// there is no header fallback, unlike [deviceIdHeader]/`uuid`).
+  ///
+  /// Sets [wasLastFetchFromCache] to reflect whether this call's result came
+  /// from the cache or a network request.
   ///
   /// Throws [UvApiForceUpdateException] on a 426 response.
   /// Throws [UvApiException] on any other non-200 response.
@@ -59,8 +71,13 @@ class UvApi {
     if (_cache.isValid) {
       final UvData? cached = await _cache.read();
 
-      if (cached != null) return cached;
+      if (cached != null) {
+        wasLastFetchFromCache = true;
+        return cached;
+      }
     }
+
+    wasLastFetchFromCache = false;
 
     final Uri uri = _uvUri.replace(
       queryParameters: <String, String>{

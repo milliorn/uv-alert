@@ -358,6 +358,43 @@ void main() {
   });
 
   test(
+    'a cache-hit fetch does not reset consecutiveFailures '
+    '(a cache hit is not evidence the proxy recovered)',
+    () async {
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+        ),
+      ).thenThrow(UvApiException(500, 'server error'));
+
+      final ProviderContainer container = _makeContainerWith(mockApi);
+
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+      expect(container.read(proxyErrorProvider).consecutiveFailures, 1);
+
+      final UvData data = _makeData();
+      mockApi.wasLastFetchFromCache = true;
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+        ),
+      ).thenAnswer((_) async => data);
+
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+
+      final ProxyErrorState state = container.read(proxyErrorProvider);
+      expect(state.consecutiveFailures, 1);
+      expect(state.lastStatusCode, 500);
+    },
+  );
+
+  test(
     '426 (force-update) is excluded from the consecutive-failure counter',
     () async {
       when(

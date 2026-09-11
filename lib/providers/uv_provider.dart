@@ -302,7 +302,13 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
 
     if (!ref.mounted || isStale()) return;
 
-    ref.read(proxyErrorProvider.notifier).recordSuccess();
+    // A cache hit proves nothing about current proxy health -- only a real
+    // network response should clear the consecutive-failure streak (see
+    // UvApi.wasLastFetchFromCache).
+    if (!api.wasLastFetchFromCache) {
+      ref.read(proxyErrorProvider.notifier).recordSuccess();
+    }
+    
     state = AsyncValue<UvData>.data(data);
   }
 }

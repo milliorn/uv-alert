@@ -70,6 +70,8 @@ void main() {
       );
 
       expect(result.currentUvi, cached.currentUvi);
+      expect(api.wasLastFetchFromCache, isTrue);
+      
       verifyNever(() => mockCache.store(any()));
     });
 
@@ -93,6 +95,7 @@ void main() {
       );
 
       expect(result.currentUvi, 5.0);
+      expect(api.wasLastFetchFromCache, isFalse);
       verify(() => mockCache.store(any())).called(1);
     });
   });
@@ -118,6 +121,7 @@ void main() {
       );
 
       expect(result.currentUvi, 5.0);
+      expect(api.wasLastFetchFromCache, isFalse);
       verify(() => mockCache.store(any())).called(1);
     });
 
