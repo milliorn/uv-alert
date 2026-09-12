@@ -54,9 +54,10 @@ App UX per code:
 - The app never inspects OWM response bodies — all error semantics flow through
   HTTP status codes
 - `lib/api/uv_api.dart` declares a sealed `UvApiFailure` hierarchy:
-  `UvApiException` (any non-200 response; carries `statusCode` and `body`),
-  `UvApiForceUpdateException` (426), and `UvApiParseException` (a 200 response
-  whose body is unparseable, not a proxy error). Each subtype declares an
+  `UvApiException` (any non-200 response other than 426; carries `statusCode`
+  and `body`), `UvApiForceUpdateException` (426), and `UvApiParseException` (a
+  200 response whose body is unparseable, not a proxy error). Each subtype
+  declares an
   `escalationStatusCode` getter (non-null status code to escalate with, or
   `null` to be excluded) so escalation eligibility and the code to record are
   a single getter, centralized on the exception type rather than inferred per
