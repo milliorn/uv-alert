@@ -459,6 +459,62 @@ void main() {
     expect(state.lastStatusCode, isNull);
   });
 
+  test(
+    'a parse failure resets an existing consecutive-failure streak '
+    '(500 -> malformed 200 -> the streak must not carry over)',
+    () async {
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+          meta: any(named: 'meta'),
+        ),
+      ).thenThrow(UvApiException(500, 'server error'));
+
+      final ProviderContainer container = _makeContainerWith(mockApi);
+
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+      expect(container.read(proxyErrorProvider).consecutiveFailures, 1);
+
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+          meta: any(named: 'meta'),
+        ),
+      ).thenThrow(UvApiParseException('parse error: bad json'));
+
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+
+      // The proxy itself answered with a 200 here -- even though the body
+      // didn't parse, that's proof of proxy health, so the streak from the
+      // earlier 500 must not carry over into a subsequent real failure.
+      final ProxyErrorState state = container.read(proxyErrorProvider);
+      expect(state.consecutiveFailures, 0);
+      expect(state.lastStatusCode, isNull);
+
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+          meta: any(named: 'meta'),
+        ),
+      ).thenThrow(UvApiException(500, 'server error'));
+
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+
+      final ProxyErrorState finalState = container.read(proxyErrorProvider);
+      expect(finalState.consecutiveFailures, 1);
+      expect(finalState.lastStatusCode, 500);
+    },
+  );
+
   test('a stale fetch failure does not mutate proxyErrorProvider', () async {
     // fetch #1 reaches api.fetch and stalls there (past _fetchWith's
     // entry staleness check); fetch #2 is triggered and resolves first,

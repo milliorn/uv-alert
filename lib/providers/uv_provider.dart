@@ -66,9 +66,11 @@ class ProxyErrorState {
   const ProxyErrorState({this.consecutiveFailures = 0, this.lastStatusCode});
 
   /// Number of non-200 responses received back-to-back, with no successful
-  /// network response in between. Reset to 0 when [UvApi.fetch] resolves via
-  /// an actual network 200 -- a cache hit is also a "successful fetch" but does
-  /// not reset this, since it is not evidence the proxy has recovered (see
+  /// network response in between. Reset to 0 on a real network HTTP 200 --
+  /// this includes a response whose body fails to parse
+  /// ([UvApiParseException]), since the proxy itself still answered
+  /// successfully, but excludes a cache hit, which is also a "successful
+  /// fetch" but is not evidence the proxy has recovered (see
   /// `UvApiFetchMeta` in `uv_api.dart`).
   final int consecutiveFailures;
 
@@ -302,6 +304,14 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
 
         if (code != null) {
           ref.read(proxyErrorProvider.notifier).recordFailure(code);
+        } else if (e is UvApiParseException) {
+          // A parse failure only happens after a real network 200 (see
+          // UvApi.fetch) -- the proxy itself responded successfully, it's
+          // just the body that didn't parse. Per issue #70's "reset on any
+          // successful 200 response" rule, that's still proxy health
+          // evidence, so the streak resets even though this failure type
+          // is excluded from recordFailure.
+          ref.read(proxyErrorProvider.notifier).recordSuccess();
         }
       }
 
