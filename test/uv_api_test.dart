@@ -411,9 +411,9 @@ void main() {
       expect(e.toString(), contains('not found'));
     });
 
-    test('countsTowardEscalation is true', () {
+    test('escalationStatusCode is the status code', () {
       final UvApiException e = UvApiException(500, 'server error');
-      expect(e.countsTowardEscalation, isTrue);
+      expect(e.escalationStatusCode, 500);
     });
   });
 
@@ -423,16 +423,16 @@ void main() {
       expect(e.toString(), contains('parse error: bad'));
     });
 
-    test('countsTowardEscalation is false', () {
+    test('escalationStatusCode is null', () {
       final UvApiParseException e = UvApiParseException('parse error: bad');
-      expect(e.countsTowardEscalation, isFalse);
+      expect(e.escalationStatusCode, isNull);
     });
   });
 
   group('UvApiForceUpdateException', () {
-    test('countsTowardEscalation is false', () {
+    test('escalationStatusCode is null', () {
       const UvApiForceUpdateException e = UvApiForceUpdateException();
-      expect(e.countsTowardEscalation, isFalse);
+      expect(e.escalationStatusCode, isNull);
     });
   });
 }

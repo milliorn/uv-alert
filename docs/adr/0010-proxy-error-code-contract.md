@@ -56,13 +56,16 @@ App UX per code:
 - `lib/api/uv_api.dart` declares a sealed `UvApiFailure` hierarchy:
   `UvApiException` (any non-200 response; carries `statusCode` and `body`),
   `UvApiForceUpdateException` (426), and `UvApiParseException` (a 200 response
-  whose body is unparseable, not a proxy error). Each subtype declares a
-  `countsTowardEscalation` getter so escalation eligibility is centralized on
-  the exception type rather than inferred per catch site.
+  whose body is unparseable, not a proxy error). Each subtype declares an
+  `escalationStatusCode` getter (non-null status code to escalate with, or
+  `null` to be excluded) so escalation eligibility and the code to record are
+  a single getter, centralized on the exception type rather than inferred per
+  catch site -- a subtype can't opt in without also providing the code the
+  counter needs, in any build mode.
 - `ProxyErrorState`/`ProxyErrorNotifier` in `lib/providers/uv_provider.dart`
   track the 3-consecutive-failure threshold for escalating from toast to
   persistent banner. Currently this is one undifferentiated counter across all
-  status codes for which `countsTowardEscalation` is `true` (today, only
+  status codes for which `escalationStatusCode` is non-null (today, only
   `UvApiException`, i.e. every non-200/non-426 code) — it does not yet
   implement the per-code distinctions above (e.g. 502's immediate escalation,
   or excluding 400/404/429 from the counter). No widget consumes this state yet.

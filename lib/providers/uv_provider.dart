@@ -290,22 +290,19 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
       );
     } on Object catch (e, st) {
       if (!ref.mounted || isStale()) return;
-      // Whether a failure counts toward the escalation counter is declared
-      // on the exception itself (see UvApiFailure.countsTowardEscalation),
-      // not inferred here by type -- 426/parse failures opt out there, so
-      // adding a new failure type can't silently start or stop counting.
-      // Only UvApiException carries a statusCode to record, so it must be
-      // the only UvApiFailure subtype that opts in; this assert catches at
-      // dev/test time a future subtype that opts in without updating this
-      // site (assert is compiled out of release builds, so this never adds
-      // runtime cost in production).
-      assert(
-        e is! UvApiFailure || e is UvApiException || !e.countsTowardEscalation,
-        '$e opts into countsTowardEscalation but is not a UvApiException; '
-        'this site only knows how to record a UvApiException.statusCode.',
-      );
-      if (e is UvApiException && e.countsTowardEscalation) {
-        ref.read(proxyErrorProvider.notifier).recordFailure(e.statusCode);
+      // Whether (and with what code) a failure counts toward the escalation
+      // counter is declared on the exception itself (see
+      // UvApiFailure.escalationStatusCode), not inferred here by type --
+      // 426/parse failures return null there, so adding a new failure type
+      // can't silently start or stop counting: the policy and the status
+      // code are the same getter, so there is no "opted in but forgot the
+      // code" state for this site to miss, in any build mode.
+      if (e is UvApiFailure) {
+        final int? code = e.escalationStatusCode;
+
+        if (code != null) {
+          ref.read(proxyErrorProvider.notifier).recordFailure(code);
+        }
       }
 
       state = _withPrevious(AsyncValue<UvData>.error(e, st));

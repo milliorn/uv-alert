@@ -130,21 +130,24 @@ class UvApi {
   }
 }
 
-/// Base for [UvApi.fetch] failures, declaring whether each one counts
-/// toward `ProxyErrorState`'s consecutive-failure escalation counter (see
-/// `docs/adr/0010-proxy-error-code-contract.md`).
+/// Base for [UvApi.fetch] failures, declaring whether (and with what status
+/// code) each one counts toward `ProxyErrorState`'s consecutive-failure
+/// escalation counter (see `docs/adr/0010-proxy-error-code-contract.md`).
 ///
 /// Centralizing the policy here (rather than a catch site testing `is
 /// UvApiException` to infer it by type-hierarchy accident) means adding a
-/// new failure type forces an explicit choice via [countsTowardEscalation],
-/// instead of silently defaulting to "excluded" until some catch site is
-/// remembered to be updated.
+/// new failure type forces an explicit choice via [escalationStatusCode].
+/// The policy and the status code are a single getter, not a bool alongside
+/// a separately-typed status code, so a subtype can't opt in without also
+/// providing the code the counter needs to record -- there is no
+/// "opted in but forgot the code" state for a catch site to guard against.
 sealed class UvApiFailure implements Exception {
   const UvApiFailure();
 
-  /// Whether this failure should increment `ProxyErrorState`'s
-  /// consecutive-failure count.
-  bool get countsTowardEscalation;
+  /// Non-null if this failure should increment `ProxyErrorState`'s
+  /// consecutive-failure count, using this HTTP status code; `null` to be
+  /// excluded from the counter entirely.
+  int? get escalationStatusCode;
 }
 
 /// Thrown when the proxy returns 426 (app version too old).
@@ -157,7 +160,7 @@ class UvApiForceUpdateException extends UvApiFailure {
   const UvApiForceUpdateException();
 
   @override
-  bool get countsTowardEscalation => false;
+  int? get escalationStatusCode => null;
 }
 
 /// Thrown when the UV API returns a non-200 status.
@@ -172,7 +175,7 @@ class UvApiException extends UvApiFailure {
   final String body;
 
   @override
-  bool get countsTowardEscalation => true;
+  int? get escalationStatusCode => statusCode;
 
   // Override toString for debuggability only - the app works without it.
   // Without this, logs and error messages show "Instance of 'UvApiException'"
@@ -196,7 +199,7 @@ class UvApiParseException extends UvApiFailure {
   final String body;
 
   @override
-  bool get countsTowardEscalation => false;
+  int? get escalationStatusCode => null;
 
   @override
   String toString() => 'UvApiParseException: $body';
