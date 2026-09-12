@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.22.0](https://github.com/milliorn/uv-alert/compare/v1.21.1...v1.22.0) (2026-09-12)
+
+
+### Features
+
+* implement proxy error state tracker in UV provider ([#130](https://github.com/milliorn/uv-alert/issues/130)) ([b3b53a2](https://github.com/milliorn/uv-alert/commit/b3b53a2ac840728e4c8be0df333c6de22d48acee)), closes [#70](https://github.com/milliorn/uv-alert/issues/70)
+
 ## [1.21.1](https://github.com/milliorn/uv-alert/compare/v1.21.0...v1.21.1) (2026-09-09)
 
 
