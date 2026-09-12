@@ -66,12 +66,12 @@ class ProxyErrorState {
   const ProxyErrorState({this.consecutiveFailures = 0, this.lastStatusCode});
 
   /// Number of non-200 responses received back-to-back, with no successful
-  /// network response in between. Reset to 0 on a real network HTTP 200 --
-  /// this includes a response whose body fails to parse
-  /// ([UvApiParseException]), since the proxy itself still answered
-  /// successfully, but excludes a cache hit, which is also a "successful
-  /// fetch" but is not evidence the proxy has recovered (see
-  /// `UvApiFetchMeta` in `uv_api.dart`).
+  /// network response in between. Reset to 0 whenever `UvApi.fetch` actually
+  /// receives an HTTP 200 from the proxy (`UvApiFetchMeta.receivedNetwork200`
+  /// in `uv_api.dart`) -- this holds even if something fails afterward (an
+  /// unparseable body, or a cache-write error), since the proxy itself still
+  /// answered successfully. Excludes a cache hit, which is also a
+  /// "successful fetch" but is not evidence the proxy has recovered.
   final int consecutiveFailures;
 
   /// The HTTP status code of the most recent failure, or `null` if no
@@ -304,15 +304,16 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
 
         if (code != null) {
           ref.read(proxyErrorProvider.notifier).recordFailure(code);
-        } else if (e is UvApiParseException) {
-          // A parse failure only happens after a real network 200 (see
-          // UvApi.fetch) -- the proxy itself responded successfully, it's
-          // just the body that didn't parse. Per issue #70's "reset on any
-          // successful 200 response" rule, that's still proxy health
-          // evidence, so the streak resets even though this failure type
-          // is excluded from recordFailure.
-          ref.read(proxyErrorProvider.notifier).recordSuccess();
         }
+      }
+
+      // A real network 200 is proxy-health evidence regardless of what
+      // failed afterward (body parsing, or Cache.store raising some
+      // unrelated exception that isn't even a UvApiFailure) -- so this is
+      // keyed on UvApiFetchMeta.receivedNetwork200, not on the exception's
+      // type, per issue #70's "reset on any successful 200 response" rule.
+      if (meta.receivedNetwork200) {
+        ref.read(proxyErrorProvider.notifier).recordSuccess();
       }
 
       state = _withPrevious(AsyncValue<UvData>.error(e, st));

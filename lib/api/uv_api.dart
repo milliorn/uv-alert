@@ -16,6 +16,18 @@ class UvApiFetchMeta {
   /// Whether the call this instance was passed to returned a cached value
   /// instead of making a network request. `false` until that call completes.
   bool wasFromCache = false;
+
+  /// Whether the call this instance was passed to received an HTTP 200 from
+  /// the proxy, regardless of what happened afterward (body parsing, cache
+  /// storage). `false` until a 200 is actually observed.
+  ///
+  /// Set as soon as the response status is confirmed -- before parsing the
+  /// body or writing to the cache -- so a failure in either of those later
+  /// steps (e.g. [UvApiParseException], or a raw exception from
+  /// `Cache.store`) doesn't erase the fact that the proxy itself answered
+  /// successfully. Callers should treat this as proxy-health evidence
+  /// independent of whether [UvApi.fetch] ultimately threw.
+  bool receivedNetwork200 = false;
 }
 
 /// HTTP client for fetching UV data from the proxy API.
@@ -108,6 +120,8 @@ class UvApi {
     if (response.statusCode != httpOk) {
       throw UvApiException(response.statusCode, response.body);
     }
+
+    meta?.receivedNetwork200 = true;
 
     final UvData data;
 

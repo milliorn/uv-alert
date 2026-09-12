@@ -486,7 +486,12 @@ void main() {
           appVersion: any(named: 'appVersion'),
           meta: any(named: 'meta'),
         ),
-      ).thenThrow(UvApiParseException('parse error: bad json'));
+      ).thenAnswer((Invocation invocation) async {
+        (invocation.namedArguments[#meta] as UvApiFetchMeta?)
+                ?.receivedNetwork200 =
+            true;
+        throw UvApiParseException('parse error: bad json');
+      });
 
       await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
 
@@ -512,6 +517,56 @@ void main() {
       final ProxyErrorState finalState = container.read(proxyErrorProvider);
       expect(finalState.consecutiveFailures, 1);
       expect(finalState.lastStatusCode, 500);
+    },
+  );
+
+  test(
+    'a failure after a real network 200 resets the streak even when it is '
+    'not a UvApiFailure at all (e.g. Cache.store throwing) '
+    '(500 -> healthy 200 with a post-response failure -> the streak must '
+    'not carry over)',
+    () async {
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+          meta: any(named: 'meta'),
+        ),
+      ).thenThrow(UvApiException(500, 'server error'));
+
+      final ProviderContainer container = _makeContainerWith(mockApi);
+
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+      expect(container.read(proxyErrorProvider).consecutiveFailures, 1);
+
+      // Simulates UvApi.fetch receiving a real 200 and parsing it
+      // successfully, but Cache.store throwing afterward -- a raw
+      // exception unrelated to UvApiFailure entirely.
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+          meta: any(named: 'meta'),
+        ),
+      ).thenAnswer((Invocation invocation) async {
+        (invocation.namedArguments[#meta] as UvApiFetchMeta?)
+                ?.receivedNetwork200 =
+            true;
+        throw Exception('disk full');
+      });
+
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+
+      // The proxy answered with a real 200 -- the failure happened purely
+      // client-side (cache write), which is not proxy-health evidence
+      // against the proxy, so the streak from the earlier 500 must reset.
+      final ProxyErrorState state = container.read(proxyErrorProvider);
+      expect(state.consecutiveFailures, 0);
+      expect(state.lastStatusCode, isNull);
     },
   );
 

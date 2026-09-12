@@ -187,6 +187,7 @@ void main() {
 
       expect(result.currentUvi, 5.0);
       expect(meta.wasFromCache, isFalse);
+      expect(meta.receivedNetwork200, isTrue);
       verify(() => mockCache.store(any())).called(1);
     });
 
@@ -200,12 +201,14 @@ void main() {
         ),
       );
 
+      final UvApiFetchMeta meta = UvApiFetchMeta();
       await expectLater(
         () => api.fetch(
           lat: 40.7,
           lon: -74,
           uuid: 'uuid-1',
           appVersion: 'test-version',
+          meta: meta,
         ),
         throwsA(
           isA<UvApiException>().having(
@@ -214,6 +217,11 @@ void main() {
             500,
           ),
         ),
+      );
+      expect(
+        meta.receivedNetwork200,
+        isFalse,
+        reason: 'a non-200 response must not set receivedNetwork200',
       );
     });
 
@@ -241,16 +249,60 @@ void main() {
         httpClient: MockClient((_) async => http.Response('not json', 200)),
       );
 
+      final UvApiFetchMeta meta = UvApiFetchMeta();
       await expectLater(
         () => api.fetch(
           lat: 40.7,
           lon: -74,
           uuid: 'uuid-1',
           appVersion: 'test-version',
+          meta: meta,
         ),
         throwsA(isA<UvApiParseException>()),
       );
+      expect(
+        meta.receivedNetwork200,
+        isTrue,
+        reason:
+            'the proxy answered with a real 200 -- only the body failed '
+            'to parse, so this must still be recorded as proxy health',
+      );
     });
+
+    test(
+      'receivedNetwork200 is true even when Cache.store throws after a '
+      'real 200 and successful parse',
+      () async {
+        when(
+          () => mockCache.store(any()),
+        ).thenThrow(Exception('disk full'));
+
+        final UvApi api = UvApi(
+          cache: mockCache,
+          proxyBaseUrl: 'http://example.com',
+          httpClient: mockClientReturning(200, jsonEncode(_apiJson())),
+        );
+
+        final UvApiFetchMeta meta = UvApiFetchMeta();
+        await expectLater(
+          () => api.fetch(
+            lat: 40.7,
+            lon: -74,
+            uuid: 'uuid-1',
+            appVersion: 'test-version',
+            meta: meta,
+          ),
+          throwsA(isA<Exception>()),
+        );
+        expect(
+          meta.receivedNetwork200,
+          isTrue,
+          reason:
+              'the proxy answered with a real 200 and the body parsed fine '
+              '-- a later cache-write failure must not erase that fact',
+        );
+      },
+    );
 
     test('throws UvApiParseException when JSON is not an object', () async {
       for (final String body in <String>['[1,2,3]', '"a string"', '42']) {
