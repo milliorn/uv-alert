@@ -51,7 +51,7 @@ void main() {
 
   tearDown(resetMocktailState);
 
-  group('UvApi.fetch — cache hit', () {
+  group('UvApi.fetch -- cache hit', () {
     test('returns cached data without making a network request', () async {
       final UvData cached = _makeData();
       when(() => mockCache.isValid).thenReturn(true);
@@ -62,14 +62,17 @@ void main() {
         proxyBaseUrl: 'http://example.com',
       );
 
+      final UvApiFetchMeta meta = UvApiFetchMeta();
       final UvData result = await api.fetch(
         lat: 40.7,
         lon: -74,
         uuid: 'uuid-1',
         appVersion: 'test-version',
+        meta: meta,
       );
 
       expect(result.currentUvi, cached.currentUvi);
+      expect(meta.wasFromCache, isTrue);
       verifyNever(() => mockCache.store(any()));
     });
 
@@ -85,19 +88,82 @@ void main() {
         httpClient: mockClientReturning(200, jsonEncode(_apiJson())),
       );
 
+      final UvApiFetchMeta meta = UvApiFetchMeta();
       final UvData result = await api.fetch(
         lat: 40.7,
         lon: -74,
         uuid: 'uuid-1',
         appVersion: 'test-version',
+        meta: meta,
       );
 
       expect(result.currentUvi, 5.0);
+      expect(meta.wasFromCache, isFalse);
       verify(() => mockCache.store(any())).called(1);
     });
+
+    test(
+      'overlapping calls on the same UvApi keep separate meta outcomes '
+      '(a slower network call is not clobbered by a faster concurrent '
+      'cache hit)',
+      () async {
+        // First call: cache miss, slow network response held open until
+        // released below.
+        final Completer<http.Response> networkGate =
+            Completer<http.Response>();
+        bool cacheValidForSecondCallOnward = false;
+
+        when(
+          () => mockCache.isValid,
+        ).thenAnswer((_) => cacheValidForSecondCallOnward);
+        when(() => mockCache.store(any())).thenAnswer((_) async {});
+
+        final UvApi api = UvApi(
+          cache: mockCache,
+          proxyBaseUrl: 'http://example.com',
+          httpClient: MockClient((_) => networkGate.future),
+        );
+
+        final UvApiFetchMeta slowNetworkMeta = UvApiFetchMeta();
+        final Future<UvData> slowNetworkFetch = api.fetch(
+          lat: 40.7,
+          lon: -74,
+          uuid: 'uuid-1',
+          appVersion: 'test-version',
+          meta: slowNetworkMeta,
+        );
+
+        // Second call starts while the first is still awaiting the network
+        // and completes via a cache hit before the first resolves.
+        cacheValidForSecondCallOnward = true;
+        final UvData cached = _makeData();
+        when(() => mockCache.read()).thenAnswer((_) async => cached);
+
+        final UvApiFetchMeta cacheHitMeta = UvApiFetchMeta();
+        final UvData cacheHitResult = await api.fetch(
+          lat: 40.7,
+          lon: -74,
+          uuid: 'uuid-1',
+          appVersion: 'test-version',
+          meta: cacheHitMeta,
+        );
+
+        expect(cacheHitResult.currentUvi, cached.currentUvi);
+        expect(cacheHitMeta.wasFromCache, isTrue);
+
+        // Now release the first call's network response.
+        networkGate.complete(http.Response(jsonEncode(_apiJson()), 200));
+        final UvData networkResult = await slowNetworkFetch;
+
+        expect(networkResult.currentUvi, 5.0);
+        // The cache-hit call's meta must not have leaked into the slower
+        // network call's own meta.
+        expect(slowNetworkMeta.wasFromCache, isFalse);
+      },
+    );
   });
 
-  group('UvApi.fetch — cache miss', () {
+  group('UvApi.fetch -- cache miss', () {
     setUp(() {
       when(() => mockCache.isValid).thenReturn(false);
       when(() => mockCache.store(any())).thenAnswer((_) async {});
@@ -110,14 +176,18 @@ void main() {
         httpClient: mockClientReturning(200, jsonEncode(_apiJson())),
       );
 
+      final UvApiFetchMeta meta = UvApiFetchMeta();
       final UvData result = await api.fetch(
         lat: 40.7,
         lon: -74,
         uuid: 'uuid-1',
         appVersion: 'test-version',
+        meta: meta,
       );
 
       expect(result.currentUvi, 5.0);
+      expect(meta.wasFromCache, isFalse);
+      expect(meta.receivedNetwork200, isTrue);
       verify(() => mockCache.store(any())).called(1);
     });
 
@@ -131,12 +201,14 @@ void main() {
         ),
       );
 
+      final UvApiFetchMeta meta = UvApiFetchMeta();
       await expectLater(
         () => api.fetch(
           lat: 40.7,
           lon: -74,
           uuid: 'uuid-1',
           appVersion: 'test-version',
+          meta: meta,
         ),
         throwsA(
           isA<UvApiException>().having(
@@ -145,6 +217,11 @@ void main() {
             500,
           ),
         ),
+      );
+      expect(
+        meta.receivedNetwork200,
+        isFalse,
+        reason: 'a non-200 response must not set receivedNetwork200',
       );
     });
 
@@ -165,25 +242,69 @@ void main() {
       );
     });
 
-    test('throws UvApiException on malformed JSON body', () async {
+    test('throws UvApiParseException on malformed JSON body', () async {
       final UvApi api = UvApi(
         cache: mockCache,
         proxyBaseUrl: 'http://example.com',
         httpClient: MockClient((_) async => http.Response('not json', 200)),
       );
 
+      final UvApiFetchMeta meta = UvApiFetchMeta();
       await expectLater(
         () => api.fetch(
           lat: 40.7,
           lon: -74,
           uuid: 'uuid-1',
           appVersion: 'test-version',
+          meta: meta,
         ),
-        throwsA(isA<UvApiException>()),
+        throwsA(isA<UvApiParseException>()),
+      );
+      expect(
+        meta.receivedNetwork200,
+        isTrue,
+        reason:
+            'the proxy answered with a real 200 -- only the body failed '
+            'to parse, so this must still be recorded as proxy health',
       );
     });
 
-    test('throws UvApiException when JSON is not an object', () async {
+    test(
+      'receivedNetwork200 is true even when Cache.store throws after a '
+      'real 200 and successful parse',
+      () async {
+        when(
+          () => mockCache.store(any()),
+        ).thenThrow(Exception('disk full'));
+
+        final UvApi api = UvApi(
+          cache: mockCache,
+          proxyBaseUrl: 'http://example.com',
+          httpClient: mockClientReturning(200, jsonEncode(_apiJson())),
+        );
+
+        final UvApiFetchMeta meta = UvApiFetchMeta();
+        await expectLater(
+          () => api.fetch(
+            lat: 40.7,
+            lon: -74,
+            uuid: 'uuid-1',
+            appVersion: 'test-version',
+            meta: meta,
+          ),
+          throwsA(isA<Exception>()),
+        );
+        expect(
+          meta.receivedNetwork200,
+          isTrue,
+          reason:
+              'the proxy answered with a real 200 and the body parsed fine '
+              '-- a later cache-write failure must not erase that fact',
+        );
+      },
+    );
+
+    test('throws UvApiParseException when JSON is not an object', () async {
       for (final String body in <String>['[1,2,3]', '"a string"', '42']) {
         final UvApi api = UvApi(
           cache: mockCache,
@@ -198,8 +319,8 @@ void main() {
             uuid: 'uuid-1',
             appVersion: 'test-version',
           ),
-          throwsA(isA<UvApiException>()),
-          reason: 'expected UvApiException for body: $body',
+          throwsA(isA<UvApiParseException>()),
+          reason: 'expected UvApiParseException for body: $body',
         );
       }
     });
@@ -330,7 +451,7 @@ void main() {
         httpClient: client,
       ).dispose();
 
-      // ignore: unnecessary_lambdas — tear-off would invoke close() for real
+      // ignore: unnecessary_lambdas -- tear-off would invoke close() for real
       verifyNever(() => client.close());
     });
   });
@@ -340,6 +461,30 @@ void main() {
       final UvApiException e = UvApiException(404, 'not found');
       expect(e.toString(), contains('404'));
       expect(e.toString(), contains('not found'));
+    });
+
+    test('escalationStatusCode is the status code', () {
+      final UvApiException e = UvApiException(500, 'server error');
+      expect(e.escalationStatusCode, 500);
+    });
+  });
+
+  group('UvApiParseException', () {
+    test('toString includes the body', () {
+      final UvApiParseException e = UvApiParseException('parse error: bad');
+      expect(e.toString(), contains('parse error: bad'));
+    });
+
+    test('escalationStatusCode is null', () {
+      final UvApiParseException e = UvApiParseException('parse error: bad');
+      expect(e.escalationStatusCode, isNull);
+    });
+  });
+
+  group('UvApiForceUpdateException', () {
+    test('escalationStatusCode is null', () {
+      const UvApiForceUpdateException e = UvApiForceUpdateException();
+      expect(e.escalationStatusCode, isNull);
     });
   });
 }

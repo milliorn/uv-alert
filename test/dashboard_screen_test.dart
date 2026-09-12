@@ -215,6 +215,7 @@ void main() {
         lon: any(named: 'lon'),
         uuid: any(named: 'uuid'),
         appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
       ),
     ).thenAnswer((_) async => makeUvData());
 
@@ -241,6 +242,7 @@ void main() {
         lon: -119.65,
         uuid: any(named: 'uuid'),
         appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
       ),
     ).called(1);
   });
@@ -287,6 +289,7 @@ void main() {
           lon: any(named: 'lon'),
           uuid: any(named: 'uuid'),
           appVersion: any(named: 'appVersion'),
+          meta: any(named: 'meta'),
         ),
       ).thenThrow(UvApiException(500, 'server error'));
 
@@ -329,6 +332,7 @@ void main() {
           lon: 88,
           uuid: any(named: 'uuid'),
           appVersion: any(named: 'appVersion'),
+          meta: any(named: 'meta'),
         ),
       ).called(greaterThanOrEqualTo(1));
       verifyNever(
@@ -337,6 +341,7 @@ void main() {
           lon: 2,
           uuid: any(named: 'uuid'),
           appVersion: any(named: 'appVersion'),
+          meta: any(named: 'meta'),
         ),
       );
     },
@@ -355,6 +360,7 @@ void main() {
         lon: any(named: 'lon'),
         uuid: any(named: 'uuid'),
         appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
       ),
     ).thenAnswer((_) async => makeUvData());
 
@@ -390,6 +396,7 @@ void main() {
         lon: -74.006,
         uuid: any(named: 'uuid'),
         appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
       ),
     ).called(1);
   });
