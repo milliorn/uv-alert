@@ -157,6 +157,49 @@ void main() {
       expect(result, 50);
     });
 
+    test(
+      'buckets hourly entries by location-local day, not UTC day, when '
+      'timezoneOffset is non-zero',
+      () {
+        // Fresno is UTC-7. 02:00 UTC on June 22nd is 19:00 local on June
+        // 21st -- still "today" locally even though the UTC calendar day has
+        // already rolled over, and the sun is still above the horizon. An
+        // entry at 03:00 UTC on June 22nd (20:00 local, June 21st) should
+        // count toward the same local day, while an entry at 08:00 UTC on
+        // June 22nd (01:00 local, June 22nd) should not.
+        const int fresnoOffsetSeconds = -7 * 3600;
+        final DateTime queryUtc = DateTime.utc(2024, 6, 22, 2);
+
+        final UvData data = makeUvData(
+          currentUvi: 0,
+          timezoneOffset: fresnoOffsetSeconds,
+          hourly: <UvForecastEntry>[
+            // Same location-local day (June 21st local) as queryUtc.
+            UvForecastEntry(time: DateTime.utc(2024, 6, 22, 3), uvi: 5),
+            // Next location-local day (June 22nd local) -- must be excluded.
+            UvForecastEntry(time: DateTime.utc(2024, 6, 22, 8), uvi: 99),
+          ],
+        );
+
+        final double elevation = solarElevationDegrees(
+          lat: _lat,
+          lon: _lon,
+          utcTime: queryUtc,
+        );
+        expect(elevation, greaterThan(0));
+
+        final double result = interpolatedUvi(
+          data: data,
+          lat: _lat,
+          lon: _lon,
+          atUtc: queryUtc,
+        );
+
+        expect(result, lessThan(99));
+        expect(result, closeTo(5 * _sinDegrees(elevation), 0.01));
+      },
+    );
+
     test('returns 0 at a high-latitude location during polar night', () {
       // Above the Arctic Circle, near winter solstice: the sun does not
       // rise, so elevation stays negative all day.

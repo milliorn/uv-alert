@@ -3,13 +3,6 @@ import 'dart:math' as math;
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/services/solar_position.dart';
 
-/// Number of degrees in a half circle (pi radians), used to convert between
-/// degrees and radians.
-const double _degreesPerHalfCircle = 180;
-
-/// Converts [degrees] to radians.
-double _degToRad(double degrees) => degrees * math.pi / _degreesPerHalfCircle;
-
 /// The peak `hourly[].uvi` value for the location-local calendar day
 /// containing [atUtc], or `data`'s current UV index if `data`'s hourly
 /// forecast has no entry for that day.
@@ -74,7 +67,7 @@ double interpolatedUvi({
   if (elevationDegrees <= 0) return 0;
 
   final double uvMax = _peakUviForDay(data, atUtc);
-  final double estimate = uvMax * math.sin(_degToRad(elevationDegrees));
+  final double estimate = uvMax * math.sin(degToRad(elevationDegrees));
 
   return math.max(estimate, data.currentUvi);
 }

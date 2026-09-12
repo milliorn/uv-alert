@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 /// Number of degrees in a half circle (pi radians), used to convert between
 /// degrees and radians.
-const double _degreesPerHalfCircle = 180;
+const double degreesPerHalfCircle = 180;
 
 /// Number of degrees in a full circle, used to map day-of-year onto a
 /// fraction of the Earth's full orbital cycle in the declination formula.
@@ -66,10 +66,10 @@ const double _nauticalElevationDegrees = -12;
 const double _astronomicalElevationDegrees = -18;
 
 /// Converts [degrees] to radians.
-double _degToRad(double degrees) => degrees * math.pi / _degreesPerHalfCircle;
+double degToRad(double degrees) => degrees * math.pi / degreesPerHalfCircle;
 
 /// Converts [radians] to degrees.
-double _radToDeg(double radians) => radians * _degreesPerHalfCircle / math.pi;
+double _radToDeg(double radians) => radians * degreesPerHalfCircle / math.pi;
 
 /// A named solar event during a day's light cycle.
 ///
@@ -175,7 +175,7 @@ int _dayOfYear(DateTime date) {
 double _solarDeclinationDegrees(int dayOfYear) {
   final double fractionOfYear =
       (_degreesPerCircle / _daysPerYear) * (dayOfYear - _declinationDayOffset);
-  return _declinationAmplitudeDegrees * math.sin(_degToRad(fractionOfYear));
+  return _declinationAmplitudeDegrees * math.sin(degToRad(fractionOfYear));
 }
 
 /// Computes the UTC [DateTime] for [SolarEvent] at [lat]/[lon] on [date],
@@ -253,9 +253,9 @@ DateTime? _eventTime({
   required double elevationDegrees,
   required bool isMorning,
 }) {
-  final double latRad = _degToRad(lat);
-  final double decRad = _degToRad(declinationDegrees);
-  final double elevationRad = _degToRad(elevationDegrees);
+  final double latRad = degToRad(lat);
+  final double decRad = degToRad(declinationDegrees);
+  final double elevationRad = degToRad(elevationDegrees);
 
   final double cosHourAngle =
       (math.sin(elevationRad) - math.sin(latRad) * math.sin(decRad)) /
@@ -338,9 +338,9 @@ double solarElevationDegrees({
   final double hourAngleDegrees =
       (localSolarHour - _solarNoonHour) * _degreesPerHour;
 
-  final double latRad = _degToRad(lat);
-  final double decRad = _degToRad(declinationDegrees);
-  final double hourAngleRad = _degToRad(hourAngleDegrees);
+  final double latRad = degToRad(lat);
+  final double decRad = degToRad(declinationDegrees);
+  final double hourAngleRad = degToRad(hourAngleDegrees);
 
   final double sinElevation =
       math.sin(latRad) * math.sin(decRad) +
