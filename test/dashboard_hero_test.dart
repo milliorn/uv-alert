@@ -8,6 +8,7 @@ import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/services/solar_position.dart';
 import 'package:uvalert/services/uv_interpolation.dart';
+import 'package:uvalert/utils/time_format.dart';
 import 'package:uvalert/widgets/dashboard_hero.dart';
 import 'package:uvalert/widgets/uv_current_display.dart';
 import 'package:uvalert/widgets/uv_hero_conditional_line.dart';
@@ -142,6 +143,62 @@ void main() {
           math.asin(data.currentUvi / _fixtureHourlyPeakUvi) * 180 / math.pi;
       if (elevation > minElevationForVisibleInterpolation) {
         expect(display.uvIndex, greaterThan(data.currentUvi));
+      }
+    },
+  );
+
+  testWidgets(
+    'anchors solarEvents to the location-local calendar date, not '
+    "nowUtc's own UTC date",
+    (WidgetTester tester) async {
+      // A non-zero, non-multiple-of-24h-aligned offset: with makeUvData's
+      // default timezoneOffset of 0, toLocationLocal(nowUtc, 0) == nowUtc,
+      // so no assertion here could ever distinguish the correct call from a
+      // regression back to passing nowUtc directly. A large positive offset
+      // makes that distinction meaningful for most of a UTC day (excluding
+      // a window near UTC midnight where both computations still happen to
+      // agree, an inherent limitation without an injectable clock, same as
+      // the interpolation fixture above).
+      const int nonZeroOffsetSeconds = 12 * 60 * 60;
+      final DateTime nowUtc = DateTime.now().toUtc();
+      final UvData data = makeUvData(timezoneOffset: nonZeroOffsetSeconds);
+
+      await tester.pumpWidget(
+        _wrap(
+          uvNotifier: () => FakeDataUvNotifier(data),
+          locationNotifier: FakeFixedLocationNotifier.new,
+        ),
+      );
+
+      const ({double lat, double lon}) fixedLocation = (
+        lat: 36.75,
+        lon: -119.65,
+      );
+      final Map<SolarEvent, DateTime?> expectedSolarEvents = solarEventTimes(
+        lat: fixedLocation.lat,
+        lon: fixedLocation.lon,
+        date: toLocationLocal(nowUtc, nonZeroOffsetSeconds),
+      );
+      final Map<SolarEvent, DateTime?> regressedSolarEvents = solarEventTimes(
+        lat: fixedLocation.lat,
+        lon: fixedLocation.lon,
+        date: nowUtc,
+      );
+
+      final UvHeroConditionalLine conditionalLine = tester.widget(
+        find.byType(UvHeroConditionalLine),
+      );
+      expect(conditionalLine.solarEvents, expectedSolarEvents);
+
+      // Only meaningful once the local and UTC calendar dates actually
+      // differ at this run instant (see the offset comment above); skipped,
+      // not silently passed, otherwise.
+      if (toLocationLocal(
+            nowUtc,
+            nonZeroOffsetSeconds,
+          ).day !=
+          nowUtc.day) {
+        expect(conditionalLine.solarEvents, isNot(regressedSolarEvents));
       }
     },
   );
