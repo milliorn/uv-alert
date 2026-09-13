@@ -155,20 +155,15 @@ String? _uvThresholdLine({required DateTime now, required UvData uvData}) {
   // shows the queried location's wall-clock time, not UTC.
   DateTime local(DateTime t) => toLocationLocal(t, uvData.timezoneOffset);
 
-  // "Today" is the location's local calendar day, via uvData.timezoneOffset
-  // -- not `now`'s UTC calendar day, which can be a different day than the
-  // location's "today" for any location far enough from UTC. Computed by
-  // shifting `now` to location-local time (via toLocationLocal) to find its
-  // local calendar day, then shifting that day's UTC midnight boundaries
-  // back by the same offset -- so todayStart/todayEnd remain UTC DateTimes
-  // directly comparable against hourly's UTC timestamps.
-  final DateTime nowLocal = toLocationLocal(now, uvData.timezoneOffset);
-  final Duration locationOffset = Duration(seconds: uvData.timezoneOffset);
-  final DateTime todayStart = DateTime.utc(
-    nowLocal.year,
-    nowLocal.month,
-    nowLocal.day,
-  ).subtract(locationOffset);
+  // "Today" is the location's local calendar day, via uvData.timezoneOffset,
+  // not `now`'s UTC calendar day, which can be a different day than the
+  // location's "today" for any location far enough from UTC. todayStart/
+  // todayEnd remain UTC DateTimes directly comparable against hourly's UTC
+  // timestamps (see startOfLocationLocalDayUtc's own doc comment).
+  final DateTime todayStart = startOfLocationLocalDayUtc(
+    now,
+    uvData.timezoneOffset,
+  );
   final DateTime todayEnd = todayStart.add(const Duration(days: 1));
 
   // past/future/today are three views over the same sorted list -- built in

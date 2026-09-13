@@ -77,10 +77,20 @@ void main() {
       // something this fixture can avoid without an injectable clock. The
       // day-branch assertion below is skipped in that case rather than
       // silently passing on a false premise.
+      // Anchors both the captured nowUtc's calendar day and the day after,
+      // so the widget's own DateTime.now() call (microseconds after nowUtc
+      // is captured above) still finds an hourly entry on its own day even
+      // if the two calls happen to straddle a UTC midnight boundary
+      // (makeUvData defaults timezoneOffset to 0, so the local calendar day
+      // here is the UTC calendar day).
       final UvData data = makeUvData(
         currentUvi: 1,
         hourly: <UvForecastEntry>[
           UvForecastEntry(time: nowUtc, uvi: _fixtureHourlyPeakUvi),
+          UvForecastEntry(
+            time: nowUtc.add(const Duration(days: 1)),
+            uvi: _fixtureHourlyPeakUvi,
+          ),
         ],
       );
 
@@ -149,13 +159,9 @@ void main() {
     'periodic timer refreshes the hero and is cancelled on dispose, without '
     'triggering a fetch',
     (WidgetTester tester) async {
-      final FakeDataUvNotifier notifier = FakeDataUvNotifier(
-        makeUvData(currentUvi: 1),
-      );
-
       await tester.pumpWidget(
         _wrap(
-          uvNotifier: () => notifier,
+          uvNotifier: () => FakeDataUvNotifier(makeUvData(currentUvi: 1)),
           locationNotifier: FakeFixedLocationNotifier.new,
         ),
       );
@@ -165,26 +171,22 @@ void main() {
       final UvCurrentDisplay initialDisplay = tester.widget(
         find.byType(UvCurrentDisplay),
       );
-      
-      expect(initialDisplay.uvIndex, 1);
 
-      // Changes the provider's data, then advances the test binding's
-      // virtual clock past one refresh interval in the same pump call.
-      // ref.watch's own change-triggered rebuild already covers the case
-      // where a provider update alone causes a rebuild (see
-      // dashboard_screen_test.dart); this test's own value is the coverage
-      // below combined with the sibling test at the bottom of this file:
-      // together they show the periodic Timer exists, actually fires
-      // (rather than silently never registering), and does not itself
-      // throw or double-fire against a changed provider state, while
-      // dispose() still cancels it cleanly.
-      notifier.updateData(makeUvData(currentUvi: 9));
+      // Advances the test binding's virtual clock past one refresh interval
+      // with no provider change at all, isolating the periodic Timer's own
+      // contribution: a rebuild here can only be caused by the Timer firing,
+      // not by ref.watch reacting to new state (see
+      // dashboard_screen_test.dart for that separate case). Flutter builds
+      // a fresh UvCurrentDisplay instance on every DashboardHero.build()
+      // call regardless of whether uvIndex's value actually changed, so a
+      // different widget instance (not equal value) is what proves the
+      // rebuild happened.
       await tester.pump(const Duration(minutes: 1));
 
       final UvCurrentDisplay refreshedDisplay = tester.widget(
         find.byType(UvCurrentDisplay),
       );
-      expect(refreshedDisplay.uvIndex, 9);
+      expect(identical(initialDisplay, refreshedDisplay), isFalse);
 
       // Tearing the widget down here must not leave a pending timer
       // (flutter_test fails the test at tearDown if any Timer is still
