@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
+import 'package:uvalert/services/solar_position.dart';
 import 'package:uvalert/services/uv_interpolation.dart';
 import 'package:uvalert/widgets/dashboard_hero.dart';
 import 'package:uvalert/widgets/uv_current_display.dart';
@@ -51,8 +52,28 @@ void main() {
     'renders the solar-interpolated value and conditional line when a '
     'location is available',
     (WidgetTester tester) async {
-      final DateTime fetchedAt = DateTime.utc(2024, 6, 1, 12);
-      final UvData data = makeUvData(currentUvi: 4, fetchedAt: fetchedAt);
+      // Captured once and reused for both the fixture's hourly anchor and
+      // the expected-value comparison below, so the two agree on what
+      // "today" is regardless of when this test actually runs.
+      final DateTime nowUtc = DateTime.now().toUtc();
+      // currentUvi (1) is deliberately distinct from the hourly peak (20):
+      // with a correct location branch, peakUviForDay picks up 20 as UVmax,
+      // so during the day the interpolated estimate is a value scaled from
+      // 20, clearly not 1. This is what the day-branch assertion below
+      // checks, so it actually fails if the widget silently bypassed
+      // interpolation and passed currentUvi straight through instead.
+      //
+      // At night, interpolatedUvi's conservative-max step correctly
+      // resolves to max(0, 1) = 1, coincidentally equal to currentUvi. This
+      // is an inherent limitation of the conservative-max design itself
+      // (see uv_interpolation_test.dart's own night-time tests), not
+      // something this fixture can avoid without an injectable clock. The
+      // day-branch assertion below is skipped in that case rather than
+      // silently passing on a false premise.
+      final UvData data = makeUvData(
+        currentUvi: 1,
+        hourly: <UvForecastEntry>[UvForecastEntry(time: nowUtc, uvi: 20)],
+      );
 
       await tester.pumpWidget(
         _wrap(
@@ -61,11 +82,14 @@ void main() {
         ),
       );
 
-      final double expectedUvi = interpolatedUvi(
-        data: data,
+      const ({double lat, double lon}) fixedLocation = (
         lat: 36.75,
         lon: -119.65,
-        atUtc: DateTime.now().toUtc(),
+      );
+      final double expectedUvi = displayUvi(
+        data: data,
+        location: fixedLocation,
+        atUtc: nowUtc,
       );
 
       final UvCurrentDisplay display = tester.widget(
@@ -75,6 +99,22 @@ void main() {
       // widget's own `DateTime.now()` call are computed microseconds apart.
       expect(display.uvIndex, closeTo(expectedUvi, 0.01));
       expect(find.byType(UvHeroConditionalLine), findsOneWidget);
+
+      // Proves the widget actually took the location/interpolation branch
+      // rather than silently falling back to a currentUvi passthrough, when
+      // the sun is up at this location right now: with currentUvi=1 and a
+      // real peak of 20, a correct interpolated result is well above 1,
+      // while a passthrough bug would render exactly 1 regardless of the
+      // real peak. See the fixture comment above for why this assertion is
+      // skipped (not silently passed) when the sun happens to be down.
+      final double elevation = solarElevationDegrees(
+        lat: fixedLocation.lat,
+        lon: fixedLocation.lon,
+        utcTime: nowUtc,
+      );
+      if (elevation > 0) {
+        expect(display.uvIndex, greaterThan(data.currentUvi));
+      }
     },
   );
 
