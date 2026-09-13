@@ -1,8 +1,6 @@
 import 'dart:math' as math;
 
-/// Number of degrees in a half circle (pi radians), used to convert between
-/// degrees and radians.
-const double degreesPerHalfCircle = 180;
+import 'package:uvalert/utils/angle_math.dart';
 
 /// Number of degrees in a full circle, used to map day-of-year onto a
 /// fraction of the Earth's full orbital cycle in the declination formula.
@@ -64,12 +62,6 @@ const double _nauticalElevationDegrees = -12;
 /// Elevation angle (degrees) marking astronomical dawn/dusk -- standard
 /// astronomical definition.
 const double _astronomicalElevationDegrees = -18;
-
-/// Converts [degrees] to radians.
-double degToRad(double degrees) => degrees * math.pi / degreesPerHalfCircle;
-
-/// Converts [radians] to degrees.
-double _radToDeg(double radians) => radians * degreesPerHalfCircle / math.pi;
 
 /// A named solar event during a day's light cycle.
 ///
@@ -267,7 +259,7 @@ DateTime? _eventTime({
   // silently passing through to `acos`.
   if (!(cosHourAngle >= -1 && cosHourAngle <= 1)) return null;
 
-  final double hourAngleDegrees = _radToDeg(math.acos(cosHourAngle));
+  final double hourAngleDegrees = radToDeg(math.acos(cosHourAngle));
 
   // acos returns [0, 180]; the morning crossing is at the negative hour
   // angle (before solar noon), the evening crossing at the positive one.
@@ -351,5 +343,5 @@ double solarElevationDegrees({
   // outside [-1, 1] and produce NaN.
   final double clamped = sinElevation.clamp(-1.0, 1.0);
 
-  return _radToDeg(math.asin(clamped));
+  return radToDeg(math.asin(clamped));
 }

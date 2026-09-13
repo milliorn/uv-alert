@@ -2,22 +2,25 @@ import 'dart:math' as math;
 
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/services/solar_position.dart';
+import 'package:uvalert/utils/angle_math.dart';
+import 'package:uvalert/utils/time_format.dart';
 
 /// The peak `hourly[].uvi` value for the location-local calendar day
 /// containing [atUtc], or `data`'s current UV index if `data`'s hourly
 /// forecast has no entry for that day.
 ///
-/// `data`'s timezone offset (seconds) shifts [atUtc] and each hourly entry's
-/// time into the location's local time before comparing calendar dates, so
-/// an hourly entry just after UTC midnight but still within the location's
-/// "today" (or vice versa) is bucketed correctly.
+/// `data`'s timezone offset (seconds), via [toLocationLocal], shifts [atUtc]
+/// and each hourly entry's time into the location's local time before
+/// comparing calendar dates, so an hourly entry just after UTC midnight but
+/// still within the location's "today" (or vice versa) is bucketed
+/// correctly.
 double _peakUviForDay(UvData data, DateTime atUtc) {
-  final Duration offset = Duration(seconds: data.timezoneOffset);
-  final DateTime localToday = _localDate(atUtc, offset);
+  final DateTime localToday = _localDate(atUtc, data.timezoneOffset);
 
   final Iterable<double> todaysUvi = data.hourly
       .where(
-        (UvForecastEntry entry) => _localDate(entry.time, offset) == localToday,
+        (UvForecastEntry entry) =>
+            _localDate(entry.time, data.timezoneOffset) == localToday,
       )
       .map((UvForecastEntry entry) => entry.uvi);
 
@@ -27,9 +30,9 @@ double _peakUviForDay(UvData data, DateTime atUtc) {
 }
 
 /// The location-local calendar date (time-of-day truncated) for UTC time
-/// [utc] shifted by [offset].
-DateTime _localDate(DateTime utc, Duration offset) {
-  final DateTime local = utc.add(offset);
+/// [utc], per [timezoneOffsetSeconds] (i.e. `UvData.timezoneOffset`).
+DateTime _localDate(DateTime utc, int timezoneOffsetSeconds) {
+  final DateTime local = toLocationLocal(utc, timezoneOffsetSeconds);
   return DateTime.utc(local.year, local.month, local.day);
 }
 
@@ -69,5 +72,12 @@ double interpolatedUvi({
   final double uvMax = _peakUviForDay(data, atUtc);
   final double estimate = uvMax * math.sin(degToRad(elevationDegrees));
 
-  return math.max(estimate, data.currentUvi);
+  return _conservativeUvi(estimate, data.currentUvi);
 }
+
+/// Per ADR 0012 decision point 3: always report the higher of the
+/// interpolated [estimate] and the last-known [currentUvi], even when they
+/// diverge only slightly -- protecting user safety takes priority over
+/// reporting the more "accurate" lower estimate.
+double _conservativeUvi(double estimate, double currentUvi) =>
+    math.max(estimate, currentUvi);
