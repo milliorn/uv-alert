@@ -5,6 +5,16 @@ import 'package:uvalert/services/solar_position.dart';
 import 'package:uvalert/utils/angle_math.dart';
 import 'package:uvalert/utils/time_format.dart';
 
+/// Solar elevation at or below which the sun is considered below the
+/// horizon, per ADR 0012 decision point 3 -- no direct-sun UV contribution
+/// at or below this elevation.
+const double _horizonElevationDegrees = 0;
+
+/// The solar-driven UV contribution once the sun is below the horizon
+/// ([_horizonElevationDegrees]): always zero, since there is no direct
+/// sunlight to derive a UV estimate from.
+const double _noDirectSunUvi = 0;
+
 /// The peak `hourly[].uvi` value for the location-local calendar day
 /// containing [atUtc], or `data`'s current UV index if `data`'s hourly
 /// forecast has no entry for that day.
@@ -45,11 +55,14 @@ DateTime _localDate(DateTime utc, int timezoneOffsetSeconds) {
 ///    covers that day).
 /// 2. The sun's elevation angle at [lat]/[lon]/[atUtc] scales that peak via
 ///    `UVmax * sin(elevation)`.
-/// 3. The sun below the horizon (elevation <= 0) always yields 0, regardless
-///    of `UVmax` -- there is no UV at night.
+/// 3. The sun below the horizon (elevation <= 0) yields a solar estimate of
+///    0, regardless of `UVmax` -- there is no direct-sun UV contribution at
+///    night.
 /// 4. The conservative (higher) of the interpolated estimate and
-///    `data.currentUvi` is returned, so a transient dip in the model never
-///    under-reports actual risk.
+///    `data.currentUvi` is returned -- including at night, so a stale
+///    non-zero `currentUvi` is never clobbered to 0 just because the sun has
+///    set; a transient dip (or a zeroed-out night estimate) in the model
+///    never under-reports actual risk.
 ///
 /// Cloud cover is not modeled (see ADR 0012) -- this assumes clear sky
 /// between polls, which may overestimate UV on cloudy days. That is the
@@ -67,10 +80,13 @@ double interpolatedUvi({
     utcTime: atUtc,
   );
 
-  if (elevationDegrees <= 0) return 0;
-
-  final double uvMax = _peakUviForDay(data, atUtc);
-  final double estimate = uvMax * math.sin(degToRad(elevationDegrees));
+  // No direct solar contribution once the sun is below the horizon -- but
+  // this estimate is still subject to the conservative-max rule below, same
+  // as any other low estimate: a stale non-zero currentUvi must not be
+  // clobbered to 0 just because it's currently night at this location.
+  final double estimate = elevationDegrees <= _horizonElevationDegrees
+      ? _noDirectSunUvi
+      : _peakUviForDay(data, atUtc) * math.sin(degToRad(elevationDegrees));
 
   return _conservativeUvi(estimate, data.currentUvi);
 }

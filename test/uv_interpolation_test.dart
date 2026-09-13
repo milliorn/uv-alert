@@ -26,28 +26,20 @@ double _sinDegrees(double degrees) => math.sin(degrees * math.pi / 180);
 
 void main() {
   group('interpolatedUvi', () {
-    test('returns 0 when the sun is below the horizon', () {
-      final double elevation = solarElevationDegrees(
-        lat: _lat,
-        lon: _lon,
-        utcTime: _nighttimeUtc,
-      );
-      // Sanity-check the fixture actually represents nighttime before
-      // asserting on interpolatedUvi's behavior.
-      expect(elevation, lessThanOrEqualTo(0));
-
-      final UvData data = makeUvData();
-
-      expect(
-        interpolatedUvi(data: data, lat: _lat, lon: _lon, atUtc: _nighttimeUtc),
-        0,
-      );
-    });
-
     test(
-      'returns 0 at night even when currentUvi is non-zero (no negative UV)',
+      'at night with a zero currentUvi, returns 0 (no negative UV, no '
+      'direct-sun contribution)',
       () {
-        final UvData data = makeUvData(currentUvi: 3);
+        final double elevation = solarElevationDegrees(
+          lat: _lat,
+          lon: _lon,
+          utcTime: _nighttimeUtc,
+        );
+        // Sanity-check the fixture actually represents nighttime before
+        // asserting on interpolatedUvi's behavior.
+        expect(elevation, lessThanOrEqualTo(0));
+
+        final UvData data = makeUvData(currentUvi: 0);
 
         final double result = interpolatedUvi(
           data: data,
@@ -58,6 +50,24 @@ void main() {
 
         expect(result, 0);
         expect(result, isNot(lessThan(0)));
+      },
+    );
+
+    test(
+      'at night, still returns the conservative (higher) of 0 and a '
+      'non-zero currentUvi -- a stale reading must not be clobbered to 0 '
+      'just because the sun has set',
+      () {
+        final UvData data = makeUvData(currentUvi: 3);
+
+        final double result = interpolatedUvi(
+          data: data,
+          lat: _lat,
+          lon: _lon,
+          atUtc: _nighttimeUtc,
+        );
+
+        expect(result, 3);
       },
     );
 
@@ -200,30 +210,34 @@ void main() {
       },
     );
 
-    test('returns 0 at a high-latitude location during polar night', () {
-      // Above the Arctic Circle, near winter solstice: the sun does not
-      // rise, so elevation stays negative all day.
-      const double arcticLat = 78;
-      final DateTime winterSolstice = DateTime.utc(2024, 12, 21, 12);
+    test(
+      'returns 0 at a high-latitude location during polar night, given a '
+      'zero currentUvi',
+      () {
+        // Above the Arctic Circle, near winter solstice: the sun does not
+        // rise, so elevation stays negative all day.
+        const double arcticLat = 78;
+        final DateTime winterSolstice = DateTime.utc(2024, 12, 21, 12);
 
-      final double elevation = solarElevationDegrees(
-        lat: arcticLat,
-        lon: 0,
-        utcTime: winterSolstice,
-      );
-      expect(elevation, lessThanOrEqualTo(0));
-
-      final UvData data = makeUvData();
-
-      expect(
-        interpolatedUvi(
-          data: data,
+        final double elevation = solarElevationDegrees(
           lat: arcticLat,
           lon: 0,
-          atUtc: winterSolstice,
-        ),
-        0,
-      );
-    });
+          utcTime: winterSolstice,
+        );
+        expect(elevation, lessThanOrEqualTo(0));
+
+        final UvData data = makeUvData(currentUvi: 0);
+
+        expect(
+          interpolatedUvi(
+            data: data,
+            lat: arcticLat,
+            lon: 0,
+            atUtc: winterSolstice,
+          ),
+          0,
+        );
+      },
+    );
   });
 }
