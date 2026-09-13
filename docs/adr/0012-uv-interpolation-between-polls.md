@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted — not yet implemented
+Accepted. Solar-position interpolation math implemented in
+`lib/services/uv_interpolation.dart`, not yet wired into the dashboard (see
+issue #133)
 
 ## Context
 
@@ -23,8 +25,10 @@ hourly forecast anchors already present in the cached payload:
    convert to radians before calling trig functions); use the peak
    `hourly[].uvi` for the current day as UVmax (falls back to `current.uvi`
    if no hourly data is available); UV estimate = UVmax × sin(elevation_rad)
-3. If the interpolated value and the last-known `current.uvi` diverge
-   significantly, use the conservative (higher) value to protect user safety
+3. Always use the conservative (higher) of the interpolated value and the
+   last-known `current.uvi`, even for a small difference (e.g. 3.2 vs. 3.3) --
+   protecting user safety takes priority over reporting the more "accurate"
+   lower estimate
 4. Every 2-hour refresh corrects the model with fresh `current.uvi` from OWM
 
 ## Consequences
@@ -36,5 +40,6 @@ hourly forecast anchors already present in the cached payload:
 - Solar position math runs on-device using only lat, lon, and the system clock
 - The 2-hour refresh corrects accumulated drift from cloud cover or unexpected
   atmospheric conditions
-- This logic will live in `lib/services/` alongside the polling service and is
-  not yet implemented
+- This logic lives in `lib/services/uv_interpolation.dart` alongside the
+  polling service; no widget calls it yet, so the dashboard does not display
+  interpolated values until issue #133 wires it in
