@@ -123,7 +123,7 @@ void _restoreLocationIfNeeded(
   if (settings == null || settings.useGps) return;
 
   final ManualLocation? manualLocation = settings.manualLocation;
-  
+
   if (manualLocation == null) return;
 
   ref
