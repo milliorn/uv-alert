@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.23.0](https://github.com/milliorn/uv-alert/compare/v1.22.0...v1.23.0) (2026-09-13)
+
+
+### Features
+
+* implement UV index interpolation between polls ([#132](https://github.com/milliorn/uv-alert/issues/132)) ([16c9924](https://github.com/milliorn/uv-alert/commit/16c992400e62597d8999f9828a87f4e26119d58c)), closes [#69](https://github.com/milliorn/uv-alert/issues/69)
+
 ## [1.22.0](https://github.com/milliorn/uv-alert/compare/v1.21.1...v1.22.0) (2026-09-12)
 
 
