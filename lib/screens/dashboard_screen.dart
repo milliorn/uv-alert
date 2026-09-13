@@ -93,7 +93,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         );
                       },
                     )
-                  : const DashboardHero(),
+                  : const Center(child: DashboardHero()),
             ),
             const DashboardFooter(),
           ],
@@ -123,6 +123,7 @@ void _restoreLocationIfNeeded(
   if (settings == null || settings.useGps) return;
 
   final ManualLocation? manualLocation = settings.manualLocation;
+  
   if (manualLocation == null) return;
 
   ref
