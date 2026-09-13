@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted — not yet implemented
+Accepted. Solar-position interpolation math implemented in
+`lib/services/uv_interpolation.dart`, not yet wired into the dashboard (see
+issue #133)
 
 ## Context
 
@@ -38,5 +40,6 @@ hourly forecast anchors already present in the cached payload:
 - Solar position math runs on-device using only lat, lon, and the system clock
 - The 2-hour refresh corrects accumulated drift from cloud cover or unexpected
   atmospheric conditions
-- This logic will live in `lib/services/` alongside the polling service and is
-  not yet implemented
+- This logic lives in `lib/services/uv_interpolation.dart` alongside the
+  polling service; no widget calls it yet, so the dashboard does not display
+  interpolated values until issue #133 wires it in

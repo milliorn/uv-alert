@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/services/solar_position.dart';
 import 'package:uvalert/utils/angle_math.dart';
@@ -24,7 +25,14 @@ const double _noDirectSunUvi = 0;
 /// comparing calendar dates, so an hourly entry just after UTC midnight but
 /// still within the location's "today" (or vice versa) is bucketed
 /// correctly.
-double _peakUviForDay(UvData data, DateTime atUtc) {
+///
+/// Exposed (rather than kept private) so its `currentUvi` fallback is
+/// directly testable: through [interpolatedUvi] alone, `sin(elevation) <= 1`
+/// means the conservative-max step can never let the interpolated estimate
+/// exceed `currentUvi`, so a broken fallback value can end up masked by
+/// `currentUvi` winning the outer max regardless.
+@visibleForTesting
+double peakUviForDay(UvData data, DateTime atUtc) {
   final DateTime localToday = _localDate(atUtc, data.timezoneOffset);
 
   final Iterable<double> todaysUvi = data.hourly
@@ -86,7 +94,7 @@ double interpolatedUvi({
   // clobbered to 0 just because it's currently night at this location.
   final double estimate = elevationDegrees <= _horizonElevationDegrees
       ? _noDirectSunUvi
-      : _peakUviForDay(data, atUtc) * math.sin(degToRad(elevationDegrees));
+      : peakUviForDay(data, atUtc) * math.sin(degToRad(elevationDegrees));
 
   return _conservativeUvi(estimate, data.currentUvi);
 }

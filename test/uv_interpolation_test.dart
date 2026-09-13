@@ -26,50 +26,44 @@ double _sinDegrees(double degrees) => math.sin(degrees * math.pi / 180);
 
 void main() {
   group('interpolatedUvi', () {
-    test(
-      'at night with a zero currentUvi, returns 0 (no negative UV, no '
-      'direct-sun contribution)',
-      () {
-        final double elevation = solarElevationDegrees(
-          lat: _lat,
-          lon: _lon,
-          utcTime: _nighttimeUtc,
-        );
-        // Sanity-check the fixture actually represents nighttime before
-        // asserting on interpolatedUvi's behavior.
-        expect(elevation, lessThanOrEqualTo(0));
+    test('at night with a zero currentUvi, returns 0 (no negative UV, no '
+        'direct-sun contribution)', () {
+      final double elevation = solarElevationDegrees(
+        lat: _lat,
+        lon: _lon,
+        utcTime: _nighttimeUtc,
+      );
+      // Sanity-check the fixture actually represents nighttime before
+      // asserting on interpolatedUvi's behavior.
+      expect(elevation, lessThanOrEqualTo(0));
 
-        final UvData data = makeUvData(currentUvi: 0);
+      final UvData data = makeUvData(currentUvi: 0);
 
-        final double result = interpolatedUvi(
-          data: data,
-          lat: _lat,
-          lon: _lon,
-          atUtc: _nighttimeUtc,
-        );
+      final double result = interpolatedUvi(
+        data: data,
+        lat: _lat,
+        lon: _lon,
+        atUtc: _nighttimeUtc,
+      );
 
-        expect(result, 0);
-        expect(result, isNot(lessThan(0)));
-      },
-    );
+      expect(result, 0);
+      expect(result, isNot(lessThan(0)));
+    });
 
-    test(
-      'at night, still returns the conservative (higher) of 0 and a '
-      'non-zero currentUvi -- a stale reading must not be clobbered to 0 '
-      'just because the sun has set',
-      () {
-        final UvData data = makeUvData(currentUvi: 3);
+    test('at night, still returns the conservative (higher) of 0 and a '
+        'non-zero currentUvi. A stale reading must not be clobbered to 0 '
+        'just because the sun has set', () {
+      final UvData data = makeUvData(currentUvi: 3);
 
-        final double result = interpolatedUvi(
-          data: data,
-          lat: _lat,
-          lon: _lon,
-          atUtc: _nighttimeUtc,
-        );
+      final double result = interpolatedUvi(
+        data: data,
+        lat: _lat,
+        lon: _lon,
+        atUtc: _nighttimeUtc,
+      );
 
-        expect(result, 3);
-      },
-    );
+      expect(result, 3);
+    });
 
     test('scales the peak hourly uvi by sin(elevation) when the sun is up', () {
       final double elevation = solarElevationDegrees(
@@ -114,6 +108,11 @@ void main() {
       );
 
       // UVmax falls back to currentUvi (4); result is max(estimate, 4).
+      // Note: since sin(elevation) <= 1, the conservative-max step here
+      // always resolves to currentUvi regardless of what UVmax actually was.
+      // This only proves interpolatedUvi doesn't crash/underreport on a
+      // no-hourly-data day, not that the fallback specifically ran. See the
+      // dedicated `peakUviForDay` group below for that.
       final double expectedEstimate = 4 * _sinDegrees(elevation);
       expect(result, math.max(expectedEstimate, 4));
     });
@@ -167,77 +166,126 @@ void main() {
       expect(result, 50);
     });
 
-    test(
-      'buckets hourly entries by location-local day, not UTC day, when '
-      'timezoneOffset is non-zero',
-      () {
-        // Fresno is UTC-7. 02:00 UTC on June 22nd is 19:00 local on June
-        // 21st -- still "today" locally even though the UTC calendar day has
-        // already rolled over, and the sun is still above the horizon. An
-        // entry at 03:00 UTC on June 22nd (20:00 local, June 21st) should
-        // count toward the same local day, while an entry at 08:00 UTC on
-        // June 22nd (01:00 local, June 22nd) should not.
-        const int fresnoOffsetSeconds = -7 * 3600;
-        final DateTime queryUtc = DateTime.utc(2024, 6, 22, 2);
+    test('buckets hourly entries by location-local day, not UTC day, when '
+        'timezoneOffset is non-zero', () {
+      // Fresno is UTC-7. 02:00 UTC on June 22nd is 19:00 local on June
+      // 21st -- still "today" locally even though the UTC calendar day has
+      // already rolled over, and the sun is still above the horizon. An
+      // entry at 03:00 UTC on June 22nd (20:00 local, June 21st) should
+      // count toward the same local day, while an entry at 08:00 UTC on
+      // June 22nd (01:00 local, June 22nd) should not.
+      const int fresnoOffsetSeconds = -7 * 3600;
+      final DateTime queryUtc = DateTime.utc(2024, 6, 22, 2);
 
-        final UvData data = makeUvData(
-          currentUvi: 0,
-          timezoneOffset: fresnoOffsetSeconds,
-          hourly: <UvForecastEntry>[
-            // Same location-local day (June 21st local) as queryUtc.
-            UvForecastEntry(time: DateTime.utc(2024, 6, 22, 3), uvi: 5),
-            // Next location-local day (June 22nd local) -- must be excluded.
-            UvForecastEntry(time: DateTime.utc(2024, 6, 22, 8), uvi: 99),
-          ],
-        );
+      final UvData data = makeUvData(
+        currentUvi: 0,
+        timezoneOffset: fresnoOffsetSeconds,
+        hourly: <UvForecastEntry>[
+          // Same location-local day (June 21st local) as queryUtc.
+          UvForecastEntry(time: DateTime.utc(2024, 6, 22, 3), uvi: 5),
+          // Next location-local day (June 22nd local) -- must be excluded.
+          UvForecastEntry(time: DateTime.utc(2024, 6, 22, 8), uvi: 99),
+        ],
+      );
 
-        final double elevation = solarElevationDegrees(
-          lat: _lat,
-          lon: _lon,
-          utcTime: queryUtc,
-        );
-        expect(elevation, greaterThan(0));
+      final double elevation = solarElevationDegrees(
+        lat: _lat,
+        lon: _lon,
+        utcTime: queryUtc,
+      );
+      expect(elevation, greaterThan(0));
 
-        final double result = interpolatedUvi(
+      final double result = interpolatedUvi(
+        data: data,
+        lat: _lat,
+        lon: _lon,
+        atUtc: queryUtc,
+      );
+
+      expect(result, lessThan(99));
+      expect(result, closeTo(5 * _sinDegrees(elevation), 0.01));
+    });
+
+    test('returns 0 at a high-latitude location during polar night, given a '
+        'zero currentUvi', () {
+      // Above the Arctic Circle, near winter solstice: the sun does not
+      // rise, so elevation stays negative all day.
+      const double arcticLat = 78;
+      final DateTime winterSolstice = DateTime.utc(2024, 12, 21, 12);
+
+      final double elevation = solarElevationDegrees(
+        lat: arcticLat,
+        lon: 0,
+        utcTime: winterSolstice,
+      );
+      expect(elevation, lessThanOrEqualTo(0));
+
+      final UvData data = makeUvData(currentUvi: 0);
+
+      expect(
+        interpolatedUvi(
           data: data,
-          lat: _lat,
-          lon: _lon,
-          atUtc: queryUtc,
-        );
-
-        expect(result, lessThan(99));
-        expect(result, closeTo(5 * _sinDegrees(elevation), 0.01));
-      },
-    );
-
-    test(
-      'returns 0 at a high-latitude location during polar night, given a '
-      'zero currentUvi',
-      () {
-        // Above the Arctic Circle, near winter solstice: the sun does not
-        // rise, so elevation stays negative all day.
-        const double arcticLat = 78;
-        final DateTime winterSolstice = DateTime.utc(2024, 12, 21, 12);
-
-        final double elevation = solarElevationDegrees(
           lat: arcticLat,
           lon: 0,
-          utcTime: winterSolstice,
-        );
-        expect(elevation, lessThanOrEqualTo(0));
+          atUtc: winterSolstice,
+        ),
+        0,
+      );
+    });
+  });
 
-        final UvData data = makeUvData(currentUvi: 0);
+  // ---------------------------------------------------------------------------
+  // peakUviForDay
+  // ---------------------------------------------------------------------------
+  //
+  // Tested directly (rather than only observed through interpolatedUvi)
+  // because interpolatedUvi's conservative-max step against currentUvi
+  // structurally masks this function's fallback value: sin(elevation) <= 1
+  // means the interpolated estimate can never exceed currentUvi when UVmax
+  // is set to currentUvi via the fallback, so a broken fallback returning
+  // some other value could still coincidentally produce the same
+  // interpolatedUvi() result as long as it stays below currentUvi.
 
-        expect(
-          interpolatedUvi(
-            data: data,
-            lat: arcticLat,
-            lon: 0,
-            atUtc: winterSolstice,
+  group('peakUviForDay', () {
+    test('falls back to currentUvi when hourly has no entry for the day', () {
+      final UvData data = makeUvData(currentUvi: 4);
+
+      expect(peakUviForDay(data, _solarNoonUtc), 4);
+    });
+
+    test('returns the peak hourly uvi for the location-local day containing '
+        'atUtc', () {
+      final UvData data = makeUvData(
+        currentUvi: 1,
+        hourly: <UvForecastEntry>[
+          UvForecastEntry(time: _solarNoonUtc, uvi: 3),
+          UvForecastEntry(
+            time: _solarNoonUtc.add(const Duration(hours: 1)),
+            uvi: 7,
           ),
-          0,
-        );
-      },
-    );
+          UvForecastEntry(
+            time: _solarNoonUtc.add(const Duration(hours: 2)),
+            uvi: 5,
+          ),
+        ],
+      );
+
+      expect(peakUviForDay(data, _solarNoonUtc), 7);
+    });
+
+    test('ignores hourly entries from a different location-local day', () {
+      final UvData data = makeUvData(
+        currentUvi: 1,
+        hourly: <UvForecastEntry>[
+          UvForecastEntry(
+            time: _solarNoonUtc.subtract(const Duration(days: 1)),
+            uvi: 99,
+          ),
+          UvForecastEntry(time: _solarNoonUtc, uvi: 5),
+        ],
+      );
+
+      expect(peakUviForDay(data, _solarNoonUtc), 5);
+    });
   });
 }
