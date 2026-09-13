@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,6 +15,11 @@ import 'package:uvalert/widgets/uv_hero_conditional_line.dart';
 import 'fakes/fake_fixed_location_notifier.dart';
 import 'fakes/fake_uv_data.dart';
 import 'fakes/fake_uv_notifier.dart';
+
+/// The hourly peak used by the interpolation fixture below, kept as a named
+/// constant so the test's elevation-threshold math stays in sync with the
+/// fixture value it is derived from.
+const double _fixtureHourlyPeakUvi = 20;
 
 Widget _wrap({
   required UvNotifier Function() uvNotifier,
@@ -72,7 +79,9 @@ void main() {
       // silently passing on a false premise.
       final UvData data = makeUvData(
         currentUvi: 1,
-        hourly: <UvForecastEntry>[UvForecastEntry(time: nowUtc, uvi: 20)],
+        hourly: <UvForecastEntry>[
+          UvForecastEntry(time: nowUtc, uvi: _fixtureHourlyPeakUvi),
+        ],
       );
 
       await tester.pumpWidget(
@@ -102,17 +111,26 @@ void main() {
 
       // Proves the widget actually took the location/interpolation branch
       // rather than silently falling back to a currentUvi passthrough, when
-      // the sun is up at this location right now: with currentUvi=1 and a
-      // real peak of 20, a correct interpolated result is well above 1,
-      // while a passthrough bug would render exactly 1 regardless of the
-      // real peak. See the fixture comment above for why this assertion is
-      // skipped (not silently passed) when the sun happens to be down.
+      // the sun is high enough at this location right now: with
+      // currentUvi=1 and a real peak of 20, interpolatedUvi's
+      // conservative-max step only exceeds currentUvi once
+      // 20 * sin(elevation) > 1, i.e. elevation above asin(1/20), about
+      // 2.87 degrees. Below that (including a barely-positive elevation
+      // near sunrise/sunset), the correct result coincidentally equals
+      // currentUvi too, so asserting greaterThan there would make this test
+      // flaky depending on the instant it happens to run. A passthrough bug
+      // would still render exactly 1 regardless of the real peak, so this
+      // assertion only runs (and only proves anything) once elevation is
+      // clearly past that threshold. See the fixture comment above for why
+      // it is skipped, not silently passed, otherwise.
       final double elevation = solarElevationDegrees(
         lat: fixedLocation.lat,
         lon: fixedLocation.lon,
         utcTime: nowUtc,
       );
-      if (elevation > 0) {
+      final double minElevationForVisibleInterpolation =
+          math.asin(data.currentUvi / _fixtureHourlyPeakUvi) * 180 / math.pi;
+      if (elevation > minElevationForVisibleInterpolation) {
         expect(display.uvIndex, greaterThan(data.currentUvi));
       }
     },

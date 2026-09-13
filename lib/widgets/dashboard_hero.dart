@@ -59,12 +59,16 @@ class _DashboardHeroState extends ConsumerState<DashboardHero>
             solarEvents: solarEventTimes(
               lat: location.lat,
               lon: location.lon,
-              // The location-local calendar day, not nowUtc's own UTC day.
-              // Those can disagree near a UTC-day boundary for any location
+              // solarEventTimes reads its own UTC calendar-date fields from
+              // this argument, so it needs an instant whose UTC year/month/
+              // day already equal the location-local date, which is exactly
+              // what toLocationLocal returns (still isUtc, but shifted so
+              // its fields read as the local wall-clock date). Passing
+              // nowUtc directly would anchor events to nowUtc's own UTC day,
+              // which disagrees with the location-local day for any location
               // far enough from UTC (e.g. UTC+10 just after UTC midnight is
-              // already tomorrow locally), which would anchor every event to
-              // the wrong day and make them all appear already in the past.
-              date: startOfLocationLocalDayUtc(nowUtc, uvData.timezoneOffset),
+              // already tomorrow locally).
+              date: toLocationLocal(nowUtc, uvData.timezoneOffset),
             ),
             uvData: uvData,
           ),
