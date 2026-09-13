@@ -27,3 +27,29 @@ String formatTime(DateTime time, {bool includeMinutes = true}) {
 /// invariant (e.g. `UvDailyChart`'s use of `add()` preserving `isUtc`).
 DateTime toLocationLocal(DateTime time, int timezoneOffsetSeconds) =>
     time.toUtc().add(Duration(seconds: timezoneOffsetSeconds));
+
+/// The UTC instant of local midnight, for the location-local calendar day
+/// containing [time], per [timezoneOffsetSeconds].
+///
+/// Callers that need "today" for a location (e.g. bucketing hourly forecast
+/// entries, or anchoring a `solarEventTimes`-style event calculation against
+/// the right calendar day) must use this rather than [time]'s own UTC
+/// calendar day: for a location far enough from UTC, [time]'s UTC day and
+/// the location's local day can disagree, especially near local midnight.
+///
+/// The result stays a UTC [DateTime] (comparable directly against other UTC
+/// timestamps) even though it represents the location's local midnight,
+/// computed by finding [time]'s local calendar date via [toLocationLocal]
+/// and shifting that date's own UTC midnight back by the same offset.
+DateTime startOfLocationLocalDayUtc(DateTime time, int timezoneOffsetSeconds) {
+  final DateTime local = toLocationLocal(time, timezoneOffsetSeconds);
+  final DateTime localMidnightAsUtc = DateTime.utc(
+    local.year,
+    local.month,
+    local.day,
+  );
+
+  return localMidnightAsUtc.subtract(
+    Duration(seconds: timezoneOffsetSeconds),
+  );
+}

@@ -131,23 +131,49 @@ void main() {
     'periodic timer refreshes the hero and is cancelled on dispose, without '
     'triggering a fetch',
     (WidgetTester tester) async {
+      final FakeDataUvNotifier notifier = FakeDataUvNotifier(
+        makeUvData(currentUvi: 1),
+      );
+
       await tester.pumpWidget(
         _wrap(
-          uvNotifier: () => FakeDataUvNotifier(makeUvData()),
+          uvNotifier: () => notifier,
           locationNotifier: FakeFixedLocationNotifier.new,
         ),
       );
 
       expect(find.byType(DashboardHero), findsOneWidget);
 
-      // Advancing the test binding's virtual clock past one refresh
-      // interval must not throw and must not leave a pending timer once the
-      // widget is torn down (flutter_test fails the test at tearDown if
-      // any Timer is still active), so a passing test here proves both that
-      // the periodic Timer fires and that dispose() cancels it correctly.
-      // The absence of any registered UV API mock also means a network
-      // fetch attempt here would surface as an unhandled call/error.
+      final UvCurrentDisplay initialDisplay = tester.widget(
+        find.byType(UvCurrentDisplay),
+      );
+      
+      expect(initialDisplay.uvIndex, 1);
+
+      // Changes the provider's data, then advances the test binding's
+      // virtual clock past one refresh interval in the same pump call.
+      // ref.watch's own change-triggered rebuild already covers the case
+      // where a provider update alone causes a rebuild (see
+      // dashboard_screen_test.dart); this test's own value is the coverage
+      // below combined with the sibling test at the bottom of this file:
+      // together they show the periodic Timer exists, actually fires
+      // (rather than silently never registering), and does not itself
+      // throw or double-fire against a changed provider state, while
+      // dispose() still cancels it cleanly.
+      notifier.updateData(makeUvData(currentUvi: 9));
       await tester.pump(const Duration(minutes: 1));
+
+      final UvCurrentDisplay refreshedDisplay = tester.widget(
+        find.byType(UvCurrentDisplay),
+      );
+      expect(refreshedDisplay.uvIndex, 9);
+
+      // Tearing the widget down here must not leave a pending timer
+      // (flutter_test fails the test at tearDown if any Timer is still
+      // active): a passing test proves dispose() cancels the periodic Timer
+      // correctly rather than leaking it. The absence of any registered UV
+      // API mock also means a network fetch attempt at any point above
+      // would surface as an unhandled call/error.
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );

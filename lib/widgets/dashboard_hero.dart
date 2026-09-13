@@ -5,6 +5,7 @@ import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/services/solar_position.dart';
 import 'package:uvalert/services/uv_interpolation.dart';
+import 'package:uvalert/utils/time_format.dart';
 import 'package:uvalert/widgets/periodic_rebuild.dart';
 import 'package:uvalert/widgets/uv_current_display.dart';
 import 'package:uvalert/widgets/uv_hero_conditional_line.dart';
@@ -58,7 +59,12 @@ class _DashboardHeroState extends ConsumerState<DashboardHero>
             solarEvents: solarEventTimes(
               lat: location.lat,
               lon: location.lon,
-              date: nowUtc,
+              // The location-local calendar day, not nowUtc's own UTC day.
+              // Those can disagree near a UTC-day boundary for any location
+              // far enough from UTC (e.g. UTC+10 just after UTC midnight is
+              // already tomorrow locally), which would anchor every event to
+              // the wrong day and make them all appear already in the past.
+              date: startOfLocationLocalDayUtc(nowUtc, uvData.timezoneOffset),
             ),
             uvData: uvData,
           ),
