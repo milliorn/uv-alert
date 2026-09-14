@@ -12,6 +12,7 @@ import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/screens/dashboard_screen.dart';
 import 'package:uvalert/screens/settings_screen.dart';
 import 'package:uvalert/widgets/dashboard_footer.dart';
+import 'package:uvalert/widgets/dashboard_hero.dart';
 import 'package:uvalert/widgets/dashboard_no_data_view.dart';
 
 import 'fakes/fake_fixed_location_notifier.dart';
@@ -36,7 +37,7 @@ void main() {
 
   tearDown(resetMocktailState);
 
-  testWidgets('DashboardScreen renders Dashboard text', (
+  testWidgets('DashboardScreen renders the UV hero', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
@@ -55,7 +56,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Dashboard'), findsOneWidget);
+    expect(find.byType(DashboardHero), findsOneWidget);
   });
 
   testWidgets('DashboardScreen renders the footer', (
@@ -126,7 +127,7 @@ void main() {
     await tester.tap(find.byTooltip('Change location'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Dashboard'), findsOneWidget);
+    expect(find.byType(DashboardHero), findsOneWidget);
     expect(find.byType(SettingsScreen), findsNothing);
   });
 
@@ -185,7 +186,7 @@ void main() {
       find.text('No UV data available. Please check your connection.'),
       findsOneWidget,
     );
-    expect(find.text('Dashboard'), findsNothing);
+    expect(find.byType(DashboardHero), findsNothing);
   });
 
   testWidgets('does not show DashboardNoDataView when data is present', (
@@ -202,7 +203,7 @@ void main() {
     );
 
     expect(find.byType(DashboardNoDataView), findsNothing);
-    expect(find.text('Dashboard'), findsOneWidget);
+    expect(find.byType(DashboardHero), findsOneWidget);
   });
 
   testWidgets('tapping Retry triggers a fresh UV fetch', (

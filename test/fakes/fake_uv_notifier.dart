@@ -34,4 +34,11 @@ class FakeDataUvNotifier extends UvNotifier {
 
   @override
   AsyncValue<UvData> build() => AsyncValue<UvData>.data(data);
+
+  /// Replaces the current state with [newData], for tests that need to
+  /// prove a widget rebuilds and re-reads provider state after this notifier
+  /// changes, rather than only checking its initial [build] output.
+  void updateData(UvData newData) {
+    state = AsyncValue<UvData>.data(newData);
+  }
 }

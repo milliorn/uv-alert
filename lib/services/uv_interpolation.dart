@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:uvalert/models/uv_model.dart';
+import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/services/solar_position.dart';
 import 'package:uvalert/utils/angle_math.dart';
 import 'package:uvalert/utils/time_format.dart';
@@ -105,3 +106,19 @@ double interpolatedUvi({
 /// reporting the more "accurate" lower estimate.
 double _conservativeUvi(double estimate, double currentUvi) =>
     math.max(estimate, currentUvi);
+
+/// The UV index to display for [data] at [atUtc]: [interpolatedUvi] when
+/// [location] is known, or `data.currentUvi` directly when it is not (no
+/// coordinates yet means no solar elevation to interpolate against).
+double displayUvi({
+  required UvData data,
+  required LocationState location,
+  required DateTime atUtc,
+}) => location == null
+    ? data.currentUvi
+    : interpolatedUvi(
+        data: data,
+        lat: location.lat,
+        lon: location.lon,
+        atUtc: atUtc,
+      );

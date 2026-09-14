@@ -8,6 +8,7 @@ import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/screens/settings_screen.dart';
 import 'package:uvalert/widgets/dashboard_footer.dart';
+import 'package:uvalert/widgets/dashboard_hero.dart';
 import 'package:uvalert/widgets/dashboard_no_data_view.dart';
 import 'package:uvalert/widgets/weather_alert_banner.dart';
 
@@ -92,7 +93,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         );
                       },
                     )
-                  : const Center(child: Text('Dashboard')),
+                  : const Center(child: DashboardHero()),
             ),
             const DashboardFooter(),
           ],
@@ -122,6 +123,7 @@ void _restoreLocationIfNeeded(
   if (settings == null || settings.useGps) return;
 
   final ManualLocation? manualLocation = settings.manualLocation;
+
   if (manualLocation == null) return;
 
   ref

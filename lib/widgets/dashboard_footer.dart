@@ -9,16 +9,13 @@ import 'package:uvalert/providers/settings_provider.dart';
 import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/storage/cache.dart';
 import 'package:uvalert/utils/time_format.dart';
+import 'package:uvalert/widgets/periodic_rebuild.dart';
 
 /// Horizontal padding around the dashboard footer's content.
 const double dashboardFooterPaddingHorizontal = 16;
 
 /// Vertical padding around the dashboard footer's content.
 const double dashboardFooterPaddingVertical = 12;
-
-/// How often the "Updated X ago" label re-renders itself so it stays
-/// accurate while the dashboard is left open without any provider change.
-const Duration _relativeTimeRefreshInterval = Duration(minutes: 1);
 
 /// Number of minutes in an hour, used by [_formatRelativeTime].
 const int _minutesPerHour = 60;
@@ -52,24 +49,15 @@ class DashboardFooter extends ConsumerStatefulWidget {
   ConsumerState<DashboardFooter> createState() => _DashboardFooterState();
 }
 
-class _DashboardFooterState extends ConsumerState<DashboardFooter> {
-  late final Timer _relativeTimeTimer;
+class _DashboardFooterState extends ConsumerState<DashboardFooter>
+    with PeriodicRebuildMixin<DashboardFooter> {
+  // "Updated X ago" re-renders itself on this interval so it stays accurate
+  // while the dashboard is left open without any provider change.
+  @override
+  Duration get rebuildInterval => const Duration(minutes: 1);
 
   @override
-  void initState() {
-    super.initState();
-    _relativeTimeTimer = Timer.periodic(_relativeTimeRefreshInterval, (_) {
-      if (ref.read(uvProvider).value == null) return;
-
-      setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _relativeTimeTimer.cancel();
-    super.dispose();
-  }
+  bool shouldRebuild() => ref.read(uvProvider).value != null;
 
   @override
   Widget build(BuildContext context) {
