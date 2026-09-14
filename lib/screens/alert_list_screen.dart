@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/models/weather_alert.dart';
+import 'package:uvalert/providers/uv_provider.dart';
+import 'package:uvalert/utils/alert_colors.dart';
 import 'package:uvalert/utils/time_format.dart';
-import 'package:uvalert/widgets/weather_alert_banner.dart' show AlertColors;
 
 // Note: `event`/`description`/`senderName` are display text already, but
 // `start`/`end` are UTC instants (see WeatherAlert's doc comments) and must
@@ -26,25 +29,25 @@ const double _alertCardSectionGap = 4;
 /// [MaterialPageRoute] (own back-stack entry) rather than a modal/bottom
 /// sheet, so the list is easy to return to and revisit rather than a
 /// one-off glance.
-class AlertListScreen extends StatelessWidget {
-  /// Creates an [AlertListScreen] listing [alerts].
-  const AlertListScreen({
-    required this.alerts,
-    required this.timezoneOffset,
-    super.key,
-  });
-
-  /// The alerts to display, in the order given -- callers pass the
-  /// currently-visible (non-dismissed) alerts from the banner.
-  final List<WeatherAlert> alerts;
-
-  /// The queried location's UTC offset in seconds (`UvData.timezoneOffset`),
-  /// used to display each alert's start/end in the location's local time
-  /// rather than the viewer's device timezone or raw UTC.
-  final int timezoneOffset;
+///
+/// Watches [uvProvider] directly rather than receiving a fixed alert list at
+/// construction time, so a data refresh that changes the active alerts while
+/// this screen is open (a new one arrives, or one expires) is reflected live
+/// instead of showing a stale snapshot from the moment "See more" was
+/// tapped. Always shows every alert in [UvData.alerts], regardless of which
+/// ones the collapsed banner has dismissed -- dismissal is a banner-only
+/// convenience (see `WeatherAlertBanner`), and this screen is meant to be
+/// the complete picture a user can always return to.
+class AlertListScreen extends ConsumerWidget {
+  /// Creates an [AlertListScreen].
+  const AlertListScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final UvData? uvData = ref.watch(uvProvider).value;
+    final List<WeatherAlert> alerts = uvData?.alerts ?? const <WeatherAlert>[];
+    final int timezoneOffset = uvData?.timezoneOffset ?? 0;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Active Alerts')),
       body: ListView.separated(

@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uvalert/models/weather_alert.dart';
+import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/screens/alert_list_screen.dart';
 import 'package:uvalert/widgets/weather_alert_banner.dart';
+
+import 'fakes/fake_uv_data.dart';
+import 'fakes/fake_uv_notifier.dart';
 
 final WeatherAlert _heatAdvisory = WeatherAlert(
   id: 'NWS|Heat Advisory|2024-06-01T00:00:00.000Z',
@@ -30,12 +35,27 @@ final WeatherAlert _redFlagWarning = WeatherAlert(
   senderName: 'NWS',
 );
 
+// A ProviderScope with uvProvider available is needed even though
+// WeatherAlertBanner itself takes alerts/timezoneOffset directly (unchanged,
+// still fed by DashboardScreen) -- "See more" pushes AlertListScreen, which
+// reads uvProvider directly rather than from navigation arguments (see
+// alert_list_screen.dart), so the pushed route needs it in scope too.
 Widget _wrap(List<WeatherAlert> alerts, {int timezoneOffset = 0}) =>
-    MaterialApp(
-      home: Scaffold(
-        body: WeatherAlertBanner(
-          alerts: alerts,
-          timezoneOffset: timezoneOffset,
+    ProviderScope(
+      // ignore: always_specify_types - Override not in flutter_riverpod public API
+      overrides: [
+        uvProvider.overrideWith(
+          () => FakeDataUvNotifier(
+            makeUvData(alerts: alerts, timezoneOffset: timezoneOffset),
+          ),
+        ),
+      ],
+      child: MaterialApp(
+        home: Scaffold(
+          body: WeatherAlertBanner(
+            alerts: alerts,
+            timezoneOffset: timezoneOffset,
+          ),
         ),
       ),
     );
@@ -119,10 +139,9 @@ void main() {
       await tester.tap(find.text('See more'));
       await tester.pumpAndSettle();
 
-      final AlertListScreen screen = tester.widget(
-        find.byType(AlertListScreen),
-      );
-      expect(screen.alerts, <WeatherAlert>[_heatAdvisory, _floodWarning]);
+      expect(find.byType(AlertListScreen), findsOneWidget);
+      expect(find.text(_heatAdvisory.event), findsOneWidget);
+      expect(find.text(_floodWarning.event), findsOneWidget);
     },
   );
 

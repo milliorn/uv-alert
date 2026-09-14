@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uvalert/models/weather_alert.dart';
+import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/screens/alert_list_screen.dart';
+
+import 'fakes/fake_uv_data.dart';
+import 'fakes/fake_uv_notifier.dart';
 
 final WeatherAlert _heatAdvisory = WeatherAlert(
   id: 'NWS|Heat Advisory|2024-06-01T00:00:00.000Z',
@@ -20,10 +25,23 @@ final WeatherAlert _floodWarning = WeatherAlert(
   end: DateTime.utc(2024, 6, 2),
 );
 
-Widget _wrap(List<WeatherAlert> alerts, {int timezoneOffset = 0}) =>
-    MaterialApp(
-      home: AlertListScreen(alerts: alerts, timezoneOffset: timezoneOffset),
-    );
+Widget _wrap(
+  List<WeatherAlert> alerts, {
+  int timezoneOffset = 0,
+  FakeDataUvNotifier? notifier,
+}) => ProviderScope(
+  // ignore: always_specify_types - Override not in flutter_riverpod public API
+  overrides: [
+    uvProvider.overrideWith(
+      () =>
+          notifier ??
+          FakeDataUvNotifier(
+            makeUvData(alerts: alerts, timezoneOffset: timezoneOffset),
+          ),
+    ),
+  ],
+  child: const MaterialApp(home: AlertListScreen()),
+);
 
 void main() {
   testWidgets('renders an app bar titled "Active Alerts"', (
@@ -94,6 +112,32 @@ void main() {
 
       expect(find.textContaining('1:00 AM'), findsOneWidget);
       expect(find.textContaining('8:00 AM'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'reflects a later data refresh live, rather than showing a stale '
+    'snapshot from when the screen was opened',
+    (WidgetTester tester) async {
+      final FakeDataUvNotifier notifier = FakeDataUvNotifier(
+        makeUvData(alerts: <WeatherAlert>[_heatAdvisory]),
+      );
+
+      await tester.pumpWidget(
+        _wrap(<WeatherAlert>[_heatAdvisory], notifier: notifier),
+      );
+      expect(find.text(_heatAdvisory.event), findsOneWidget);
+      expect(find.text(_floodWarning.event), findsNothing);
+
+      // Simulates a background refresh that adds a new alert while this
+      // screen is already open.
+      notifier.updateData(
+        makeUvData(alerts: <WeatherAlert>[_heatAdvisory, _floodWarning]),
+      );
+      await tester.pump();
+
+      expect(find.text(_heatAdvisory.event), findsOneWidget);
+      expect(find.text(_floodWarning.event), findsOneWidget);
     },
   );
 }
