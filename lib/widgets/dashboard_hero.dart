@@ -35,6 +35,9 @@ class _DashboardHeroState extends ConsumerState<DashboardHero>
   @override
   bool shouldRebuild() => ref.read(uvProvider).value != null;
 
+  UvData? _lastSeenUvData;
+  LocationState _locationAtLastSeenUvData;
+
   @override
   Widget build(BuildContext context) {
     final UvData? uvData = ref.watch(uvProvider).value;
@@ -42,10 +45,26 @@ class _DashboardHeroState extends ConsumerState<DashboardHero>
 
     if (uvData == null) return const SizedBox.shrink();
 
+    // uvProvider has no source-location field on UvData itself, and
+    // UvNotifier deliberately keeps serving the previous location's cached
+    // data (via stateOrNull) while a new fetch for a changed location is in
+    // flight, plus UvApi's cache has no per-location key, so a still-valid
+    // cache hit for the OLD location can outlive the fetch entirely.
+    // Recording which location was current the last time uvData actually
+    // changed value lets a mismatch against the CURRENT location be
+    // detected here, even though nothing in the data itself carries that
+    // information.
+    if (uvData != _lastSeenUvData) {
+      _lastSeenUvData = uvData;
+      _locationAtLastSeenUvData = location;
+    }
+    
+    final bool uvDataMatchesLocation = location == _locationAtLastSeenUvData;
+
     final DateTime nowUtc = DateTime.now().toUtc();
     final double uvIndex = displayUvi(
       data: uvData,
-      location: location,
+      location: uvDataMatchesLocation ? location : null,
       atUtc: nowUtc,
     );
 
@@ -53,7 +72,7 @@ class _DashboardHeroState extends ConsumerState<DashboardHero>
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         UvCurrentDisplay(uvIndex: uvIndex),
-        if (location != null)
+        if (location != null && uvDataMatchesLocation)
           UvHeroConditionalLine(
             now: nowUtc,
             solarEvents: solarEventTimes(

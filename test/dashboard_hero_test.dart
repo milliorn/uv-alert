@@ -203,6 +203,113 @@ void main() {
     },
   );
 
+  testWidgets(
+    'suppresses interpolation and the conditional line when the location '
+    "changes but uvData hasn't caught up yet",
+    (WidgetTester tester) async {
+      const ({double lat, double lon}) originalLocation = (
+        lat: 36.75,
+        lon: -119.65,
+      );
+      const ({double lat, double lon}) newLocation = (lat: 1, lon: 2);
+      final DateTime nowUtc = DateTime.now().toUtc();
+      // currentUvi (1) distinct from the hourly peak (20), same fixture
+      // shape as the earlier interpolation test above, so a passthrough
+      // (uninterpolated) value is distinguishable from a correctly
+      // interpolated one.
+      final UvData data = makeUvData(
+        currentUvi: 1,
+        hourly: <UvForecastEntry>[
+          UvForecastEntry(time: nowUtc, uvi: _fixtureHourlyPeakUvi),
+          UvForecastEntry(
+            time: nowUtc.add(const Duration(days: 1)),
+            uvi: _fixtureHourlyPeakUvi,
+          ),
+        ],
+      );
+      final FakeDataUvNotifier notifier = FakeDataUvNotifier(data);
+
+      final ProviderContainer container = ProviderContainer(
+        // ignore: always_specify_types - Override not in flutter_riverpod public API
+        overrides: [
+          uvProvider.overrideWith(() => notifier),
+          locationProvider.overrideWith(LocationNotifier.new),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container
+          .read(locationProvider.notifier)
+          .setManual(lat: originalLocation.lat, lon: originalLocation.lon);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          // Not `const`: see the analogous constructor at the top of this
+          // file for why a real (non-const) DashboardHero call site is used
+          // here.
+          // ignore: prefer_const_constructors
+          child: MaterialApp(home: Scaffold(body: DashboardHero())),
+        ),
+      );
+
+      final double elevationAtOriginalLocation = solarElevationDegrees(
+        lat: originalLocation.lat,
+        lon: originalLocation.lon,
+        utcTime: nowUtc,
+      );
+      final double minElevationForVisibleInterpolation =
+          math.asin(data.currentUvi / _fixtureHourlyPeakUvi) * 180 / math.pi;
+
+      // uvProvider has no source-location field on UvData (see
+      // dashboard_hero.dart's own comment on this), and a real UvNotifier
+      // deliberately keeps serving the previous location's cached data
+      // while a new fetch is in flight, so this simulates exactly that
+      // window: locationProvider has already moved to newLocation, but
+      // uvProvider's value is still the same object fetched for
+      // originalLocation.
+      container
+          .read(locationProvider.notifier)
+          .setManual(lat: newLocation.lat, lon: newLocation.lon);
+      await tester.pump();
+
+      final UvCurrentDisplay mismatchedDisplay = tester.widget(
+        find.byType(UvCurrentDisplay),
+      );
+      // Falls back to currentUvi directly (the same safe path as no
+      // location at all) rather than running interpolation against
+      // newLocation's coordinates with originalLocation's cached data. This
+      // is only distinguishable from a correct-but-coincidental match once
+      // originalLocation's elevation is past the threshold where
+      // interpolation would actually move the value away from currentUvi;
+      // skipped, not silently passed, otherwise (same reasoning as the
+      // interpolation test above).
+      if (elevationAtOriginalLocation > minElevationForVisibleInterpolation) {
+        expect(mismatchedDisplay.uvIndex, data.currentUvi);
+      }
+      expect(find.byType(UvHeroConditionalLine), findsNothing);
+
+      // Once uvProvider's value actually changes (by UvData's own value
+      // equality, which _lastSeenUvData tracking relies on) to data that
+      // arrived after the location change, the mismatch clears and
+      // location-dependent rendering resumes. currentUvi is bumped so the
+      // new value is genuinely distinct from the original fixture, matching
+      // a real UvNotifier's fetch outcome actually differing from the
+      // stale data it superseded.
+      notifier.updateData(
+        makeUvData(
+          currentUvi: 9,
+          hourly: <UvForecastEntry>[
+            UvForecastEntry(time: nowUtc, uvi: _fixtureHourlyPeakUvi),
+          ],
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(UvHeroConditionalLine), findsOneWidget);
+    },
+  );
+
   testWidgets('renders nothing when uvProvider has no value', (
     WidgetTester tester,
   ) async {
