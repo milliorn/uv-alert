@@ -51,10 +51,19 @@ class _DashboardHeroState extends ConsumerState<DashboardHero>
     // flight, plus UvApi's cache has no per-location key, so a still-valid
     // cache hit for the OLD location can outlive the fetch entirely.
     // Recording which location was current the last time uvData actually
-    // changed value lets a mismatch against the CURRENT location be
-    // detected here, even though nothing in the data itself carries that
+    // changed lets a mismatch against the CURRENT location be detected
+    // here, even though nothing in the data itself carries that
     // information.
-    if (uvData != _lastSeenUvData) {
+    //
+    // Compared by identity, not UvData's own == (value equality): every
+    // successful fetch (cache hit or network) constructs a brand new
+    // UvData via fromJson, even when the payload happens to be
+    // field-for-field identical to the previous one (fetchedAt alone is
+    // only second-precision), so two distinct fetches for two nearby
+    // locations with similar conditions can genuinely be == equal. Value
+    // equality would then wrongly treat a real new fetch as "no change" and
+    // never update _locationAtLastSeenUvData to the new location.
+    if (!identical(uvData, _lastSeenUvData)) {
       _lastSeenUvData = uvData;
       _locationAtLastSeenUvData = location;
     }
