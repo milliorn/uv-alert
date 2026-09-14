@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.24.0](https://github.com/milliorn/uv-alert/compare/v1.23.0...v1.24.0) (2026-09-14)
+
+
+### Features
+
+* **dashboard:** wire UV hero section into dashboard ([#135](https://github.com/milliorn/uv-alert/issues/135)) ([5f15bce](https://github.com/milliorn/uv-alert/commit/5f15bcea12e819976d67944319be91bf45d6bbc3)), closes [#133](https://github.com/milliorn/uv-alert/issues/133)
+
 ## [1.23.0](https://github.com/milliorn/uv-alert/compare/v1.22.0...v1.23.0) (2026-09-13)
 
 
