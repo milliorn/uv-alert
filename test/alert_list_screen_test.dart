@@ -20,8 +20,10 @@ final WeatherAlert _floodWarning = WeatherAlert(
   end: DateTime.utc(2024, 6, 2),
 );
 
-Widget _wrap(List<WeatherAlert> alerts) =>
-    MaterialApp(home: AlertListScreen(alerts: alerts));
+Widget _wrap(List<WeatherAlert> alerts, {int timezoneOffset = 0}) =>
+    MaterialApp(
+      home: AlertListScreen(alerts: alerts, timezoneOffset: timezoneOffset),
+    );
 
 void main() {
   testWidgets('renders an app bar titled "Active Alerts"', (
@@ -79,4 +81,19 @@ void main() {
     expect(find.byKey(ValueKey<String>(_heatAdvisory.id)), findsOneWidget);
     expect(find.byKey(ValueKey<String>(_floodWarning.id)), findsOneWidget);
   });
+
+  testWidgets(
+    'renders the alert time window in the location-local time, not raw UTC',
+    (WidgetTester tester) async {
+      // _heatAdvisory.start is 08:00 UTC. A -25200s (UTC-7) offset shifts
+      // that to 1:00 AM local -- if the raw UTC hour were shown instead,
+      // this would read "8:00 AM".
+      await tester.pumpWidget(
+        _wrap(<WeatherAlert>[_heatAdvisory], timezoneOffset: -25200),
+      );
+
+      expect(find.textContaining('1:00 AM'), findsOneWidget);
+      expect(find.textContaining('8:00 AM'), findsNothing);
+    },
+  );
 }

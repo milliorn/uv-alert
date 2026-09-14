@@ -52,14 +52,24 @@ AlertSeverity alertSeverityOf(WeatherAlert alert) {
 WeatherAlert topAlert(List<WeatherAlert> alerts) {
   assert(alerts.isNotEmpty, 'topAlert requires a non-empty alert list');
 
-  return alerts.reduce((WeatherAlert a, WeatherAlert b) {
-    final AlertSeverity severityA = alertSeverityOf(a);
-    final AlertSeverity severityB = alertSeverityOf(b);
+  // Each alert's severity is computed exactly once, tracked alongside the
+  // running best pick, rather than recomputed on it at every subsequent
+  // comparison the way a plain alerts.reduce() callback would.
+  WeatherAlert best = alerts.first;
+  AlertSeverity bestSeverity = alertSeverityOf(best);
 
-    if (severityA.index != severityB.index) {
-      return severityA.index < severityB.index ? a : b;
+  for (final WeatherAlert alert in alerts.skip(1)) {
+    final AlertSeverity severity = alertSeverityOf(alert);
+    final bool isMoreSevere = severity.index < bestSeverity.index;
+    final bool isEarlierTiebreak =
+        severity.index == bestSeverity.index &&
+        alert.start.isBefore(best.start);
+
+    if (isMoreSevere || isEarlierTiebreak) {
+      best = alert;
+      bestSeverity = severity;
     }
+  }
 
-    return a.start.isBefore(b.start) ? a : b;
-  });
+  return best;
 }

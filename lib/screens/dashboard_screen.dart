@@ -77,6 +77,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           children: <Widget>[
             WeatherAlertBanner(
               alerts: uvState.value?.alerts ?? const <WeatherAlert>[],
+              timezoneOffset: uvState.value?.timezoneOffset ?? 0,
             ),
             Expanded(
               child: showNoData

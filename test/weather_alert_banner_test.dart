@@ -30,9 +30,15 @@ final WeatherAlert _redFlagWarning = WeatherAlert(
   senderName: 'NWS',
 );
 
-Widget _wrap(List<WeatherAlert> alerts) => MaterialApp(
-  home: Scaffold(body: WeatherAlertBanner(alerts: alerts)),
-);
+Widget _wrap(List<WeatherAlert> alerts, {int timezoneOffset = 0}) =>
+    MaterialApp(
+      home: Scaffold(
+        body: WeatherAlertBanner(
+          alerts: alerts,
+          timezoneOffset: timezoneOffset,
+        ),
+      ),
+    );
 
 void main() {
   // ---------------------------------------------------------------------------
@@ -61,7 +67,7 @@ void main() {
   );
 
   // ---------------------------------------------------------------------------
-  // Multiple alerts — collapsed count + top alert
+  // Multiple alerts -- collapsed count + top alert
   // ---------------------------------------------------------------------------
 
   testWidgets('shows a count and the top-severity alert event when there are '
@@ -121,7 +127,7 @@ void main() {
   );
 
   // ---------------------------------------------------------------------------
-  // Dismissal — per-alert, keyed by id
+  // Dismissal -- all currently-visible alerts at once, keyed by id
   // ---------------------------------------------------------------------------
 
   testWidgets('dismiss button hides the banner when there is one alert', (
@@ -137,7 +143,8 @@ void main() {
   });
 
   testWidgets(
-    'dismissing the top alert of a multi-alert set surfaces the next one',
+    'dismissing a multi-alert set clears every visible alert at once, '
+    'using the plural tooltip',
     (WidgetTester tester) async {
       await tester.pumpWidget(
         _wrap(<WeatherAlert>[_heatAdvisory, _floodWarning]),
@@ -147,13 +154,29 @@ void main() {
         find.text('2 Active Alerts · ${_floodWarning.event}'),
         findsOneWidget,
       );
+      expect(find.byTooltip('Dismiss all alerts'), findsOneWidget);
 
-      await tester.tap(find.byTooltip('Dismiss alert'));
+      await tester.tap(find.byTooltip('Dismiss all alerts'));
       await tester.pumpAndSettle();
 
-      // Only _heatAdvisory remains -- single-alert direct rendering.
-      expect(find.text(_heatAdvisory.event), findsOneWidget);
+      // Both alerts are gone -- not just the top-ranked one.
+      expect(find.text(_heatAdvisory.event), findsNothing);
       expect(find.textContaining('Active Alerts'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'a three-alert set is fully cleared by a single dismiss tap',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _wrap(<WeatherAlert>[_heatAdvisory, _floodWarning, _redFlagWarning]),
+      );
+      expect(find.textContaining('3 Active Alerts'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Dismiss all alerts'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MaterialBanner), findsNothing);
     },
   );
 

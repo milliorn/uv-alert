@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:uvalert/models/weather_alert.dart';
 import 'package:uvalert/utils/time_format.dart';
+import 'package:uvalert/widgets/weather_alert_banner.dart' show AlertColors;
+
+// Note: `event`/`description`/`senderName` are display text already, but
+// `start`/`end` are UTC instants (see WeatherAlert's doc comments) and must
+// be converted via toLocationLocal before formatting -- see _AlertCard.
 
 /// Horizontal padding around each alert card's content.
 const double _alertCardPaddingHorizontal = 16;
@@ -23,11 +28,20 @@ const double _alertCardSectionGap = 4;
 /// one-off glance.
 class AlertListScreen extends StatelessWidget {
   /// Creates an [AlertListScreen] listing [alerts].
-  const AlertListScreen({required this.alerts, super.key});
+  const AlertListScreen({
+    required this.alerts,
+    required this.timezoneOffset,
+    super.key,
+  });
 
   /// The alerts to display, in the order given -- callers pass the
   /// currently-visible (non-dismissed) alerts from the banner.
   final List<WeatherAlert> alerts;
+
+  /// The queried location's UTC offset in seconds (`UvData.timezoneOffset`),
+  /// used to display each alert's start/end in the location's local time
+  /// rather than the viewer's device timezone or raw UTC.
+  final int timezoneOffset;
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +63,7 @@ class AlertListScreen extends StatelessWidget {
             // could silently misattribute one alert's state to another.
             key: ValueKey<String>(alert.id),
             alert: alert,
+            timezoneOffset: timezoneOffset,
           );
         },
       ),
@@ -57,9 +72,14 @@ class AlertListScreen extends StatelessWidget {
 }
 
 class _AlertCard extends StatelessWidget {
-  const _AlertCard({required this.alert, super.key});
+  const _AlertCard({
+    required this.alert,
+    required this.timezoneOffset,
+    super.key,
+  });
 
   final WeatherAlert alert;
+  final int timezoneOffset;
 
   @override
   Widget build(BuildContext context) {
@@ -67,11 +87,13 @@ class _AlertCard extends StatelessWidget {
     final ColorScheme colors = theme.colorScheme;
     final String? senderName = alert.senderName;
 
+    final DateTime localStart = toLocationLocal(alert.start, timezoneOffset);
+    final DateTime localEnd = toLocationLocal(alert.end, timezoneOffset);
     final String timeWindow =
-        '${formatTime(alert.start)} – ${formatTime(alert.end)}';
+        '${formatTime(localStart)} - ${formatTime(localEnd)}';
 
     return Card(
-      color: colors.errorContainer,
+      color: colors.alertBackground,
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: _alertCardPaddingHorizontal,
@@ -83,7 +105,7 @@ class _AlertCard extends StatelessWidget {
             Text(
               alert.event,
               style: theme.textTheme.titleMedium?.copyWith(
-                color: colors.onErrorContainer,
+                color: colors.alertForeground,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -91,14 +113,14 @@ class _AlertCard extends StatelessWidget {
             Text(
               senderName == null ? timeWindow : '$senderName · $timeWindow',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: colors.onErrorContainer,
+                color: colors.alertForeground,
               ),
             ),
             const SizedBox(height: _alertCardSectionGap),
             Text(
               alert.description,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: colors.onErrorContainer,
+                color: colors.alertForeground,
               ),
             ),
           ],
