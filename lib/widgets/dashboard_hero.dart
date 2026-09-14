@@ -58,7 +58,6 @@ class _DashboardHeroState extends ConsumerState<DashboardHero>
       _lastSeenUvData = uvData;
       _locationAtLastSeenUvData = location;
     }
-    
     final bool uvDataMatchesLocation = location == _locationAtLastSeenUvData;
 
     final DateTime nowUtc = DateTime.now().toUtc();

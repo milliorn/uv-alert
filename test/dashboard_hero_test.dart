@@ -160,7 +160,6 @@ void main() {
       // agree, an inherent limitation without an injectable clock, same as
       // the interpolation fixture above).
       const int nonZeroOffsetSeconds = 12 * 60 * 60;
-      final DateTime nowUtc = DateTime.now().toUtc();
       final UvData data = makeUvData(timezoneOffset: nonZeroOffsetSeconds);
 
       await tester.pumpWidget(
@@ -174,6 +173,18 @@ void main() {
         lat: 36.75,
         lon: -119.65,
       );
+
+      final UvHeroConditionalLine conditionalLine = tester.widget(
+        find.byType(UvHeroConditionalLine),
+      );
+      // Derived from conditionalLine.now, the actual instant the widget
+      // captured and used, rather than a separately captured DateTime.now()
+      // in this test: the two calls happen microseconds apart, and deriving
+      // the expectation from a different instant than the widget actually
+      // used would make this assertion itself racy across a local-day
+      // boundary (for this +12h fixture, around 12:00 UTC), independently
+      // of anything the widget under test does.
+      final DateTime nowUtc = conditionalLine.now;
       final Map<SolarEvent, DateTime?> expectedSolarEvents = solarEventTimes(
         lat: fixedLocation.lat,
         lon: fixedLocation.lon,
@@ -185,9 +196,6 @@ void main() {
         date: nowUtc,
       );
 
-      final UvHeroConditionalLine conditionalLine = tester.widget(
-        find.byType(UvHeroConditionalLine),
-      );
       expect(conditionalLine.solarEvents, expectedSolarEvents);
 
       // Only meaningful once the local and UTC calendar dates actually
