@@ -116,6 +116,34 @@ void main() {
   );
 
   testWidgets(
+    'includes the date in the time window when an alert spans multiple '
+    'local days, so a cross-midnight window is not ambiguous',
+    (WidgetTester tester) async {
+      // _floodWarning runs 06:00 Jun 1 -> 00:00 Jun 2 at UTC+0 (timezoneOffset
+      // 0), so its local start and end fall on different calendar days.
+      await tester.pumpWidget(_wrap(<WeatherAlert>[_floodWarning]));
+
+      expect(find.textContaining('Jun 1 6:00 AM'), findsOneWidget);
+      expect(find.textContaining('Jun 2 12:00 AM'), findsOneWidget);
+      // Without the date, both instants would show as bare times with no
+      // way to tell the window spans two days.
+      expect(find.text('6:00 AM - 12:00 AM'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'omits the date from the time window when an alert stays within a '
+    'single local day',
+    (WidgetTester tester) async {
+      // _heatAdvisory runs 08:00 -> 20:00 on the same UTC day.
+      await tester.pumpWidget(_wrap(<WeatherAlert>[_heatAdvisory]));
+
+      expect(find.textContaining('8:00 AM - 8:00 PM'), findsOneWidget);
+      expect(find.textContaining('Jun'), findsNothing);
+    },
+  );
+
+  testWidgets(
     'reflects a later data refresh live, rather than showing a stale '
     'snapshot from when the screen was opened',
     (WidgetTester tester) async {

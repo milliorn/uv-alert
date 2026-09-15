@@ -92,8 +92,14 @@ class _AlertCard extends StatelessWidget {
 
     final DateTime localStart = toLocationLocal(alert.start, timezoneOffset);
     final DateTime localEnd = toLocationLocal(alert.end, timezoneOffset);
-    final String timeWindow =
-        '${formatTime(localStart)} - ${formatTime(localEnd)}';
+    final bool spansMultipleDays =
+        localStart.year != localEnd.year ||
+        localStart.month != localEnd.month ||
+        localStart.day != localEnd.day;
+    final String timeWindow = spansMultipleDays
+        ? '${formatDate(localStart)} ${formatTime(localStart)} - '
+              '${formatDate(localEnd)} ${formatTime(localEnd)}'
+        : '${formatTime(localStart)} - ${formatTime(localEnd)}';
 
     return Card(
       color: colors.alertBackground,
