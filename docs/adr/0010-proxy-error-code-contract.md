@@ -4,8 +4,11 @@
 
 Accepted — consecutive-failure tracking implemented in the Flutter app
 (`ProxyErrorState`/`ProxyErrorNotifier` in `lib/providers/uv_provider.dart`);
-per-status-code UX (banners, inline errors, toast text) not yet wired to a
-consumer widget
+per-status-code UX for 400/429/500/502/503/504 (banners, toast text) is wired
+into `DashboardScreen` via `ProxyErrorBanner`/`ProxyErrorToastListener` in
+`lib/widgets/proxy_error_banner.dart`. 404's inline field error and 426's
+full-screen block are handled separately (404 in the geocoding/search flow,
+426 per ADR 0009), not via this state.
 
 ## Context
 
@@ -64,9 +67,12 @@ App UX per code:
   catch site -- a subtype can't opt in without also providing the code the
   counter needs, in any build mode.
 - `ProxyErrorState`/`ProxyErrorNotifier` in `lib/providers/uv_provider.dart`
-  track the 3-consecutive-failure threshold for escalating from toast to
-  persistent banner. Currently this is one undifferentiated counter across all
-  status codes for which `escalationStatusCode` is non-null (today, only
-  `UvApiException`, i.e. every non-200/non-426 code) — it does not yet
-  implement the per-code distinctions above (e.g. 502's immediate escalation,
-  or excluding 400/404/429 from the counter). No widget consumes this state yet.
+  implement the per-code distinctions above: `immediateStatusCode` tracks
+  400/429/502 (sticky until the next success, independent of any other
+  failure in between), while `consecutiveFailures`/`lastStatusCode` track
+  the 3-consecutive-failure threshold for 500/503/504 only. `UvApiException`'s
+  `escalationStatusCode` getter excludes any status code outside these six
+  (404 included) so they cannot affect either field.
+  `lib/widgets/proxy_error_banner.dart`'s `ProxyErrorBanner` and
+  `ProxyErrorToastListener` consume this state and are wired into
+  `DashboardScreen`.

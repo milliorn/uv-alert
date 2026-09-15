@@ -190,7 +190,7 @@ void main() {
           () => FakeProxyErrorNotifier(
             const ProxyErrorState(
               consecutiveFailures: proxyErrorEscalationThreshold,
-              lastStatusCode: httpBadGateway,
+              lastStatusCode: httpInternalServerError,
             ),
           ),
         ),
@@ -249,8 +249,7 @@ void main() {
   }
 
   testWidgets(
-    'does not show a toast on the 2nd or 3rd consecutive 500/503/504 '
-    'failure',
+    'does not show a toast on the 2nd consecutive 500/503/504 failure',
     (WidgetTester tester) async {
       final ProviderContainer container = ProviderContainer(
         // ignore: always_specify_types - Override not in flutter_riverpod public API
@@ -259,6 +258,44 @@ void main() {
             () => FakeProxyErrorNotifier(
               const ProxyErrorState(
                 consecutiveFailures: 1,
+                lastStatusCode: httpInternalServerError,
+              ),
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Scaffold(
+              body: ProxyErrorToastListener(child: SizedBox.shrink()),
+            ),
+          ),
+        ),
+      );
+
+      container.read(proxyErrorProvider.notifier).recordFailure(
+        httpInternalServerError,
+      );
+      await tester.pump();
+
+      expect(find.text(proxyErrorTransientToastMessage), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'does not show a toast on the 3rd consecutive 500/503/504 failure',
+    (WidgetTester tester) async {
+      final ProviderContainer container = ProviderContainer(
+        // ignore: always_specify_types - Override not in flutter_riverpod public API
+        overrides: [
+          proxyErrorProvider.overrideWith(
+            () => FakeProxyErrorNotifier(
+              const ProxyErrorState(
+                consecutiveFailures: 2,
                 lastStatusCode: httpInternalServerError,
               ),
             ),

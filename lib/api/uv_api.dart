@@ -188,13 +188,13 @@ class UvApiException extends UvApiFailure {
   /// The response body.
   final String body;
 
-  /// `null` unless [statusCode] is one ADR 0010 defines escalation UX for
-  /// (see `proxyEscalationStatusCodes` in `constants.dart`): 404, for
-  /// example, has its own "geocoding no results" UX and must not affect
-  /// `ProxyErrorState`. This is the actual eligibility policy: a status
-  /// code excluded here is guaranteed to be a no-op wherever
-  /// [escalationStatusCode] is consumed, rather than relying on the
-  /// consumer to separately re-check eligibility.
+  /// `null` unless [statusCode] is one of the statuses for which ADR 0010
+  /// defines escalation UX (see `proxyEscalationStatusCodes` in
+  /// `constants.dart`): 404, for example, has its own "geocoding no
+  /// results" UX and must not affect `ProxyErrorState`. This is the actual
+  /// eligibility policy: a status code excluded here is guaranteed to be a
+  /// no-op wherever [escalationStatusCode] is consumed, rather than relying
+  /// on the consumer to separately re-check eligibility.
   @override
   int? get escalationStatusCode =>
       proxyEscalationStatusCodes.contains(statusCode) ? statusCode : null;

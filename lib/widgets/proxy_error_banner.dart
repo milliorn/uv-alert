@@ -30,8 +30,14 @@ const String proxyErrorInvalidRequestMessage =
 
 /// The one-time toast message shown on the first 500/503/504 failure,
 /// before [proxyErrorEscalationThreshold] is reached.
+///
+/// Does not claim a retry is in progress: the app has no automatic retry
+/// after a fetch failure (see `PeriodicRebuildMixin`, which only repaints
+/// already-cached data on a timer, never re-fetches). The user must tap
+/// Retry in `DashboardNoDataView`, or change location, to trigger another
+/// fetch.
 const String proxyErrorTransientToastMessage =
-    'UV data could not be refreshed. Retrying...';
+    'UV data could not be refreshed. Showing last known reading.';
 
 /// Persistent banner text for [errorState], or `null` if no banner should
 /// show given the current state.

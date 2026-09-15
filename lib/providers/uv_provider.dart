@@ -80,13 +80,21 @@ class ProxyErrorState {
   });
 
   /// Number of 500/503/504 responses received back-to-back, with no
-  /// successful network response and no intervening non-500/503/504 failure
-  /// in between. Reset to 0 whenever `UvApi.fetch` actually receives an HTTP
-  /// 200 from the proxy (`UvApiFetchMeta.receivedNetwork200` in
-  /// `uv_api.dart`) -- this holds even if something fails afterward (an
-  /// unparseable body, or a cache-write error), since the proxy itself still
-  /// answered successfully. Excludes a cache hit, which is also a
-  /// "successful fetch" but is not evidence the proxy has recovered.
+  /// successful network response and no intervening
+  /// [proxyImmediateStatusCodes] failure in between (see
+  /// [ProxyErrorNotifier.recordFailure]). Reset to 0 whenever `UvApi.fetch`
+  /// actually receives an HTTP 200 from the proxy
+  /// (`UvApiFetchMeta.receivedNetwork200` in `uv_api.dart`) -- this holds
+  /// even if something fails afterward (an unparseable body, or a
+  /// cache-write error), since the proxy itself still answered
+  /// successfully. Excludes a cache hit, which is also a "successful fetch"
+  /// but is not evidence the proxy has recovered.
+  ///
+  /// An unmapped status code (e.g. 404, which has its own "geocoding no
+  /// results" UX per ADR 0010) is not counted as an intervening failure: it
+  /// leaves this streak unchanged rather than resetting or continuing it,
+  /// since it carries no information about whether the proxy is still
+  /// failing in the way this counter tracks.
   final int consecutiveFailures;
 
   /// The status code of the most recent 500/503/504 failure counted by
@@ -172,11 +180,13 @@ class ProxyErrorNotifier extends Notifier<ProxyErrorState> {
     );
 
     if (proxyImmediateStatusCodes.contains(statusCode)) {
-      state = ProxyErrorState(
-        consecutiveFailures: state.consecutiveFailures,
-        lastStatusCode: state.lastStatusCode,
-        immediateStatusCode: statusCode,
-      );
+      // Resets the threshold fields rather than preserving them: an
+      // immediate-banner code interrupts the 500/503/504 streak (per
+      // consecutiveFailures' own contract of "no intervening
+      // non-500/503/504 failure"), so a later threshold-gated failure must
+      // start a fresh streak, not silently continue the pre-interruption
+      // one.
+      state = ProxyErrorState(immediateStatusCode: statusCode);
       return;
     }
 
