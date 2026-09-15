@@ -76,7 +76,12 @@ class WeatherAlert {
     final DateTime start = _requireEpochSeconds(json, 'start');
     final DateTime end = _requireEpochSeconds(json, 'end');
     final Object? senderNameValue = json['sender_name'];
-    final String? senderName = senderNameValue is String
+    // An empty string is normalized to null here, at the one place
+    // sender_name is parsed, rather than at each display/id-derivation call
+    // site, so "no sender" has exactly one representation throughout the
+    // model instead of two that callers must remember to treat alike.
+    final String? senderName =
+        senderNameValue is String && senderNameValue.isNotEmpty
         ? senderNameValue
         : null;
     final Object? tagsValue = json['tags'];
