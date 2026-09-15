@@ -51,31 +51,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final bool showNoData = uvState.isNoData;
     final LocationState location = ref.watch(locationProvider);
 
-    return ProxyErrorToastListener(
-      child: Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.location_pin),
-            tooltip: 'Change location',
-            onPressed: () {},
-          ),
-          title: const Text('UV Alert'),
-          centerTitle: true,
-          actions: <Widget>[
-            IconButton(
-              icon: const Icon(Icons.settings),
-              tooltip: 'Open settings',
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const SettingsScreen(),
-                  ),
-                );
-              },
-            ),
-          ],
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.location_pin),
+          tooltip: 'Change location',
+          onPressed: () {},
         ),
-        body: SafeArea(
+        title: const Text('UV Alert'),
+        centerTitle: true,
+        actions: <Widget>[
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Open settings',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+              );
+            },
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: ProxyErrorToastListener(
           child: Column(
             children: <Widget>[
               const ProxyErrorBanner(),
