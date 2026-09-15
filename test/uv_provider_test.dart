@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uvalert/api/uv_api.dart';
+import 'package:uvalert/constants.dart';
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/providers/app_version_provider.dart';
 import 'package:uvalert/providers/device_id_provider.dart';
@@ -373,6 +374,17 @@ void main() {
           appVersion: any(named: 'appVersion'),
           meta: any(named: 'meta'),
         ),
+      ).thenThrow(UvApiException(500, 'server error'));
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+          meta: any(named: 'meta'),
+        ),
       ).thenThrow(UvApiException(404, 'not found'));
       await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
 
@@ -386,10 +398,52 @@ void main() {
         ),
       ).thenThrow(UvApiException(500, 'server error'));
       await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
-      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
 
       final ProxyErrorState state = container.read(proxyErrorProvider);
       expect(state.consecutiveFailures, 2);
+      expect(state.lastStatusCode, 500);
+    },
+  );
+
+  test(
+    'an active immediate banner (502) stays active through an interrupting '
+    '500/503/504 streak, and the streak still reaches its own threshold',
+    () async {
+      final ProviderContainer container = _makeContainerWith(mockApi);
+
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+          meta: any(named: 'meta'),
+        ),
+      ).thenThrow(UvApiException(502, 'bad gateway'));
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+
+      expect(
+        container.read(proxyErrorProvider).immediateStatusCode,
+        httpBadGateway,
+      );
+      expect(container.read(proxyErrorProvider).consecutiveFailures, 0);
+
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+          meta: any(named: 'meta'),
+        ),
+      ).thenThrow(UvApiException(500, 'server error'));
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+
+      final ProxyErrorState state = container.read(proxyErrorProvider);
+      expect(state.immediateStatusCode, httpBadGateway);
+      expect(state.consecutiveFailures, 3);
       expect(state.lastStatusCode, 500);
     },
   );

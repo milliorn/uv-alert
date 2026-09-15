@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uvalert/api/uv_api.dart';
+import 'package:uvalert/constants.dart';
 import 'package:uvalert/models/weather_alert.dart';
 import 'package:uvalert/providers/app_version_provider.dart';
 import 'package:uvalert/providers/location_provider.dart';
@@ -16,6 +17,7 @@ import 'package:uvalert/widgets/dashboard_hero.dart';
 import 'package:uvalert/widgets/dashboard_no_data_view.dart';
 
 import 'fakes/fake_fixed_location_notifier.dart';
+import 'fakes/fake_proxy_error_notifier.dart';
 import 'fakes/fake_settings_notifier.dart';
 import 'fakes/fake_uv_data.dart';
 import 'fakes/fake_uv_notifier.dart';
@@ -261,6 +263,30 @@ void main() {
 
     expect(find.widgetWithText(FilledButton, 'Retry'), findsOneWidget);
   });
+
+  testWidgets(
+    'hides the Retry button in the no-data state when the active proxy '
+    'error is a 400 (an identical retry cannot succeed)',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          // ignore: always_specify_types - Override not in flutter_riverpod public API
+          overrides: [
+            uvProvider.overrideWith(FakeErrorUvNotifier.new),
+            proxyErrorProvider.overrideWith(
+              () => FakeProxyErrorNotifier(
+                const ProxyErrorState(immediateStatusCode: httpBadRequest),
+              ),
+            ),
+          ],
+          child: const MaterialApp(home: DashboardScreen()),
+        ),
+      );
+
+      expect(find.byType(DashboardNoDataView), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Retry'), findsNothing);
+    },
+  );
 
   testWidgets('tapping Retry with no location acquired does not throw', (
     WidgetTester tester,

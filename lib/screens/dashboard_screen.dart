@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uvalert/constants.dart';
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/providers/settings_provider.dart';
@@ -50,6 +51,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final AsyncValue<UvData> uvState = ref.watch(uvProvider);
     final bool showNoData = uvState.isNoData;
     final LocationState location = ref.watch(locationProvider);
+    // A 400 means the current request itself is invalid (e.g. bad lat/lon);
+    // retrying would just repeat it. See ADR 0010's "do not retry" rule for
+    // 400, and DashboardNoDataView's onRetry doc.
+    final bool isInvalidRequest =
+        ref.watch(proxyErrorProvider).immediateStatusCode == httpBadRequest;
 
     return Scaffold(
       appBar: AppBar(
@@ -81,15 +87,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               Expanded(
                 child: showNoData
                     ? DashboardNoDataView(
-                        onRetry: () {
-                          if (location == null) return;
+                        onRetry: isInvalidRequest
+                            ? null
+                            : () {
+                                if (location == null) return;
 
-                          unawaited(
-                            ref
-                                .read(uvProvider.notifier)
-                                .fetch(lat: location.lat, lon: location.lon),
-                          );
-                        },
+                                unawaited(
+                                  ref
+                                      .read(uvProvider.notifier)
+                                      .fetch(
+                                        lat: location.lat,
+                                        lon: location.lon,
+                                      ),
+                                );
+                              },
                       )
                     : const Center(child: DashboardHero()),
               ),

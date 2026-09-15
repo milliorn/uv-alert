@@ -33,43 +33,34 @@ const String proxyErrorInvalidRequestMessage =
 const String proxyErrorTransientToastMessage =
     'UV data could not be refreshed. Retrying...';
 
-/// Subset of [proxyEscalationStatusCodes] that escalate only after
-/// [proxyErrorEscalationThreshold] consecutive failures, rather than
-/// immediately (see [_bannerMessageFor]).
-const Set<int> _thresholdGatedStatusCodes = <int>{
-  httpInternalServerError,
-  httpServiceUnavailable,
-  httpGatewayTimeout,
-};
-
-/// Persistent banner text for [statusCode], or `null` if [statusCode]
-/// should not show a persistent banner given [consecutiveFailures].
+/// Persistent banner text for [errorState], or `null` if no banner should
+/// show given the current state.
 ///
-/// - 429 and 502 show their banner immediately (1st occurrence).
-/// - 400 shows its banner immediately -- it cannot self-heal via retry, so
-///   there is no toast-first grace period the way there is for genuinely
-///   transient server errors.
-/// - 500/503/504 only show a banner once [consecutiveFailures] reaches
-///   [proxyErrorEscalationThreshold]; before that, [ProxyErrorBanner] shows
-///   a toast instead (handled by the caller, not this function).
-String? _bannerMessageFor({
-  required int? statusCode,
-  required int consecutiveFailures,
-}) {
-  switch (statusCode) {
+/// [ProxyErrorState.immediateStatusCode] (400/429/502) takes priority when
+/// set: ADR 0010 calls for these to show their banner on the 1st occurrence
+/// and keep it shown until success, regardless of what
+/// [ProxyErrorState.consecutiveFailures] is doing underneath. Otherwise,
+/// 500/503/504 only show a banner once [ProxyErrorState.consecutiveFailures]
+/// reaches [proxyErrorEscalationThreshold]; before that, [ProxyErrorBanner]
+/// shows a toast instead (handled by the caller, not this function).
+String? _bannerMessageFor(ProxyErrorState errorState) {
+  switch (errorState.immediateStatusCode) {
     case httpTooManyRequests:
       return proxyErrorTooManyRequestsMessage;
     case httpBadGateway:
       return proxyErrorUnavailableMessage;
     case httpBadRequest:
       return proxyErrorInvalidRequestMessage;
-    case _ when _thresholdGatedStatusCodes.contains(statusCode):
-      return consecutiveFailures >= proxyErrorEscalationThreshold
-          ? proxyErrorUnavailableMessage
-          : null;
-    default:
-      return null;
+    case null:
+      break;
   }
+
+  if (errorState.lastStatusCode != null &&
+      errorState.consecutiveFailures >= proxyErrorEscalationThreshold) {
+    return proxyErrorUnavailableMessage;
+  }
+
+  return null;
 }
 
 /// A persistent banner shown below the app bar when the proxy is failing in
@@ -100,10 +91,7 @@ class ProxyErrorBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ProxyErrorState errorState = ref.watch(proxyErrorProvider);
-    final String? message = _bannerMessageFor(
-      statusCode: errorState.lastStatusCode,
-      consecutiveFailures: errorState.consecutiveFailures,
-    );
+    final String? message = _bannerMessageFor(errorState);
 
     if (message == null) return const SizedBox.shrink();
 
@@ -153,18 +141,17 @@ class ProxyErrorToastListener extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.listen<ProxyErrorState>(proxyErrorProvider, (
-      ProxyErrorState? previous,
+      ProxyErrorState? _,
       ProxyErrorState next,
     ) {
-      final int? statusCode = next.lastStatusCode;
-
-      // Only the 1st failure (consecutiveFailures == 1) of the escalating
-      // server-error family shows a toast; the 2nd/3rd+ are silent until
-      // ProxyErrorBanner takes over, and 429/502/400 never toast (they show
-      // their persistent banner immediately, per ADR 0010).
-      if (next.consecutiveFailures != 1) return;
-      if (statusCode == null ||
-          !_thresholdGatedStatusCodes.contains(statusCode)) {
+      // Only the 1st failure (consecutiveFailures == 1) of the 500/503/504
+      // streak shows a toast; the 2nd/3rd+ are silent until ProxyErrorBanner
+      // takes over. lastStatusCode is only ever set to a threshold-gated
+      // code by ProxyErrorNotifier.recordFailure, so a non-null value here
+      // is always eligible; 429/502/400 never toast (they show their
+      // persistent banner immediately via immediateStatusCode, per ADR
+      // 0010).
+      if (next.consecutiveFailures != 1 || next.lastStatusCode == null) {
         return;
       }
 

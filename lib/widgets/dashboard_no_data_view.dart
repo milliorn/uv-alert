@@ -17,11 +17,15 @@ const double dashboardNoDataIconSize = 48;
 /// not the common first-load path.
 class DashboardNoDataView extends StatelessWidget {
   /// Creates a [DashboardNoDataView]. [onRetry] is called when the user taps
-  /// the retry button.
+  /// the retry button, or `null` to hide the button entirely: per ADR 0010,
+  /// a 400 (invalid request) must not be retried, since an identical request
+  /// will fail identically.
   const DashboardNoDataView({required this.onRetry, super.key});
 
-  /// Called when the user taps the retry button.
-  final VoidCallback onRetry;
+  /// Called when the user taps the retry button, or `null` if retrying
+  /// would just repeat a request that cannot succeed (see [onRetry]'s
+  /// constructor doc).
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -46,8 +50,13 @@ class DashboardNoDataView extends StatelessWidget {
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyLarge,
             ),
-            const SizedBox(height: dashboardNoDataGap),
-            FilledButton.tonal(onPressed: onRetry, child: const Text('Retry')),
+            if (onRetry != null) ...<Widget>[
+              const SizedBox(height: dashboardNoDataGap),
+              FilledButton.tonal(
+                onPressed: onRetry,
+                child: const Text('Retry'),
+              ),
+            ],
           ],
         ),
       ),

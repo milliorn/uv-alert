@@ -68,22 +68,36 @@ const int httpServiceUnavailable = 503;
 /// See `docs/adr/0010-proxy-error-code-contract.md`.
 const int httpGatewayTimeout = 504;
 
-/// Status codes ADR 0010 defines escalation UX for: 400/429/502 escalate
-/// immediately, 500/503/504 escalate after
-/// `proxyErrorEscalationThreshold` consecutive failures (see
-/// `proxy_error_banner.dart`). `ProxyErrorNotifier.recordFailure` (in
-/// `uv_provider.dart`) uses this same set to decide whether a failure counts
-/// toward the escalation counter at all, so a status code not in this set
-/// (e.g. 404, which ADR 0010 assigns its own "geocoding no results" UX, not
-/// this escalation path) can never silently consume a slot in the counter
-/// while producing no user-visible feedback.
-const Set<int> proxyEscalationStatusCodes = <int>{
+/// Status codes ADR 0010 calls for an immediate persistent banner on the 1st
+/// occurrence, shown until `ProxyErrorNotifier.recordSuccess` (in
+/// `uv_provider.dart`): these cannot self-heal via retry, so there is no
+/// point waiting for a streak.
+const Set<int> proxyImmediateStatusCodes = <int>{
   httpBadRequest,
   httpTooManyRequests,
-  httpInternalServerError,
   httpBadGateway,
+};
+
+/// Status codes ADR 0010 gates behind
+/// `proxyErrorEscalationThreshold` consecutive failures (see
+/// `proxy_error_banner.dart`) before showing a persistent banner; before
+/// that threshold, a one-time toast is shown instead.
+const Set<int> proxyThresholdGatedStatusCodes = <int>{
+  httpInternalServerError,
   httpServiceUnavailable,
   httpGatewayTimeout,
+};
+
+/// Union of [proxyImmediateStatusCodes] and [proxyThresholdGatedStatusCodes]:
+/// every status code ADR 0010 defines escalation UX for.
+/// `ProxyErrorNotifier.recordFailure` (in `uv_provider.dart`) uses this to
+/// decide whether a failure is recorded at all, so a status code not in this
+/// set (e.g. 404, which ADR 0010 assigns its own "geocoding no results" UX,
+/// not this escalation path) can never silently consume state while
+/// producing no user-visible feedback.
+const Set<int> proxyEscalationStatusCodes = <int>{
+  ...proxyImmediateStatusCodes,
+  ...proxyThresholdGatedStatusCodes,
 };
 
 /// Strips a trailing slash from [url] if present.

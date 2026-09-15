@@ -145,8 +145,8 @@ class UvApi {
 }
 
 /// Base for [UvApi.fetch] failures, declaring whether (and with what status
-/// code) each one counts toward `ProxyErrorState`'s consecutive-failure
-/// escalation counter (see `docs/adr/0010-proxy-error-code-contract.md`).
+/// code) each one is recorded on `ProxyErrorState`
+/// (see `docs/adr/0010-proxy-error-code-contract.md`).
 ///
 /// Centralizing the policy here (rather than a catch site testing `is
 /// UvApiException` to infer it by type-hierarchy accident) means adding a
@@ -158,9 +158,9 @@ class UvApi {
 sealed class UvApiFailure implements Exception {
   const UvApiFailure();
 
-  /// Non-null if this failure should increment `ProxyErrorState`'s
-  /// consecutive-failure count, using this HTTP status code; `null` to be
-  /// excluded from the counter entirely.
+  /// Non-null if this failure should be recorded on `ProxyErrorState`
+  /// (see `ProxyErrorNotifier.recordFailure` in `uv_provider.dart`), using
+  /// this HTTP status code; `null` to be excluded entirely.
   int? get escalationStatusCode;
 }
 
@@ -188,8 +188,16 @@ class UvApiException extends UvApiFailure {
   /// The response body.
   final String body;
 
+  /// `null` unless [statusCode] is one ADR 0010 defines escalation UX for
+  /// (see `proxyEscalationStatusCodes` in `constants.dart`): 404, for
+  /// example, has its own "geocoding no results" UX and must not affect
+  /// `ProxyErrorState`. This is the actual eligibility policy: a status
+  /// code excluded here is guaranteed to be a no-op wherever
+  /// [escalationStatusCode] is consumed, rather than relying on the
+  /// consumer to separately re-check eligibility.
   @override
-  int? get escalationStatusCode => statusCode;
+  int? get escalationStatusCode =>
+      proxyEscalationStatusCodes.contains(statusCode) ? statusCode : null;
 
   // Override toString for debuggability only - the app works without it.
   // Without this, logs and error messages show "Instance of 'UvApiException'"

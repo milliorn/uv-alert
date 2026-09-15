@@ -53,8 +53,7 @@ void main() {
       _wrap(
         const ProxyErrorBanner(),
         errorState: const ProxyErrorState(
-          consecutiveFailures: 1,
-          lastStatusCode: httpTooManyRequests,
+          immediateStatusCode: httpTooManyRequests,
         ),
       ),
     );
@@ -70,8 +69,7 @@ void main() {
       _wrap(
         const ProxyErrorBanner(),
         errorState: const ProxyErrorState(
-          consecutiveFailures: 1,
-          lastStatusCode: httpBadGateway,
+          immediateStatusCode: httpBadGateway,
         ),
       ),
     );
@@ -87,8 +85,7 @@ void main() {
       _wrap(
         const ProxyErrorBanner(),
         errorState: const ProxyErrorState(
-          consecutiveFailures: 1,
-          lastStatusCode: httpBadRequest,
+          immediateStatusCode: httpBadRequest,
         ),
       ),
     );
@@ -96,6 +93,26 @@ void main() {
     expect(find.byType(MaterialBanner), findsOneWidget);
     expect(find.text(proxyErrorInvalidRequestMessage), findsOneWidget);
   });
+
+  testWidgets(
+    'an immediate 502 banner stays visible through an interrupting 500 '
+    'with no success',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const ProxyErrorBanner(),
+          errorState: const ProxyErrorState(
+            consecutiveFailures: 1,
+            lastStatusCode: httpInternalServerError,
+            immediateStatusCode: httpBadGateway,
+          ),
+        ),
+      );
+
+      expect(find.byType(MaterialBanner), findsOneWidget);
+      expect(find.text(proxyErrorUnavailableMessage), findsOneWidget);
+    },
+  );
 
   // ---------------------------------------------------------------------------
   // ProxyErrorBanner (escalating server errors: 500/503/504)
@@ -202,30 +219,34 @@ void main() {
   // ProxyErrorToastListener (toast on 1st failure, silent after)
   // ---------------------------------------------------------------------------
 
-  testWidgets('shows a toast once on the 1st 500/503/504 failure', (
-    WidgetTester tester,
-  ) async {
-    final ProviderContainer container = ProviderContainer();
-    addTearDown(container.dispose);
+  for (final int code in <int>[
+    httpInternalServerError,
+    httpServiceUnavailable,
+    httpGatewayTimeout,
+  ]) {
+    testWidgets('shows a toast once on the 1st failure for $code', (
+      WidgetTester tester,
+    ) async {
+      final ProviderContainer container = ProviderContainer();
+      addTearDown(container.dispose);
 
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MaterialApp(
-          home: Scaffold(
-            body: ProxyErrorToastListener(child: SizedBox.shrink()),
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Scaffold(
+              body: ProxyErrorToastListener(child: SizedBox.shrink()),
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    container
-        .read(proxyErrorProvider.notifier)
-        .recordFailure(httpInternalServerError);
-    await tester.pump();
+      container.read(proxyErrorProvider.notifier).recordFailure(code);
+      await tester.pump();
 
-    expect(find.text(proxyErrorTransientToastMessage), findsOneWidget);
-  });
+      expect(find.text(proxyErrorTransientToastMessage), findsOneWidget);
+    });
+  }
 
   testWidgets(
     'does not show a toast on the 2nd or 3rd consecutive 500/503/504 '
@@ -266,28 +287,32 @@ void main() {
     },
   );
 
-  testWidgets('does not show a toast for 429, 502, or 400', (
-    WidgetTester tester,
-  ) async {
-    final ProviderContainer container = ProviderContainer();
-    addTearDown(container.dispose);
+  for (final int code in <int>[
+    httpTooManyRequests,
+    httpBadGateway,
+    httpBadRequest,
+  ]) {
+    testWidgets('does not show a toast for $code', (
+      WidgetTester tester,
+    ) async {
+      final ProviderContainer container = ProviderContainer();
+      addTearDown(container.dispose);
 
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MaterialApp(
-          home: Scaffold(
-            body: ProxyErrorToastListener(child: SizedBox.shrink()),
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Scaffold(
+              body: ProxyErrorToastListener(child: SizedBox.shrink()),
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    container.read(proxyErrorProvider.notifier).recordFailure(
-      httpTooManyRequests,
-    );
-    await tester.pump();
+      container.read(proxyErrorProvider.notifier).recordFailure(code);
+      await tester.pump();
 
-    expect(find.byType(SnackBar), findsNothing);
-  });
+      expect(find.byType(SnackBar), findsNothing);
+    });
+  }
 }
