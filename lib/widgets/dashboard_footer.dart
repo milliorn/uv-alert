@@ -162,38 +162,15 @@ String _staleLabel(DateTime fetchedAt, int timezoneOffsetSeconds) =>
     'Last updated ${_formatDateTime(fetchedAt, timezoneOffsetSeconds)} · '
     'Data may be outdated';
 
-/// Abbreviated month names for [_formatDateTime], indexed by
-/// [DateTime.month] (1-12); index 0 is unused padding so the array can be
-/// indexed directly without an off-by-one subtraction at each call site.
-const List<String> _monthAbbreviations = <String>[
-  '',
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-];
-
 /// Formats [utc] (converted to the queried location's local time via
 /// [toLocationLocal], not the device's) as e.g. "Jun 1, 2:00 PM" -- matching
 /// the hourly/daily charts and the dashboard hero's conditional line, all of
 /// which show the location's own clock rather than the viewer's, since a
-/// manual location can be in a different timezone than the device. No
-/// `intl` dependency is used elsewhere in this codebase for date formatting
-/// (only [formatTime] for time-of-day), so this follows the same
-/// hand-rolled convention rather than introducing one for a single label.
+/// manual location can be in a different timezone than the device.
 String _formatDateTime(DateTime utc, int timezoneOffsetSeconds) {
   final DateTime local = toLocationLocal(utc, timezoneOffsetSeconds);
-  final String month = _monthAbbreviations[local.month];
 
-  return '$month ${local.day}, ${formatTime(local)}';
+  return '${formatDate(local)}, ${formatTime(local)}';
 }
 
 /// Formats [fetchedAt] (UTC) relative to [nowUtc], e.g. "just now", "5 mins

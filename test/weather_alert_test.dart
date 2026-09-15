@@ -177,6 +177,18 @@ void main() {
     expect(alert.senderName, isNull);
   });
 
+  test('fromJson normalizes an empty string senderName to null', () {
+    final WeatherAlert alert = WeatherAlert.fromJson(const <String, Object?>{
+      'event': 'Heat Advisory',
+      'description': 'Empty-string sender.',
+      'start': 1700000000,
+      'end': 1700050000,
+      'sender_name': '',
+    });
+
+    expect(alert.senderName, isNull);
+  });
+
   test('fromJson defaults tags to empty list when absent', () {
     final WeatherAlert alert = WeatherAlert.fromJson(const <String, Object?>{
       'event': 'Heat Advisory',

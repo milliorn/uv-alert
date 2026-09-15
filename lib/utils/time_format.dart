@@ -11,9 +11,37 @@ String formatTime(DateTime time, {bool includeMinutes = true}) {
   if (!includeMinutes) return '$hour12 $period';
 
   final String minutes = time.minute.toString().padLeft(2, '0');
-  
+
   return '$hour12:$minutes $period';
 }
+
+/// Abbreviated month names for [formatDate], indexed by [DateTime.month]
+/// (1-12); index 0 is unused padding so the array can be indexed directly
+/// without an off-by-one subtraction at each call site.
+const List<String> _monthAbbreviations = <String>[
+  '',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+/// Formats [time]'s calendar date as e.g. "Jun 1". No `intl` dependency is
+/// used elsewhere in this codebase for date formatting (only [formatTime]
+/// for time-of-day), so this follows the same hand-rolled convention rather
+/// than introducing one. [time] should already be in the location-local
+/// time this label is meant to represent (see [toLocationLocal]); this
+/// function only reads off whatever date fields it is given.
+String formatDate(DateTime time) =>
+    '${_monthAbbreviations[time.month]} ${time.day}';
 
 /// Converts a UTC [time] to a location's local time, using
 /// [timezoneOffsetSeconds] (i.e. `UvData.timezoneOffset`) rather than the
