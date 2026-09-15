@@ -35,30 +35,29 @@ final WeatherAlert _redFlagWarning = WeatherAlert(
   senderName: 'NWS',
 );
 
-// A ProviderScope with uvProvider available is needed even though
-// WeatherAlertBanner itself takes alerts/timezoneOffset directly (unchanged,
-// still fed by DashboardScreen) -- "See more" pushes AlertListScreen, which
-// reads uvProvider directly rather than from navigation arguments (see
-// alert_list_screen.dart), so the pushed route needs it in scope too.
-Widget _wrap(List<WeatherAlert> alerts, {int timezoneOffset = 0}) =>
-    ProviderScope(
-      // ignore: always_specify_types - Override not in flutter_riverpod public API
-      overrides: [
-        uvProvider.overrideWith(
-          () => FakeDataUvNotifier(
+// WeatherAlertBanner reads uvProvider directly (rather than taking alerts as
+// a constructor param) so it can never disagree with AlertListScreen, which
+// it pushes on "See more" and which also reads uvProvider directly -- see
+// alert_list_screen.dart.
+Widget _wrap(
+  List<WeatherAlert> alerts, {
+  int timezoneOffset = 0,
+  FakeDataUvNotifier? notifier,
+}) => ProviderScope(
+  // ignore: always_specify_types - Override not in flutter_riverpod public API
+  overrides: [
+    uvProvider.overrideWith(
+      () =>
+          notifier ??
+          FakeDataUvNotifier(
             makeUvData(alerts: alerts, timezoneOffset: timezoneOffset),
           ),
-        ),
-      ],
-      child: MaterialApp(
-        home: Scaffold(
-          body: WeatherAlertBanner(
-            alerts: alerts,
-            timezoneOffset: timezoneOffset,
-          ),
-        ),
-      ),
-    );
+    ),
+  ],
+  child: const MaterialApp(
+    home: Scaffold(body: WeatherAlertBanner()),
+  ),
+);
 
 void main() {
   // ---------------------------------------------------------------------------
@@ -202,12 +201,18 @@ void main() {
   testWidgets(
     'dismissing one alert does not suppress a different still-active alert',
     (WidgetTester tester) async {
-      await tester.pumpWidget(_wrap(<WeatherAlert>[_heatAdvisory]));
+      final FakeDataUvNotifier notifier = FakeDataUvNotifier(
+        makeUvData(alerts: <WeatherAlert>[_heatAdvisory]),
+      );
+
+      await tester.pumpWidget(
+        _wrap(<WeatherAlert>[_heatAdvisory], notifier: notifier),
+      );
       await tester.tap(find.byTooltip('Dismiss alert'));
       await tester.pumpAndSettle();
       expect(find.text(_heatAdvisory.event), findsNothing);
 
-      await tester.pumpWidget(_wrap(<WeatherAlert>[_floodWarning]));
+      notifier.updateData(makeUvData(alerts: <WeatherAlert>[_floodWarning]));
       await tester.pumpAndSettle();
 
       expect(find.text(_floodWarning.event), findsOneWidget);
@@ -215,9 +220,44 @@ void main() {
   );
 
   testWidgets(
+    'a provider rebuild that reuses the identical alerts list instance '
+    'still keeps a prior dismissal (the identical() fast path in '
+    '_pruneDismissedIds does not skip pruning incorrectly, only '
+    'redundantly)',
+    (WidgetTester tester) async {
+      final List<WeatherAlert> alerts = <WeatherAlert>[_heatAdvisory];
+      final FakeDataUvNotifier notifier = FakeDataUvNotifier(
+        makeUvData(alerts: alerts),
+      );
+
+      await tester.pumpWidget(
+        _wrap(alerts, notifier: notifier),
+      );
+      await tester.tap(find.byTooltip('Dismiss alert'));
+      await tester.pumpAndSettle();
+      expect(find.text(_heatAdvisory.event), findsNothing);
+
+      // Same List instance as above (not a new literal), the case
+      // _pruneDismissedIds's identical() check exists to short-circuit --
+      // simulates a provider rebuild that leaves alerts unchanged (e.g. a
+      // different UvData field updating).
+      notifier.updateData(makeUvData(alerts: alerts));
+      await tester.pumpAndSettle();
+
+      expect(find.text(_heatAdvisory.event), findsNothing);
+    },
+  );
+
+  testWidgets(
     'dismissing then refreshing to the same unchanged alert stays hidden',
     (WidgetTester tester) async {
-      await tester.pumpWidget(_wrap(<WeatherAlert>[_heatAdvisory]));
+      final FakeDataUvNotifier notifier = FakeDataUvNotifier(
+        makeUvData(alerts: <WeatherAlert>[_heatAdvisory]),
+      );
+
+      await tester.pumpWidget(
+        _wrap(<WeatherAlert>[_heatAdvisory], notifier: notifier),
+      );
       await tester.tap(find.byTooltip('Dismiss alert'));
       await tester.pumpAndSettle();
 
@@ -226,20 +266,23 @@ void main() {
       // object at runtime -- a const WeatherAlert with the same field values
       // would canonicalize to the exact same instance as _heatAdvisory,
       // masking a regression that swapped value-equality for identical().
-      await tester.pumpWidget(
-        _wrap(<WeatherAlert>[
-          // A const map here would let the compiler canonicalize the
-          // resulting WeatherAlert back to the same instance as
-          // _heatAdvisory, defeating the point of this test.
-          // ignore: prefer_const_literals_to_create_immutables
-          WeatherAlert.fromJson(<String, Object?>{
-            'sender_name': 'NWS',
-            'event': 'Heat Advisory',
-            'description': 'Dangerously high UV and heat index expected today.',
-            'start': 1717200000,
-            'end': 1717286400,
-          }),
-        ]),
+      notifier.updateData(
+        makeUvData(
+          alerts: <WeatherAlert>[
+            // A const map here would let the compiler canonicalize the
+            // resulting WeatherAlert back to the same instance as
+            // _heatAdvisory, defeating the point of this test.
+            // ignore: prefer_const_literals_to_create_immutables
+            WeatherAlert.fromJson(<String, Object?>{
+              'sender_name': 'NWS',
+              'event': 'Heat Advisory',
+              'description':
+                  'Dangerously high UV and heat index expected today.',
+              'start': 1717200000,
+              'end': 1717286400,
+            }),
+          ],
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -250,10 +293,17 @@ void main() {
   testWidgets(
     'clearing all alerts hides the banner even without a dismiss tap',
     (WidgetTester tester) async {
-      await tester.pumpWidget(_wrap(<WeatherAlert>[_heatAdvisory]));
+      final FakeDataUvNotifier notifier = FakeDataUvNotifier(
+        makeUvData(alerts: <WeatherAlert>[_heatAdvisory]),
+      );
+
+      await tester.pumpWidget(
+        _wrap(<WeatherAlert>[_heatAdvisory], notifier: notifier),
+      );
       expect(find.text(_heatAdvisory.event), findsOneWidget);
 
-      await tester.pumpWidget(_wrap(const <WeatherAlert>[]));
+      notifier.updateData(makeUvData());
+      await tester.pump();
 
       expect(find.text(_heatAdvisory.event), findsNothing);
     },
@@ -264,15 +314,21 @@ void main() {
     // Regression test: a refresh that briefly reports "no active alerts"
     // before the same alert reappears must not incorrectly resurface a
     // banner the user already dismissed.
-    await tester.pumpWidget(_wrap(<WeatherAlert>[_heatAdvisory]));
+    final FakeDataUvNotifier notifier = FakeDataUvNotifier(
+      makeUvData(alerts: <WeatherAlert>[_heatAdvisory]),
+    );
+
+    await tester.pumpWidget(
+      _wrap(<WeatherAlert>[_heatAdvisory], notifier: notifier),
+    );
     await tester.tap(find.byTooltip('Dismiss alert'));
     await tester.pumpAndSettle();
     expect(find.text(_heatAdvisory.event), findsNothing);
 
-    await tester.pumpWidget(_wrap(const <WeatherAlert>[]));
+    notifier.updateData(makeUvData());
     await tester.pumpAndSettle();
 
-    await tester.pumpWidget(_wrap(<WeatherAlert>[_heatAdvisory]));
+    notifier.updateData(makeUvData(alerts: <WeatherAlert>[_heatAdvisory]));
     await tester.pumpAndSettle();
 
     expect(find.text(_heatAdvisory.event), findsNothing);
@@ -282,9 +338,16 @@ void main() {
     'an alert removed from the active list (not dismissed) does not block '
     'a later different alert reusing no state',
     (WidgetTester tester) async {
-      await tester.pumpWidget(_wrap(<WeatherAlert>[_heatAdvisory]));
-      await tester.pumpWidget(_wrap(const <WeatherAlert>[]));
-      await tester.pumpWidget(_wrap(<WeatherAlert>[_floodWarning]));
+      final FakeDataUvNotifier notifier = FakeDataUvNotifier(
+        makeUvData(alerts: <WeatherAlert>[_heatAdvisory]),
+      );
+
+      await tester.pumpWidget(
+        _wrap(<WeatherAlert>[_heatAdvisory], notifier: notifier),
+      );
+      notifier.updateData(makeUvData());
+      await tester.pump();
+      notifier.updateData(makeUvData(alerts: <WeatherAlert>[_floodWarning]));
       await tester.pumpAndSettle();
 
       expect(find.text(_floodWarning.event), findsOneWidget);

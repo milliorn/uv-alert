@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uvalert/models/weather_alert.dart';
+import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/screens/alert_list_screen.dart';
 import 'package:uvalert/utils/alert_colors.dart';
 import 'package:uvalert/utils/alert_severity.dart';
@@ -12,8 +14,13 @@ const int _descriptionMaxLines = 3;
 /// A dismissible banner shown below the app bar when one or more active
 /// government weather alerts exist.
 ///
-/// Renders nothing when [alerts] is empty. When there is exactly one active
-/// alert, shows its event name and description directly (the pre-#99
+/// Watches [uvProvider] directly rather than receiving alert data as a
+/// constructor parameter (the same pattern [AlertListScreen] uses), so the
+/// two screens can never disagree about which alerts or which timezone
+/// offset are current.
+///
+/// Renders nothing when there are no active alerts. When there is exactly
+/// one, shows its event name and description directly (the pre-#99
 /// behavior). When there is more than one, shows a collapsed summary --
 /// "N Active Alerts · {top alert's event}" -- where the top alert is chosen
 /// by [topAlert] (severity-ranked: Warning > Watch > Advisory). A "See more"
@@ -34,55 +41,41 @@ const int _descriptionMaxLines = 3;
 /// shown via `ScaffoldMessenger.showMaterialBanner`), so it renders inline
 /// below the app bar and pushes the rest of the dashboard down, rather than
 /// floating on top of it.
-class WeatherAlertBanner extends StatefulWidget {
-  /// Creates a [WeatherAlertBanner] for [alerts], or a hidden banner when
-  /// [alerts] is empty.
-  const WeatherAlertBanner({
-    required this.alerts,
-    required this.timezoneOffset,
-    super.key,
-  });
-
-  /// The active alerts to display. An empty list renders nothing.
-  final List<WeatherAlert> alerts;
-
-  /// The queried location's UTC offset in seconds (`UvData.timezoneOffset`),
-  /// forwarded to [AlertListScreen] so alert times display in the location's
-  /// local time.
-  final int timezoneOffset;
+class WeatherAlertBanner extends ConsumerStatefulWidget {
+  /// Creates a [WeatherAlertBanner].
+  const WeatherAlertBanner({super.key});
 
   @override
-  State<WeatherAlertBanner> createState() => _WeatherAlertBannerState();
+  ConsumerState<WeatherAlertBanner> createState() =>
+      _WeatherAlertBannerState();
 }
 
-class _WeatherAlertBannerState extends State<WeatherAlertBanner> {
+class _WeatherAlertBannerState extends ConsumerState<WeatherAlertBanner> {
   // A refresh that briefly reports "no active alerts" before the same alert
   // reappears must not resurface a banner the user already dismissed
   // (mirrors the single-alert version's _dismissedAlert, which for the same
   // reason compared against its own prior value rather than oldWidget.alert)
-  // -- so pruning below only ever runs against a non-empty widget.alerts.
+  // -- so pruning below only ever runs against a non-empty new alerts list.
   // An empty update is deliberately treated as "unknown, possibly
   // transient" rather than "these alerts are gone," so a dismissed id
   // survives an empty update and is only dropped once a later non-empty
   // update confirms its alert is genuinely no longer present.
   final Set<String> _dismissedIds = <String>{};
 
-  @override
-  void didUpdateWidget(WeatherAlertBanner oldWidget) {
-    super.didUpdateWidget(oldWidget);
+  // The alerts list last used to prune _dismissedIds, so a provider
+  // rebuild unrelated to alerts changing (e.g. some other field on UvData
+  // updating) doesn't redo that work every time.
+  List<WeatherAlert>? _lastPrunedAgainst;
 
-    // Guards against unrelated rebuilds (e.g. an ancestor's setState), which
-    // call didUpdateWidget with an unchanged alerts list, from redoing this
-    // pruning work every time.
+  void _pruneDismissedIds(List<WeatherAlert> alerts) {
     if (_dismissedIds.isEmpty ||
-        widget.alerts.isEmpty ||
-        identical(widget.alerts, oldWidget.alerts)) {
+        alerts.isEmpty ||
+        identical(alerts, _lastPrunedAgainst)) {
       return;
     }
 
-    final Set<String> currentIds = widget.alerts
-        .map((WeatherAlert a) => a.id)
-        .toSet();
+    _lastPrunedAgainst = alerts;
+    final Set<String> currentIds = alerts.map((WeatherAlert a) => a.id).toSet();
 
     _dismissedIds.retainAll(currentIds);
   }
@@ -93,17 +86,22 @@ class _WeatherAlertBannerState extends State<WeatherAlertBanner> {
     });
   }
 
-  List<WeatherAlert> get _visibleAlerts {
-    if (_dismissedIds.isEmpty) return widget.alerts;
+  List<WeatherAlert> _visibleAlerts(List<WeatherAlert> alerts) {
+    if (_dismissedIds.isEmpty) return alerts;
 
-    return widget.alerts
+    return alerts
         .where((WeatherAlert a) => !_dismissedIds.contains(a.id))
         .toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final List<WeatherAlert> visible = _visibleAlerts;
+    final List<WeatherAlert> alerts =
+        ref.watch(uvProvider).value?.alerts ?? const <WeatherAlert>[];
+
+    _pruneDismissedIds(alerts);
+
+    final List<WeatherAlert> visible = _visibleAlerts(alerts);
 
     if (visible.isEmpty) return const SizedBox.shrink();
 
