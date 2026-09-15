@@ -41,11 +41,20 @@ AlertSeverity alertSeverityOf(WeatherAlert alert) {
 /// "top alert" slot.
 ///
 /// Ranked by [AlertSeverity] first (warning > watch > advisory > unknown),
-/// then by earliest [WeatherAlert.start], then by [WeatherAlert.id] (a plain
-/// string comparison, chosen only for a total, arbitrary-but-stable order,
-/// not for any semantic meaning of the id's contents) as a final tiebreak,
-/// so the choice doesn't depend on the payload's original ordering even
-/// when two alerts share both severity and start instant.
+/// then by earliest [WeatherAlert.start], then by [WeatherAlert.id], then by
+/// [WeatherAlert.description] (both plain string comparisons, chosen only
+/// for a total, arbitrary-but-stable order, not for any semantic meaning of
+/// their contents) as a final tiebreak, so the choice doesn't depend on the
+/// payload's original ordering even when two alerts share severity and
+/// start.
+///
+/// [WeatherAlert.id] is synthesized from `senderName`/`event`/`start` (see
+/// [WeatherAlert.fromJson]), not guaranteed unique across the whole model
+/// (two distinct alerts from the same sender, same event name, and the
+/// same start instant, but a different description, would collide) --
+/// [WeatherAlert.description] is included as one further level specifically
+/// to cover that gap, rather than assuming [WeatherAlert.id] alone settles
+/// every comparison.
 ///
 /// [alerts] must not be empty -- callers already guard on
 /// `alerts.isNotEmpty` before showing any banner content, so an empty list
@@ -65,12 +74,14 @@ WeatherAlert topAlert(List<WeatherAlert> alerts) {
 
     // Each comparison only matters when every earlier one was a tie, so
     // this reads as a single ranked cascade: severity, then start time,
-    // then id.
+    // then id, then description.
     final int comparison = severity.index != bestSeverity.index
         ? severity.index - bestSeverity.index
         : !alert.start.isAtSameMomentAs(best.start)
         ? alert.start.compareTo(best.start)
-        : alert.id.compareTo(best.id);
+        : alert.id != best.id
+        ? alert.id.compareTo(best.id)
+        : alert.description.compareTo(best.description);
 
     if (comparison < 0) {
       best = alert;
