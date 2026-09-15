@@ -113,7 +113,14 @@ class ProxyErrorNotifier extends Notifier<ProxyErrorState> {
   ProxyErrorState build() => const ProxyErrorState();
 
   /// Records a non-200 proxy response, incrementing the consecutive-failure
-  /// count.
+  /// count if [statusCode] is one ADR 0010 defines escalation UX for (see
+  /// [proxyEscalationStatusCodes]).
+  ///
+  /// Codes outside that set (e.g. 404, which has its own "geocoding no
+  /// results" UX per ADR 0010) are no-ops here: they must not consume a slot
+  /// in this counter, since no widget will ever show feedback for them, and
+  /// doing so would let an unrelated failure suppress the toast or trigger
+  /// the persistent banner early for a genuinely escalating streak.
   ///
   /// [statusCode] 426 (app-version-too-old) must never be passed here --
   /// it is handled separately via [UvApiForceUpdateException] and force-update
@@ -125,6 +132,9 @@ class ProxyErrorNotifier extends Notifier<ProxyErrorState> {
       'recordFailure must not be called with $httpUpgradeRequired '
       '(force-update); it is tracked separately, not via this counter.',
     );
+
+    if (!proxyEscalationStatusCodes.contains(statusCode)) return;
+
     state = ProxyErrorState(
       consecutiveFailures: state.consecutiveFailures + 1,
       lastStatusCode: statusCode,

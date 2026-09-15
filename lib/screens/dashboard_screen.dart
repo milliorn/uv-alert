@@ -10,6 +10,7 @@ import 'package:uvalert/screens/settings_screen.dart';
 import 'package:uvalert/widgets/dashboard_footer.dart';
 import 'package:uvalert/widgets/dashboard_hero.dart';
 import 'package:uvalert/widgets/dashboard_no_data_view.dart';
+import 'package:uvalert/widgets/proxy_error_banner.dart';
 import 'package:uvalert/widgets/weather_alert_banner.dart';
 
 /// The main screen shown after onboarding completes.
@@ -50,48 +51,53 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final bool showNoData = uvState.isNoData;
     final LocationState location = ref.watch(locationProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.location_pin),
-          tooltip: 'Change location',
-          onPressed: () {},
-        ),
-        title: const Text('UV Alert'),
-        centerTitle: true,
-        actions: <Widget>[
-          IconButton(
-            icon: const Icon(Icons.settings),
-            tooltip: 'Open settings',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
-              );
-            },
+    return ProxyErrorToastListener(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.location_pin),
+            tooltip: 'Change location',
+            onPressed: () {},
           ),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: <Widget>[
-            const WeatherAlertBanner(),
-            Expanded(
-              child: showNoData
-                  ? DashboardNoDataView(
-                      onRetry: () {
-                        if (location == null) return;
-
-                        unawaited(
-                          ref
-                              .read(uvProvider.notifier)
-                              .fetch(lat: location.lat, lon: location.lon),
-                        );
-                      },
-                    )
-                  : const Center(child: DashboardHero()),
+          title: const Text('UV Alert'),
+          centerTitle: true,
+          actions: <Widget>[
+            IconButton(
+              icon: const Icon(Icons.settings),
+              tooltip: 'Open settings',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SettingsScreen(),
+                  ),
+                );
+              },
             ),
-            const DashboardFooter(),
           ],
+        ),
+        body: SafeArea(
+          child: Column(
+            children: <Widget>[
+              const ProxyErrorBanner(),
+              const WeatherAlertBanner(),
+              Expanded(
+                child: showNoData
+                    ? DashboardNoDataView(
+                        onRetry: () {
+                          if (location == null) return;
+
+                          unawaited(
+                            ref
+                                .read(uvProvider.notifier)
+                                .fetch(lat: location.lat, lon: location.lon),
+                          );
+                        },
+                      )
+                    : const Center(child: DashboardHero()),
+              ),
+              const DashboardFooter(),
+            ],
+          ),
         ),
       ),
     );

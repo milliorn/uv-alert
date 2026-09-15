@@ -33,10 +33,58 @@ const int httpOk = 200;
 /// HTTP 404 Not Found status code.
 const int httpNotFound = 404;
 
+/// HTTP 400 Bad Request status code.
+///
+/// See `docs/adr/0010-proxy-error-code-contract.md`.
+const int httpBadRequest = 400;
+
 /// HTTP 426 Upgrade Required status code.
 ///
 /// See `docs/adr/0009-force-update-via-426.md`.
 const int httpUpgradeRequired = 426;
+
+/// HTTP 429 Too Many Requests status code (proxy abuse detection).
+///
+/// See `docs/adr/0010-proxy-error-code-contract.md`.
+const int httpTooManyRequests = 429;
+
+/// HTTP 500 Internal Server Error status code (unhandled proxy error).
+///
+/// See `docs/adr/0010-proxy-error-code-contract.md`.
+const int httpInternalServerError = 500;
+
+/// HTTP 502 Bad Gateway status code (OWM key invalid/expired).
+///
+/// See `docs/adr/0010-proxy-error-code-contract.md`.
+const int httpBadGateway = 502;
+
+/// HTTP 503 Service Unavailable status code (OWM unreachable/rate capped).
+///
+/// See `docs/adr/0010-proxy-error-code-contract.md`.
+const int httpServiceUnavailable = 503;
+
+/// HTTP 504 Gateway Timeout status code (OWM timeout).
+///
+/// See `docs/adr/0010-proxy-error-code-contract.md`.
+const int httpGatewayTimeout = 504;
+
+/// Status codes ADR 0010 defines escalation UX for: 400/429/502 escalate
+/// immediately, 500/503/504 escalate after
+/// `proxyErrorEscalationThreshold` consecutive failures (see
+/// `proxy_error_banner.dart`). `ProxyErrorNotifier.recordFailure` (in
+/// `uv_provider.dart`) uses this same set to decide whether a failure counts
+/// toward the escalation counter at all, so a status code not in this set
+/// (e.g. 404, which ADR 0010 assigns its own "geocoding no results" UX, not
+/// this escalation path) can never silently consume a slot in the counter
+/// while producing no user-visible feedback.
+const Set<int> proxyEscalationStatusCodes = <int>{
+  httpBadRequest,
+  httpTooManyRequests,
+  httpInternalServerError,
+  httpBadGateway,
+  httpServiceUnavailable,
+  httpGatewayTimeout,
+};
 
 /// Strips a trailing slash from [url] if present.
 String stripTrailingSlash(String url) =>
