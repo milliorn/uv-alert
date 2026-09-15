@@ -68,6 +68,24 @@ const int httpServiceUnavailable = 503;
 /// See `docs/adr/0010-proxy-error-code-contract.md`.
 const int httpGatewayTimeout = 504;
 
+/// Status codes ADR 0010 defines escalation UX for: 400/429/502 escalate
+/// immediately, 500/503/504 escalate after
+/// `proxyErrorEscalationThreshold` consecutive failures (see
+/// `proxy_error_banner.dart`). `ProxyErrorNotifier.recordFailure` (in
+/// `uv_provider.dart`) uses this same set to decide whether a failure counts
+/// toward the escalation counter at all, so a status code not in this set
+/// (e.g. 404, which ADR 0010 assigns its own "geocoding no results" UX, not
+/// this escalation path) can never silently consume a slot in the counter
+/// while producing no user-visible feedback.
+const Set<int> proxyEscalationStatusCodes = <int>{
+  httpBadRequest,
+  httpTooManyRequests,
+  httpInternalServerError,
+  httpBadGateway,
+  httpServiceUnavailable,
+  httpGatewayTimeout,
+};
+
 /// Strips a trailing slash from [url] if present.
 String stripTrailingSlash(String url) =>
     url.endsWith('/') ? url.substring(0, url.length - 1) : url;

@@ -33,10 +33,10 @@ const String proxyErrorInvalidRequestMessage =
 const String proxyErrorTransientToastMessage =
     'UV data could not be refreshed. Retrying...';
 
-/// Status codes that count toward [ProxyErrorState.consecutiveFailures]
-/// where 500/503/504 escalate from toast to persistent banner. 502 and 429
-/// escalate immediately instead (see [_bannerMessageFor]).
-const Set<int> _escalatingServerErrorCodes = <int>{
+/// Subset of [proxyEscalationStatusCodes] that escalate only after
+/// [proxyErrorEscalationThreshold] consecutive failures, rather than
+/// immediately (see [_bannerMessageFor]).
+const Set<int> _thresholdGatedStatusCodes = <int>{
   httpInternalServerError,
   httpServiceUnavailable,
   httpGatewayTimeout,
@@ -63,7 +63,7 @@ String? _bannerMessageFor({
       return proxyErrorUnavailableMessage;
     case httpBadRequest:
       return proxyErrorInvalidRequestMessage;
-    case _ when _escalatingServerErrorCodes.contains(statusCode):
+    case _ when _thresholdGatedStatusCodes.contains(statusCode):
       return consecutiveFailures >= proxyErrorEscalationThreshold
           ? proxyErrorUnavailableMessage
           : null;
@@ -79,9 +79,12 @@ String? _bannerMessageFor({
 /// error is still within its toast-only grace period (500/503/504 below
 /// [proxyErrorEscalationThreshold] consecutive failures -- see
 /// [ProxyErrorToastListener] for the toast side of that case). Clears
-/// automatically the moment [uvProvider] next succeeds, since
-/// [ProxyErrorNotifier.recordSuccess] resets [ProxyErrorState] to its
-/// initial value.
+/// automatically the moment the proxy answers with a real HTTP 200 (see
+/// `UvApiFetchMeta.receivedNetwork200` in `uv_api.dart`), since that is what
+/// [ProxyErrorNotifier.recordSuccess] resets [ProxyErrorState] on. This holds
+/// even if [uvProvider] itself is still in an error state afterward (e.g.
+/// the 200 body failed to parse), since a real 200 is evidence the proxy
+/// itself has recovered.
 ///
 /// Built on [MaterialBanner] embedded directly in the widget tree (same
 /// pattern as `WeatherAlertBanner`), not shown via `ScaffoldMessenger`, so
@@ -161,7 +164,7 @@ class ProxyErrorToastListener extends ConsumerWidget {
       // their persistent banner immediately, per ADR 0010).
       if (next.consecutiveFailures != 1) return;
       if (statusCode == null ||
-          !_escalatingServerErrorCodes.contains(statusCode)) {
+          !_thresholdGatedStatusCodes.contains(statusCode)) {
         return;
       }
 

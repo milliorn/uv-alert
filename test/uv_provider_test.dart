@@ -335,6 +335,65 @@ void main() {
     expect(state.lastStatusCode, 503);
   });
 
+  test(
+    'a status code outside proxyEscalationStatusCodes (e.g. 404) does not '
+    'count toward consecutiveFailures',
+    () async {
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+          meta: any(named: 'meta'),
+        ),
+      ).thenThrow(UvApiException(404, 'not found'));
+
+      final ProviderContainer container = _makeContainerWith(mockApi);
+
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+
+      final ProxyErrorState state = container.read(proxyErrorProvider);
+      expect(state.consecutiveFailures, 0);
+      expect(state.lastStatusCode, isNull);
+    },
+  );
+
+  test(
+    'an unmapped status code (404) between two 500s does not desync the '
+    'escalation threshold for the 500 streak',
+    () async {
+      final ProviderContainer container = _makeContainerWith(mockApi);
+
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+          meta: any(named: 'meta'),
+        ),
+      ).thenThrow(UvApiException(404, 'not found'));
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+          meta: any(named: 'meta'),
+        ),
+      ).thenThrow(UvApiException(500, 'server error'));
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+
+      final ProxyErrorState state = container.read(proxyErrorProvider);
+      expect(state.consecutiveFailures, 2);
+      expect(state.lastStatusCode, 500);
+    },
+  );
+
   test('a successful fetch resets consecutiveFailures to zero', () async {
     when(
       () => mockApi.fetch(

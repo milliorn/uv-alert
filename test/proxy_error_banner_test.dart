@@ -23,7 +23,7 @@ Widget _wrap(Widget child, {required ProxyErrorState errorState}) {
 
 void main() {
   // ---------------------------------------------------------------------------
-  // ProxyErrorBanner — no active error
+  // ProxyErrorBanner (no active error)
   // ---------------------------------------------------------------------------
 
   testWidgets('renders nothing when there is no active proxy error', (
@@ -43,7 +43,7 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // ProxyErrorBanner — immediate persistent banner (429, 502, 400)
+  // ProxyErrorBanner (immediate persistent banner: 429, 502, 400)
   // ---------------------------------------------------------------------------
 
   testWidgets('shows a persistent banner immediately for 429', (
@@ -98,7 +98,7 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // ProxyErrorBanner — escalating server errors (500/503/504)
+  // ProxyErrorBanner (escalating server errors: 500/503/504)
   // ---------------------------------------------------------------------------
 
   for (final int code in <int>[
@@ -160,7 +160,7 @@ void main() {
   }
 
   // ---------------------------------------------------------------------------
-  // ProxyErrorBanner — clears on success
+  // ProxyErrorBanner (clears on success)
   // ---------------------------------------------------------------------------
 
   testWidgets('banner clears when the error state resets to zero failures', (
@@ -199,7 +199,7 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // ProxyErrorToastListener — toast on 1st failure, silent after
+  // ProxyErrorToastListener (toast on 1st failure, silent after)
   // ---------------------------------------------------------------------------
 
   testWidgets('shows a toast once on the 1st 500/503/504 failure', (
