@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.25.0](https://github.com/milliorn/uv-alert/compare/v1.24.0...v1.25.0) (2026-09-15)
+
+
+### Features
+
+* multi-alert banner (count + top alert) with full alert list screen ([#138](https://github.com/milliorn/uv-alert/issues/138)) ([128cbd9](https://github.com/milliorn/uv-alert/commit/128cbd92f5692e281d4bc5562c9cf2412fe7b3a1)), closes [#99](https://github.com/milliorn/uv-alert/issues/99)
+
 ## [1.24.0](https://github.com/milliorn/uv-alert/compare/v1.23.0...v1.24.0) (2026-09-14)
 
 
