@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uvalert/api/uv_api.dart';
+import 'package:uvalert/constants.dart';
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/providers/location_provider.dart';
 import 'package:uvalert/providers/settings_provider.dart';
@@ -10,6 +12,7 @@ import 'package:uvalert/screens/settings_screen.dart';
 import 'package:uvalert/widgets/dashboard_footer.dart';
 import 'package:uvalert/widgets/dashboard_hero.dart';
 import 'package:uvalert/widgets/dashboard_no_data_view.dart';
+import 'package:uvalert/widgets/proxy_error_banner.dart';
 import 'package:uvalert/widgets/weather_alert_banner.dart';
 
 /// The main screen shown after onboarding completes.
@@ -49,6 +52,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final AsyncValue<UvData> uvState = ref.watch(uvProvider);
     final bool showNoData = uvState.isNoData;
     final LocationState location = ref.watch(locationProvider);
+    // A 400 means the current request itself is invalid (e.g. bad lat/lon);
+    // retrying would just repeat it. See ADR 0010's "do not retry" rule for
+    // 400, and DashboardNoDataView's onRetry doc. Checked against uvState's
+    // own error (not proxyErrorProvider.immediateStatusCode, which stays
+    // sticky through a later 500/503/504 and would keep suppressing Retry
+    // for a since-changed, retryable failure).
+    final Object? uvError = uvState.error;
+    final bool isInvalidRequest =
+        uvError is UvApiException && uvError.statusCode == httpBadRequest;
 
     return Scaffold(
       appBar: AppBar(
@@ -72,26 +84,34 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ],
       ),
       body: SafeArea(
-        child: Column(
-          children: <Widget>[
-            const WeatherAlertBanner(),
-            Expanded(
-              child: showNoData
-                  ? DashboardNoDataView(
-                      onRetry: () {
-                        if (location == null) return;
+        child: ProxyErrorToastListener(
+          child: Column(
+            children: <Widget>[
+              const ProxyErrorBanner(),
+              const WeatherAlertBanner(),
+              Expanded(
+                child: showNoData
+                    ? DashboardNoDataView(
+                        onRetry: isInvalidRequest
+                            ? null
+                            : () {
+                                if (location == null) return;
 
-                        unawaited(
-                          ref
-                              .read(uvProvider.notifier)
-                              .fetch(lat: location.lat, lon: location.lon),
-                        );
-                      },
-                    )
-                  : const Center(child: DashboardHero()),
-            ),
-            const DashboardFooter(),
-          ],
+                                unawaited(
+                                  ref
+                                      .read(uvProvider.notifier)
+                                      .fetch(
+                                        lat: location.lat,
+                                        lon: location.lon,
+                                      ),
+                                );
+                              },
+                      )
+                    : const Center(child: DashboardHero()),
+              ),
+              const DashboardFooter(),
+            ],
+          ),
         ),
       ),
     );

@@ -57,30 +57,65 @@ extension UvStateQueries on AsyncValue<UvData> {
   bool get isNoData => hasError && !hasValue;
 }
 
-/// In-memory count of consecutive non-200 proxy responses, tracked so the
-/// dashboard can escalate its error UX (toast -> persistent banner) after
-/// repeated failures. See `docs/adr/0010-proxy-error-code-contract.md`.
+/// In-memory record of proxy failures, tracked so the dashboard can escalate
+/// its error UX (toast -> persistent banner) after repeated failures, or
+/// show an immediate persistent banner for a failure that cannot self-heal
+/// via retry. See `docs/adr/0010-proxy-error-code-contract.md`.
+///
+/// Tracks two independent things because ADR 0010 gives 400/429/502 and
+/// 500/503/504 different escalation semantics: an immediate code's banner
+/// must stay up until [ProxyErrorNotifier.recordSuccess], regardless of what
+/// other codes occur in between, while the 500/503/504 streak counts only a
+/// consecutive run of that family. A single shared counter/last-code pair
+/// cannot represent both without one clobbering the other (e.g. a 502
+/// followed by a 500 would otherwise flip [lastStatusCode] to 500 and hide
+/// the still-active 502 banner with no success having occurred).
 @immutable
 class ProxyErrorState {
   /// Creates a [ProxyErrorState].
-  const ProxyErrorState({this.consecutiveFailures = 0, this.lastStatusCode});
+  const ProxyErrorState({
+    this.consecutiveFailures = 0,
+    this.lastStatusCode,
+    this.immediateStatusCode,
+  });
 
-  /// Number of non-200 responses received back-to-back, with no successful
-  /// network response in between. Reset to 0 whenever `UvApi.fetch` actually
-  /// receives an HTTP 200 from the proxy (`UvApiFetchMeta.receivedNetwork200`
-  /// in `uv_api.dart`) -- this holds even if something fails afterward (an
-  /// unparseable body, or a cache-write error), since the proxy itself still
-  /// answered successfully. Excludes a cache hit, which is also a
-  /// "successful fetch" but is not evidence the proxy has recovered.
+  /// Number of 500/503/504 responses received back-to-back, with no
+  /// successful network response and no intervening
+  /// [proxyImmediateStatusCodes] failure in between (see
+  /// [ProxyErrorNotifier.recordFailure]). Reset to 0 whenever `UvApi.fetch`
+  /// actually receives an HTTP 200 from the proxy
+  /// (`UvApiFetchMeta.receivedNetwork200` in `uv_api.dart`) -- this holds
+  /// even if something fails afterward (an unparseable body, or a
+  /// cache-write error), since the proxy itself still answered
+  /// successfully. Excludes a cache hit, which is also a "successful fetch"
+  /// but is not evidence the proxy has recovered.
+  ///
+  /// An unmapped status code (e.g. 404, which has its own "geocoding no
+  /// results" UX per ADR 0010) is not counted as an intervening failure: it
+  /// leaves this streak unchanged rather than resetting or continuing it,
+  /// since it carries no information about whether the proxy is still
+  /// failing in the way this counter tracks.
   final int consecutiveFailures;
 
-  /// The HTTP status code of the most recent failure, or `null` if no
-  /// failure has been recorded since the last network-verified success (or
-  /// none has completed yet).
+  /// The status code of the most recent 500/503/504 failure counted by
+  /// [consecutiveFailures], or `null` if no such failure has been recorded
+  /// since the last network-verified success (or none has completed yet).
   ///
   /// A cache-hit fetch leaves this value unchanged rather than clearing it
   /// -- see [consecutiveFailures].
   final int? lastStatusCode;
+
+  /// The status code of an active 400/429/502 failure, or `null` if none is
+  /// active.
+  ///
+  /// Unlike [lastStatusCode], this is not a streak: ADR 0010 calls for these
+  /// codes to show their banner on the very 1st occurrence and keep it shown
+  /// until [ProxyErrorNotifier.recordSuccess], since they cannot self-heal
+  /// via retry (a bad request stays bad; an invalid OWM key needs operator
+  /// action). A later 500/503/504 does not clear this field, so the
+  /// immediate banner stays visible while the 500/503/504 streak accumulates
+  /// underneath it.
+  final int? immediateStatusCode;
 
   // Override == for value equality, consistent with the rest of the
   // codebase's model classes (see WeatherAlert, UvData) -- lets tests and
@@ -89,10 +124,12 @@ class ProxyErrorState {
   bool operator ==(Object other) =>
       other is ProxyErrorState &&
       other.consecutiveFailures == consecutiveFailures &&
-      other.lastStatusCode == lastStatusCode;
+      other.lastStatusCode == lastStatusCode &&
+      other.immediateStatusCode == immediateStatusCode;
 
   @override
-  int get hashCode => Object.hash(consecutiveFailures, lastStatusCode);
+  int get hashCode =>
+      Object.hash(consecutiveFailures, lastStatusCode, immediateStatusCode);
 }
 
 /// Riverpod provider for [ProxyErrorNotifier].
@@ -112,8 +149,26 @@ class ProxyErrorNotifier extends Notifier<ProxyErrorState> {
   @override
   ProxyErrorState build() => const ProxyErrorState();
 
-  /// Records a non-200 proxy response, incrementing the consecutive-failure
-  /// count.
+  /// Records a non-200 proxy response, updating [ProxyErrorState] per ADR
+  /// 0010's rules for [statusCode].
+  ///
+  /// - If [statusCode] is in [proxyImmediateStatusCodes] (400/429/502), sets
+  ///   [ProxyErrorState.immediateStatusCode] to it and resets
+  ///   [ProxyErrorState.consecutiveFailures]/[ProxyErrorState.lastStatusCode]
+  ///   to their initial values: an immediate-banner code is a distinct,
+  ///   sticky condition that stays active until [recordSuccess], not a
+  ///   streak, and it interrupts any in-progress 500/503/504 streak so a
+  ///   later threshold-gated failure starts a fresh count rather than
+  ///   silently continuing the pre-interruption one.
+  /// - If [statusCode] is in [proxyThresholdGatedStatusCodes]
+  ///   (500/503/504), increments [ProxyErrorState.consecutiveFailures] if
+  ///   the previous failure was also threshold-gated, or starts a fresh
+  ///   streak at 1 otherwise (an interrupting immediate-banner code does not
+  ///   belong to this streak, so it cannot be silently counted as one of its
+  ///   3 consecutive failures).
+  /// - Any other [statusCode] (e.g. 404, which has its own "geocoding no
+  ///   results" UX per ADR 0010) is a no-op: it must not affect either field,
+  ///   since no widget shows feedback for it.
   ///
   /// [statusCode] 426 (app-version-too-old) must never be passed here --
   /// it is handled separately via [UvApiForceUpdateException] and force-update
@@ -125,13 +180,35 @@ class ProxyErrorNotifier extends Notifier<ProxyErrorState> {
       'recordFailure must not be called with $httpUpgradeRequired '
       '(force-update); it is tracked separately, not via this counter.',
     );
-    state = ProxyErrorState(
-      consecutiveFailures: state.consecutiveFailures + 1,
-      lastStatusCode: statusCode,
-    );
+
+    if (proxyImmediateStatusCodes.contains(statusCode)) {
+      // Resets the threshold fields rather than preserving them: an
+      // immediate-banner code interrupts the 500/503/504 streak (per
+      // consecutiveFailures' own contract of "no intervening
+      // non-500/503/504 failure"), so a later threshold-gated failure must
+      // start a fresh streak, not silently continue the pre-interruption
+      // one.
+      state = ProxyErrorState(immediateStatusCode: statusCode);
+      return;
+    }
+
+    if (proxyThresholdGatedStatusCodes.contains(statusCode)) {
+      final bool continuesStreak = proxyThresholdGatedStatusCodes.contains(
+        state.lastStatusCode,
+      );
+
+      state = ProxyErrorState(
+        consecutiveFailures: continuesStreak
+            ? state.consecutiveFailures + 1
+            : 1,
+        lastStatusCode: statusCode,
+        immediateStatusCode: state.immediateStatusCode,
+      );
+    }
   }
 
-  /// Resets the consecutive-failure count to 0 after a successful fetch.
+  /// Resets [ProxyErrorState] to its initial value after a successful fetch,
+  /// clearing both the 500/503/504 streak and any active immediate banner.
   void recordSuccess() {
     state = const ProxyErrorState();
   }
