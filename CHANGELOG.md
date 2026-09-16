@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.25.1](https://github.com/milliorn/uv-alert/compare/v1.25.0...v1.25.1) (2026-09-16)
+
+
+### Bug Fixes
+
+* **dashboard:** implement proxy error UX (toast, persistent banner, per-code routing) ([#139](https://github.com/milliorn/uv-alert/issues/139)) ([08573a1](https://github.com/milliorn/uv-alert/commit/08573a112b0c8d5ab356ad26ea09d884499a3d93)), closes [#71](https://github.com/milliorn/uv-alert/issues/71)
+
 ## [1.25.0](https://github.com/milliorn/uv-alert/compare/v1.24.0...v1.25.0) (2026-09-15)
 
 
