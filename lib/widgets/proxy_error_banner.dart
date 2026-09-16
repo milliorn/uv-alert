@@ -171,8 +171,13 @@ class ProxyErrorToastListener extends ConsumerWidget {
       // code by ProxyErrorNotifier.recordFailure, so a non-null value here
       // is always eligible; 429/502/400 never toast (they show their
       // persistent banner immediately via immediateStatusCode, per ADR
-      // 0010).
-      if (next.consecutiveFailures != 1 || next.lastStatusCode == null) {
+      // 0010). An active immediateStatusCode also suppresses this toast even
+      // when a 500/503/504 is what just landed: ProxyErrorBanner is already
+      // showing a persistent banner in that case (it checks immediateStatusCode
+      // first), so a toast on top would be a redundant, lower-priority message.
+      if (next.consecutiveFailures != 1 ||
+          next.lastStatusCode == null ||
+          next.immediateStatusCode != null) {
         return;
       }
 

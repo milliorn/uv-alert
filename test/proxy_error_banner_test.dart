@@ -393,4 +393,36 @@ void main() {
       expect(find.byType(SnackBar), findsNothing);
     });
   }
+
+  testWidgets(
+    'does not show a toast for a 500/503/504 that interrupts an active '
+    'immediate banner (502 then 500): ProxyErrorBanner is already showing '
+    'a persistent banner for the 502',
+    (WidgetTester tester) async {
+      final ProviderContainer container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Scaffold(
+              body: ProxyErrorToastListener(child: SizedBox.shrink()),
+            ),
+          ),
+        ),
+      );
+
+      container.read(proxyErrorProvider.notifier).recordFailure(
+        httpBadGateway,
+      );
+      await tester.pump();
+      container.read(proxyErrorProvider.notifier).recordFailure(
+        httpInternalServerError,
+      );
+      await tester.pump();
+
+      expect(find.byType(SnackBar), findsNothing);
+    },
+  );
 }

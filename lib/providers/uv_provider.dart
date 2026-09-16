@@ -153,11 +153,13 @@ class ProxyErrorNotifier extends Notifier<ProxyErrorState> {
   /// 0010's rules for [statusCode].
   ///
   /// - If [statusCode] is in [proxyImmediateStatusCodes] (400/429/502), sets
-  ///   [ProxyErrorState.immediateStatusCode] to it. This does not touch
-  ///   [ProxyErrorState.consecutiveFailures]: an immediate-banner code is a
-  ///   distinct, sticky condition that stays active until [recordSuccess],
-  ///   not a streak, and it must not consume a slot in the 500/503/504
-  ///   counter (nor be cleared by that counter's own resets).
+  ///   [ProxyErrorState.immediateStatusCode] to it and resets
+  ///   [ProxyErrorState.consecutiveFailures]/[ProxyErrorState.lastStatusCode]
+  ///   to their initial values: an immediate-banner code is a distinct,
+  ///   sticky condition that stays active until [recordSuccess], not a
+  ///   streak, and it interrupts any in-progress 500/503/504 streak so a
+  ///   later threshold-gated failure starts a fresh count rather than
+  ///   silently continuing the pre-interruption one.
   /// - If [statusCode] is in [proxyThresholdGatedStatusCodes]
   ///   (500/503/504), increments [ProxyErrorState.consecutiveFailures] if
   ///   the previous failure was also threshold-gated, or starts a fresh

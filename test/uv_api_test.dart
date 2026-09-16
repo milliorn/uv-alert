@@ -467,6 +467,15 @@ void main() {
       final UvApiException e = UvApiException(500, 'server error');
       expect(e.escalationStatusCode, 500);
     });
+
+    test(
+      'escalationStatusCode is null for a status code outside '
+      'proxyEscalationStatusCodes (404)',
+      () {
+        final UvApiException e = UvApiException(404, 'not found');
+        expect(e.escalationStatusCode, isNull);
+      },
+    );
   });
 
   group('UvApiParseException', () {
