@@ -29,7 +29,8 @@ const String proxyErrorInvalidRequestMessage =
     'Something went wrong loading UV data for this location.';
 
 /// The one-time toast message shown on the first 500/503/504 failure,
-/// before [proxyErrorEscalationThreshold] is reached.
+/// before [proxyErrorEscalationThreshold] is reached, when a prior
+/// successful reading exists to fall back to.
 ///
 /// Does not claim a retry is in progress: the app has no automatic retry
 /// after a fetch failure (see `PeriodicRebuildMixin`, which only repaints
@@ -38,6 +39,14 @@ const String proxyErrorInvalidRequestMessage =
 /// fetch.
 const String proxyErrorTransientToastMessage =
     'UV data could not be refreshed. Showing last known reading.';
+
+/// The one-time toast message shown on the first 500/503/504 failure when
+/// there is no prior successful reading to fall back to (`DashboardScreen`
+/// is showing `DashboardNoDataView` instead) --
+/// [proxyErrorTransientToastMessage] would falsely claim stale data is on
+/// screen in this case.
+const String proxyErrorTransientNoDataToastMessage =
+    'UV data could not be loaded.';
 
 /// Persistent banner text for [errorState], or `null` if no banner should
 /// show given the current state.
@@ -136,6 +145,12 @@ class ProxyErrorBanner extends ConsumerWidget {
 /// every rebuild while that state persists. This widget renders nothing
 /// itself; wrap it around (or place it alongside) the dashboard content that
 /// owns the [Scaffold] so `ScaffoldMessenger.of(context)` resolves.
+///
+/// Picks between [proxyErrorTransientToastMessage] and
+/// [proxyErrorTransientNoDataToastMessage] based on whether [uvProvider] has
+/// a value at the moment of the failure: the first 500/503/504 failure can
+/// land before any successful fetch has ever completed (fresh install, empty
+/// cache), in which case there is no "last known reading" to refer to.
 class ProxyErrorToastListener extends ConsumerWidget {
   /// Creates a [ProxyErrorToastListener] wrapping [child].
   const ProxyErrorToastListener({required this.child, super.key});
@@ -161,11 +176,13 @@ class ProxyErrorToastListener extends ConsumerWidget {
         return;
       }
 
+      final String message = ref.read(uvProvider).hasValue
+          ? proxyErrorTransientToastMessage
+          : proxyErrorTransientNoDataToastMessage;
+
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text(proxyErrorTransientToastMessage)),
-        );
+        ..showSnackBar(SnackBar(content: Text(message)));
     });
 
     return child;

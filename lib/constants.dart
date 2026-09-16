@@ -70,8 +70,12 @@ const int httpGatewayTimeout = 504;
 
 /// Status codes ADR 0010 calls for an immediate persistent banner on the 1st
 /// occurrence, shown until `ProxyErrorNotifier.recordSuccess` (in
-/// `uv_provider.dart`): these cannot self-heal via retry, so there is no
-/// point waiting for a streak.
+/// `uv_provider.dart`): waiting for a streak (as the 500/503/504 threshold
+/// does) would add no value here, since each of these three has its own
+/// reason to show up front instead. 400 and 502 cannot self-heal via retry
+/// (a bad request stays bad; an invalid OWM key needs operator action); 429
+/// can self-heal, but only by the user waiting, which the banner itself
+/// already communicates ("try again later"), not by a silent retry streak.
 const Set<int> proxyImmediateStatusCodes = <int>{
   httpBadRequest,
   httpTooManyRequests,

@@ -336,6 +336,61 @@ void main() {
     expect(state.lastStatusCode, 503);
   });
 
+  for (final int code in <int>[
+    httpInternalServerError,
+    httpServiceUnavailable,
+    httpGatewayTimeout,
+  ]) {
+    test(
+      'a $code failure reaches escalationStatusCode end-to-end and is '
+      'recorded as a threshold-gated failure',
+      () async {
+        when(
+          () => mockApi.fetch(
+            lat: any(named: 'lat'),
+            lon: any(named: 'lon'),
+            uuid: any(named: 'uuid'),
+            appVersion: any(named: 'appVersion'),
+            meta: any(named: 'meta'),
+          ),
+        ).thenThrow(UvApiException(code, 'error'));
+
+        final ProviderContainer container = _makeContainerWith(mockApi);
+
+        await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+
+        final ProxyErrorState state = container.read(proxyErrorProvider);
+        expect(state.consecutiveFailures, 1);
+        expect(state.lastStatusCode, code);
+        expect(state.immediateStatusCode, isNull);
+      },
+    );
+  }
+
+  test(
+    'a 429 failure reaches escalationStatusCode end-to-end and is recorded '
+    'as an immediate-banner failure',
+    () async {
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+          meta: any(named: 'meta'),
+        ),
+      ).thenThrow(UvApiException(httpTooManyRequests, 'too many requests'));
+
+      final ProviderContainer container = _makeContainerWith(mockApi);
+
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+
+      final ProxyErrorState state = container.read(proxyErrorProvider);
+      expect(state.immediateStatusCode, httpTooManyRequests);
+      expect(state.consecutiveFailures, 0);
+    },
+  );
+
   test(
     'a status code outside proxyEscalationStatusCodes (e.g. 404) does not '
     'count toward consecutiveFailures',
@@ -536,6 +591,51 @@ void main() {
     expect(state.consecutiveFailures, 0);
     expect(state.lastStatusCode, isNull);
   });
+
+  for (final int code in <int>[
+    httpBadRequest,
+    httpTooManyRequests,
+    httpBadGateway,
+  ]) {
+    test(
+      'a successful fetch clears an active immediateStatusCode ($code)',
+      () async {
+        when(
+          () => mockApi.fetch(
+            lat: any(named: 'lat'),
+            lon: any(named: 'lon'),
+            uuid: any(named: 'uuid'),
+            appVersion: any(named: 'appVersion'),
+            meta: any(named: 'meta'),
+          ),
+        ).thenThrow(UvApiException(code, 'error'));
+
+        final ProviderContainer container = _makeContainerWith(mockApi);
+
+        await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+        expect(
+          container.read(proxyErrorProvider).immediateStatusCode,
+          code,
+        );
+
+        final UvData data = _makeData();
+        when(
+          () => mockApi.fetch(
+            lat: any(named: 'lat'),
+            lon: any(named: 'lon'),
+            uuid: any(named: 'uuid'),
+            appVersion: any(named: 'appVersion'),
+            meta: any(named: 'meta'),
+          ),
+        ).thenAnswer((_) async => data);
+
+        await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+
+        final ProxyErrorState state = container.read(proxyErrorProvider);
+        expect(state.immediateStatusCode, isNull);
+      },
+    );
+  }
 
   test(
     'a cache-hit fetch does not reset consecutiveFailures '

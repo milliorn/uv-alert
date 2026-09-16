@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uvalert/api/uv_api.dart';
 import 'package:uvalert/constants.dart';
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/providers/location_provider.dart';
@@ -53,9 +54,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final LocationState location = ref.watch(locationProvider);
     // A 400 means the current request itself is invalid (e.g. bad lat/lon);
     // retrying would just repeat it. See ADR 0010's "do not retry" rule for
-    // 400, and DashboardNoDataView's onRetry doc.
+    // 400, and DashboardNoDataView's onRetry doc. Checked against uvState's
+    // own error (not proxyErrorProvider.immediateStatusCode, which stays
+    // sticky through a later 500/503/504 and would keep suppressing Retry
+    // for a since-changed, retryable failure).
+    final Object? uvError = uvState.error;
     final bool isInvalidRequest =
-        ref.watch(proxyErrorProvider).immediateStatusCode == httpBadRequest;
+        uvError is UvApiException && uvError.statusCode == httpBadRequest;
 
     return Scaffold(
       appBar: AppBar(

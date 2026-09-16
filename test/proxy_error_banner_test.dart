@@ -6,6 +6,8 @@ import 'package:uvalert/providers/uv_provider.dart';
 import 'package:uvalert/widgets/proxy_error_banner.dart';
 
 import 'fakes/fake_proxy_error_notifier.dart';
+import 'fakes/fake_uv_data.dart';
+import 'fakes/fake_uv_notifier.dart';
 
 Widget _wrap(Widget child, {required ProxyErrorState errorState}) {
   return ProviderScope(
@@ -224,28 +226,67 @@ void main() {
     httpServiceUnavailable,
     httpGatewayTimeout,
   ]) {
-    testWidgets('shows a toast once on the 1st failure for $code', (
-      WidgetTester tester,
-    ) async {
-      final ProviderContainer container = ProviderContainer();
-      addTearDown(container.dispose);
+    testWidgets(
+      'shows the "last known reading" toast once on the 1st failure for '
+      '$code when prior UV data exists',
+      (WidgetTester tester) async {
+        final ProviderContainer container = ProviderContainer(
+          // ignore: always_specify_types - Override not in flutter_riverpod public API
+          overrides: [
+            uvProvider.overrideWith(() => FakeDataUvNotifier(makeUvData())),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(
-            home: Scaffold(
-              body: ProxyErrorToastListener(child: SizedBox.shrink()),
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(
+              home: Scaffold(
+                body: ProxyErrorToastListener(child: SizedBox.shrink()),
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      container.read(proxyErrorProvider.notifier).recordFailure(code);
-      await tester.pump();
+        container.read(proxyErrorProvider.notifier).recordFailure(code);
+        await tester.pump();
 
-      expect(find.text(proxyErrorTransientToastMessage), findsOneWidget);
-    });
+        expect(find.text(proxyErrorTransientToastMessage), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'shows the no-data toast once on the 1st failure for $code when no '
+      'prior UV data exists',
+      (WidgetTester tester) async {
+        final ProviderContainer container = ProviderContainer(
+          // ignore: always_specify_types - Override not in flutter_riverpod public API
+          overrides: [uvProvider.overrideWith(FakeErrorUvNotifier.new)],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(
+              home: Scaffold(
+                body: ProxyErrorToastListener(child: SizedBox.shrink()),
+              ),
+            ),
+          ),
+        );
+
+        container.read(proxyErrorProvider.notifier).recordFailure(code);
+        await tester.pump();
+
+        expect(
+          find.text(proxyErrorTransientNoDataToastMessage),
+          findsOneWidget,
+        );
+        expect(find.text(proxyErrorTransientToastMessage), findsNothing);
+      },
+    );
   }
 
   testWidgets(

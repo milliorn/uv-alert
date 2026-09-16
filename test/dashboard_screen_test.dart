@@ -265,14 +265,44 @@ void main() {
   });
 
   testWidgets(
-    'hides the Retry button in the no-data state when the active proxy '
+    'hides the Retry button in the no-data state when the current proxy '
     'error is a 400 (an identical retry cannot succeed)',
     (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
           // ignore: always_specify_types - Override not in flutter_riverpod public API
           overrides: [
-            uvProvider.overrideWith(FakeErrorUvNotifier.new),
+            uvProvider.overrideWith(
+              () => FakeErrorUvNotifier(
+                error: UvApiException(httpBadRequest, 'bad request'),
+              ),
+            ),
+          ],
+          child: const MaterialApp(home: DashboardScreen()),
+        ),
+      );
+
+      expect(find.byType(DashboardNoDataView), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Retry'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'shows the Retry button when the current proxy error is a 500, even if '
+    'immediateStatusCode is still sticky from an earlier interrupted 400',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          // ignore: always_specify_types - Override not in flutter_riverpod public API
+          overrides: [
+            uvProvider.overrideWith(
+              () => FakeErrorUvNotifier(
+                error: UvApiException(
+                  httpInternalServerError,
+                  'server error',
+                ),
+              ),
+            ),
             proxyErrorProvider.overrideWith(
               () => FakeProxyErrorNotifier(
                 const ProxyErrorState(immediateStatusCode: httpBadRequest),
@@ -284,7 +314,7 @@ void main() {
       );
 
       expect(find.byType(DashboardNoDataView), findsOneWidget);
-      expect(find.widgetWithText(FilledButton, 'Retry'), findsNothing);
+      expect(find.widgetWithText(FilledButton, 'Retry'), findsOneWidget);
     },
   );
 
