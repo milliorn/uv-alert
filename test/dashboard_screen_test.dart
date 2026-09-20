@@ -305,6 +305,58 @@ void main() {
     expect(find.byType(UvDailyChart), findsNothing);
   });
 
+  testWidgets(
+    'suppresses the hourly and daily charts when uvProvider still holds the '
+    "previous location's data",
+    (WidgetTester tester) async {
+      final UvData data = makeUvData();
+      final FakeDataUvNotifier notifier = FakeDataUvNotifier(data);
+
+      final ProviderContainer container = ProviderContainer(
+        // ignore: always_specify_types - Override not in flutter_riverpod public API
+        overrides: [
+          uvProvider.overrideWith(() => notifier),
+          locationProvider.overrideWith(LocationNotifier.new),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(locationProvider.notifier).setManual(lat: 1, lon: 2);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(home: DashboardScreen()),
+        ),
+      );
+
+      expect(find.byType(UvHourlyChart), findsOneWidget);
+      expect(find.byType(UvDailyChart), findsOneWidget);
+
+      // uvProvider has no source-location field on UvData (see
+      // dashboard_screen.dart's own comment on this), and a real UvNotifier
+      // deliberately keeps serving the previous location's cached data
+      // while a new fetch is in flight, so this simulates exactly that
+      // window: locationProvider has already moved to the new location, but
+      // uvProvider's value is still the same object fetched for the
+      // original location.
+      container.read(locationProvider.notifier).setManual(lat: 45, lon: 88);
+      await tester.pump();
+
+      expect(find.byType(UvHourlyChart), findsNothing);
+      expect(find.byType(UvDailyChart), findsNothing);
+
+      // Once uvProvider's value actually changes (by UvData's own value
+      // equality) to data that arrived after the location change, the
+      // mismatch clears and the charts return.
+      notifier.updateData(makeUvData(currentUvi: 9));
+      await tester.pump();
+
+      expect(find.byType(UvHourlyChart), findsOneWidget);
+      expect(find.byType(UvDailyChart), findsOneWidget);
+    },
+  );
+
   testWidgets('tapping Retry triggers a fresh UV fetch', (
     WidgetTester tester,
   ) async {

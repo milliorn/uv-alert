@@ -48,6 +48,9 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  UvData? _lastSeenUvData;
+  LocationState _locationAtLastSeenUvData;
+
   @override
   void initState() {
     super.initState();
@@ -75,6 +78,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final AsyncValue<UvData> uvState = ref.watch(uvProvider);
     final bool showNoData = uvState.isNoData;
     final UvData? uvData = uvState.value;
+    final LocationState location = ref.watch(locationProvider);
+
+    // uvProvider has no source-location field on UvData itself, and
+    // UvNotifier deliberately keeps serving the previous location's cached
+    // data (via stateOrNull) while a new fetch for a changed location is in
+    // flight, plus UvApi's cache has no per-location key, so a still-valid
+    // cache hit for the OLD location can outlive the fetch entirely. Same
+    // mitigation as DashboardHero's own uvDataMatchesLocation guard: record
+    // which location was current the last time uvData actually changed
+    // value, so a mismatch against the CURRENT location can be detected
+    // here and the charts suppressed rather than shown for the wrong place.
+    // See issue #136 for the proper fix (tagging UvData/cache entries with
+    // their source coordinates).
+    if (uvData != _lastSeenUvData) {
+      _lastSeenUvData = uvData;
+      _locationAtLastSeenUvData = location;
+    }
+    final bool uvDataMatchesLocation = location == _locationAtLastSeenUvData;
     // A 400 means the current request itself is invalid (e.g. bad lat/lon);
     // retrying would just repeat it. See ADR 0010's "do not retry" rule for
     // 400, and DashboardNoDataView's onRetry doc. Checked against uvState's
@@ -139,7 +160,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           spacing: _dashboardSectionGap,
                           children: <Widget>[
                             const DashboardHero(),
-                            if (uvData != null) ...<Widget>[
+                            if (uvData != null &&
+                                uvDataMatchesLocation) ...<Widget>[
                               _chartSection(
                                 height: _hourlyChartHeight,
                                 child: UvHourlyChart(uvData: uvData),
