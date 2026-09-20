@@ -5,6 +5,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uvalert/api/uv_api.dart';
 import 'package:uvalert/constants.dart';
+import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/models/weather_alert.dart';
 import 'package:uvalert/providers/app_version_provider.dart';
 import 'package:uvalert/providers/location_provider.dart';
@@ -15,6 +16,8 @@ import 'package:uvalert/screens/settings_screen.dart';
 import 'package:uvalert/widgets/dashboard_footer.dart';
 import 'package:uvalert/widgets/dashboard_hero.dart';
 import 'package:uvalert/widgets/dashboard_no_data_view.dart';
+import 'package:uvalert/widgets/uv_daily_chart.dart';
+import 'package:uvalert/widgets/uv_hourly_chart.dart';
 
 import 'fakes/fake_fixed_location_notifier.dart';
 import 'fakes/fake_proxy_error_notifier.dart';
@@ -22,6 +25,18 @@ import 'fakes/fake_settings_notifier.dart';
 import 'fakes/fake_uv_data.dart';
 import 'fakes/fake_uv_notifier.dart';
 import 'fakes/mock_uv_api.dart';
+
+/// Day-of-week abbreviations, indexed by `DateTime.weekday - 1` (Monday =
+/// index 0), matching [UvDailyChart]'s own bottom-axis and semantics labels.
+const List<String> _weekdayAbbreviations = <String>[
+  'Mon',
+  'Tue',
+  'Wed',
+  'Thu',
+  'Fri',
+  'Sat',
+  'Sun',
+];
 
 final WeatherAlert _heatAdvisory = WeatherAlert(
   id: 'NWS|Heat Advisory|2024-06-01T00:00:00.000Z',
@@ -208,6 +223,88 @@ void main() {
     expect(find.byType(DashboardHero), findsOneWidget);
   });
 
+  testWidgets(
+    'renders the hourly and daily charts with the populated forecast data '
+    'from uvProvider',
+    (WidgetTester tester) async {
+      // UvDailyChart drops any daily entry whose location-local date is
+      // before today (see its own doc comment), so its first entry must be
+      // anchored to the real current date rather than a fixed one.
+      final DateTime today = DateTime.now().toUtc();
+      final DateTime todayDate = DateTime.utc(
+        today.year,
+        today.month,
+        today.day,
+      );
+      final String todayAbbreviation =
+          _weekdayAbbreviations[todayDate.weekday - 1];
+
+      final UvData data = makeUvData(
+        hourly: <UvForecastEntry>[
+          UvForecastEntry(time: DateTime.utc(2024, 6, 1, 8), uvi: 2),
+          UvForecastEntry(time: DateTime.utc(2024, 6, 1, 12), uvi: 7),
+          UvForecastEntry(time: DateTime.utc(2024, 6, 1, 16), uvi: 4),
+        ],
+        daily: <UvForecastEntry>[
+          UvForecastEntry(time: todayDate, uvi: 7.5),
+          UvForecastEntry(time: todayDate.add(const Duration(days: 1)), uvi: 6),
+        ],
+      );
+
+      final SemanticsHandle handle = tester.ensureSemantics();
+      try {
+        await tester.pumpWidget(
+          ProviderScope(
+            // ignore: always_specify_types - Override not in flutter_riverpod public API
+            overrides: [
+              uvProvider.overrideWith(() => FakeDataUvNotifier(data)),
+            ],
+            child: const MaterialApp(home: DashboardScreen()),
+          ),
+        );
+
+        final UvHourlyChart hourlyChart = tester.widget(
+          find.byType(UvHourlyChart),
+        );
+        final UvDailyChart dailyChart = tester.widget(
+          find.byType(UvDailyChart),
+        );
+
+        expect(hourlyChart.uvData, data);
+        expect(dailyChart.uvData, data);
+
+        // Confirms the fed-in data actually reaches each chart's rendered
+        // semantics tree, not just its constructor argument.
+        expect(
+          find.bySemanticsLabel('12:00 PM, UV index 7.0, High risk'),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel(
+            '$todayAbbreviation, UV max 7.5, Very High risk',
+          ),
+          findsOneWidget,
+        );
+      } finally {
+        handle.dispose();
+      }
+    },
+  );
+
+  testWidgets('does not render the hourly or daily chart in the no-data '
+      'state', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        // ignore: always_specify_types - Override not in flutter_riverpod public API
+        overrides: [uvProvider.overrideWith(FakeErrorUvNotifier.new)],
+        child: const MaterialApp(home: DashboardScreen()),
+      ),
+    );
+
+    expect(find.byType(UvHourlyChart), findsNothing);
+    expect(find.byType(UvDailyChart), findsNothing);
+  });
+
   testWidgets('tapping Retry triggers a fresh UV fetch', (
     WidgetTester tester,
   ) async {
@@ -297,10 +394,7 @@ void main() {
           overrides: [
             uvProvider.overrideWith(
               () => FakeErrorUvNotifier(
-                error: UvApiException(
-                  httpInternalServerError,
-                  'server error',
-                ),
+                error: UvApiException(httpInternalServerError, 'server error'),
               ),
             ),
             proxyErrorProvider.overrideWith(
