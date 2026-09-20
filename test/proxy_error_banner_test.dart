@@ -13,9 +13,7 @@ Widget _wrap(Widget child, {required ProxyErrorState errorState}) {
   return ProviderScope(
     // ignore: always_specify_types - Override not in flutter_riverpod public API
     overrides: [
-      proxyErrorProvider.overrideWith(
-        () => FakeProxyErrorNotifier(errorState),
-      ),
+      proxyErrorProvider.overrideWith(() => FakeProxyErrorNotifier(errorState)),
     ],
     child: MaterialApp(
       home: Scaffold(body: ProxyErrorToastListener(child: child)),
@@ -70,9 +68,7 @@ void main() {
     await tester.pumpWidget(
       _wrap(
         const ProxyErrorBanner(),
-        errorState: const ProxyErrorState(
-          immediateStatusCode: httpBadGateway,
-        ),
+        errorState: const ProxyErrorState(immediateStatusCode: httpBadGateway),
       ),
     );
 
@@ -86,9 +82,7 @@ void main() {
     await tester.pumpWidget(
       _wrap(
         const ProxyErrorBanner(),
-        errorState: const ProxyErrorState(
-          immediateStatusCode: httpBadRequest,
-        ),
+        errorState: const ProxyErrorState(immediateStatusCode: httpBadRequest),
       ),
     );
 
@@ -203,9 +197,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(
-          home: Scaffold(body: ProxyErrorBanner()),
-        ),
+        child: const MaterialApp(home: Scaffold(body: ProxyErrorBanner())),
       ),
     );
 
@@ -318,9 +310,9 @@ void main() {
         ),
       );
 
-      container.read(proxyErrorProvider.notifier).recordFailure(
-        httpInternalServerError,
-      );
+      container
+          .read(proxyErrorProvider.notifier)
+          .recordFailure(httpInternalServerError);
       await tester.pump();
 
       expect(find.text(proxyErrorTransientToastMessage), findsNothing);
@@ -356,9 +348,9 @@ void main() {
         ),
       );
 
-      container.read(proxyErrorProvider.notifier).recordFailure(
-        httpInternalServerError,
-      );
+      container
+          .read(proxyErrorProvider.notifier)
+          .recordFailure(httpInternalServerError);
       await tester.pump();
 
       expect(find.text(proxyErrorTransientToastMessage), findsNothing);
@@ -370,9 +362,7 @@ void main() {
     httpBadGateway,
     httpBadRequest,
   ]) {
-    testWidgets('does not show a toast for $code', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('does not show a toast for $code', (WidgetTester tester) async {
       final ProviderContainer container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -413,13 +403,11 @@ void main() {
         ),
       );
 
-      container.read(proxyErrorProvider.notifier).recordFailure(
-        httpBadGateway,
-      );
+      container.read(proxyErrorProvider.notifier).recordFailure(httpBadGateway);
       await tester.pump();
-      container.read(proxyErrorProvider.notifier).recordFailure(
-        httpInternalServerError,
-      );
+      container
+          .read(proxyErrorProvider.notifier)
+          .recordFailure(httpInternalServerError);
       await tester.pump();
 
       expect(find.byType(SnackBar), findsNothing);

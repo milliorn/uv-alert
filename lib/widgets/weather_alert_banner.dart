@@ -46,8 +46,7 @@ class WeatherAlertBanner extends ConsumerStatefulWidget {
   const WeatherAlertBanner({super.key});
 
   @override
-  ConsumerState<WeatherAlertBanner> createState() =>
-      _WeatherAlertBannerState();
+  ConsumerState<WeatherAlertBanner> createState() => _WeatherAlertBannerState();
 }
 
 class _WeatherAlertBannerState extends ConsumerState<WeatherAlertBanner> {

@@ -147,69 +147,59 @@ void main() {
     },
   );
 
-  testWidgets(
-    'anchors solarEvents to the location-local calendar date, not '
-    "nowUtc's own UTC date",
-    (WidgetTester tester) async {
-      // A non-zero, non-multiple-of-24h-aligned offset: with makeUvData's
-      // default timezoneOffset of 0, toLocationLocal(nowUtc, 0) == nowUtc,
-      // so no assertion here could ever distinguish the correct call from a
-      // regression back to passing nowUtc directly. A large positive offset
-      // makes that distinction meaningful for most of a UTC day (excluding
-      // a window near UTC midnight where both computations still happen to
-      // agree, an inherent limitation without an injectable clock, same as
-      // the interpolation fixture above).
-      const int nonZeroOffsetSeconds = 12 * 60 * 60;
-      final UvData data = makeUvData(timezoneOffset: nonZeroOffsetSeconds);
+  testWidgets('anchors solarEvents to the location-local calendar date, not '
+      "nowUtc's own UTC date", (WidgetTester tester) async {
+    // A non-zero, non-multiple-of-24h-aligned offset: with makeUvData's
+    // default timezoneOffset of 0, toLocationLocal(nowUtc, 0) == nowUtc,
+    // so no assertion here could ever distinguish the correct call from a
+    // regression back to passing nowUtc directly. A large positive offset
+    // makes that distinction meaningful for most of a UTC day (excluding
+    // a window near UTC midnight where both computations still happen to
+    // agree, an inherent limitation without an injectable clock, same as
+    // the interpolation fixture above).
+    const int nonZeroOffsetSeconds = 12 * 60 * 60;
+    final UvData data = makeUvData(timezoneOffset: nonZeroOffsetSeconds);
 
-      await tester.pumpWidget(
-        _wrap(
-          uvNotifier: () => FakeDataUvNotifier(data),
-          locationNotifier: FakeFixedLocationNotifier.new,
-        ),
-      );
+    await tester.pumpWidget(
+      _wrap(
+        uvNotifier: () => FakeDataUvNotifier(data),
+        locationNotifier: FakeFixedLocationNotifier.new,
+      ),
+    );
 
-      const ({double lat, double lon}) fixedLocation = (
-        lat: 36.75,
-        lon: -119.65,
-      );
+    const ({double lat, double lon}) fixedLocation = (lat: 36.75, lon: -119.65);
 
-      final UvHeroConditionalLine conditionalLine = tester.widget(
-        find.byType(UvHeroConditionalLine),
-      );
-      // Derived from conditionalLine.now, the actual instant the widget
-      // captured and used, rather than a separately captured DateTime.now()
-      // in this test: the two calls happen microseconds apart, and deriving
-      // the expectation from a different instant than the widget actually
-      // used would make this assertion itself racy across a local-day
-      // boundary (for this +12h fixture, around 12:00 UTC), independently
-      // of anything the widget under test does.
-      final DateTime nowUtc = conditionalLine.now;
-      final Map<SolarEvent, DateTime?> expectedSolarEvents = solarEventTimes(
-        lat: fixedLocation.lat,
-        lon: fixedLocation.lon,
-        date: toLocationLocal(nowUtc, nonZeroOffsetSeconds),
-      );
-      final Map<SolarEvent, DateTime?> regressedSolarEvents = solarEventTimes(
-        lat: fixedLocation.lat,
-        lon: fixedLocation.lon,
-        date: nowUtc,
-      );
+    final UvHeroConditionalLine conditionalLine = tester.widget(
+      find.byType(UvHeroConditionalLine),
+    );
+    // Derived from conditionalLine.now, the actual instant the widget
+    // captured and used, rather than a separately captured DateTime.now()
+    // in this test: the two calls happen microseconds apart, and deriving
+    // the expectation from a different instant than the widget actually
+    // used would make this assertion itself racy across a local-day
+    // boundary (for this +12h fixture, around 12:00 UTC), independently
+    // of anything the widget under test does.
+    final DateTime nowUtc = conditionalLine.now;
+    final Map<SolarEvent, DateTime?> expectedSolarEvents = solarEventTimes(
+      lat: fixedLocation.lat,
+      lon: fixedLocation.lon,
+      date: toLocationLocal(nowUtc, nonZeroOffsetSeconds),
+    );
+    final Map<SolarEvent, DateTime?> regressedSolarEvents = solarEventTimes(
+      lat: fixedLocation.lat,
+      lon: fixedLocation.lon,
+      date: nowUtc,
+    );
 
-      expect(conditionalLine.solarEvents, expectedSolarEvents);
+    expect(conditionalLine.solarEvents, expectedSolarEvents);
 
-      // Only meaningful once the local and UTC calendar dates actually
-      // differ at this run instant (see the offset comment above); skipped,
-      // not silently passed, otherwise.
-      if (toLocationLocal(
-            nowUtc,
-            nonZeroOffsetSeconds,
-          ).day !=
-          nowUtc.day) {
-        expect(conditionalLine.solarEvents, isNot(regressedSolarEvents));
-      }
-    },
-  );
+    // Only meaningful once the local and UTC calendar dates actually
+    // differ at this run instant (see the offset comment above); skipped,
+    // not silently passed, otherwise.
+    if (toLocationLocal(nowUtc, nonZeroOffsetSeconds).day != nowUtc.day) {
+      expect(conditionalLine.solarEvents, isNot(regressedSolarEvents));
+    }
+  });
 
   testWidgets(
     'suppresses interpolation and the conditional line when the location '

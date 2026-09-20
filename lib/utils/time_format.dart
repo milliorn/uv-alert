@@ -86,7 +86,5 @@ DateTime startOfLocationLocalDayUtc(DateTime time, int timezoneOffsetSeconds) {
     local.day,
   );
 
-  return localMidnightAsUtc.subtract(
-    Duration(seconds: timezoneOffsetSeconds),
-  );
+  return localMidnightAsUtc.subtract(Duration(seconds: timezoneOffsetSeconds));
 }

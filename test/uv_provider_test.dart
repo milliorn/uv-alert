@@ -341,124 +341,112 @@ void main() {
     httpServiceUnavailable,
     httpGatewayTimeout,
   ]) {
-    test(
-      'a $code failure reaches escalationStatusCode end-to-end and is '
-      'recorded as a threshold-gated failure',
-      () async {
-        when(
-          () => mockApi.fetch(
-            lat: any(named: 'lat'),
-            lon: any(named: 'lon'),
-            uuid: any(named: 'uuid'),
-            appVersion: any(named: 'appVersion'),
-            meta: any(named: 'meta'),
-          ),
-        ).thenThrow(UvApiException(code, 'error'));
+    test('a $code failure reaches escalationStatusCode end-to-end and is '
+        'recorded as a threshold-gated failure', () async {
+      when(
+        () => mockApi.fetch(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+          uuid: any(named: 'uuid'),
+          appVersion: any(named: 'appVersion'),
+          meta: any(named: 'meta'),
+        ),
+      ).thenThrow(UvApiException(code, 'error'));
 
-        final ProviderContainer container = _makeContainerWith(mockApi);
+      final ProviderContainer container = _makeContainerWith(mockApi);
 
-        await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
 
-        final ProxyErrorState state = container.read(proxyErrorProvider);
-        expect(state.consecutiveFailures, 1);
-        expect(state.lastStatusCode, code);
-        expect(state.immediateStatusCode, isNull);
-      },
-    );
+      final ProxyErrorState state = container.read(proxyErrorProvider);
+      expect(state.consecutiveFailures, 1);
+      expect(state.lastStatusCode, code);
+      expect(state.immediateStatusCode, isNull);
+    });
   }
 
-  test(
-    'a 429 failure reaches escalationStatusCode end-to-end and is recorded '
-    'as an immediate-banner failure',
-    () async {
-      when(
-        () => mockApi.fetch(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-          uuid: any(named: 'uuid'),
-          appVersion: any(named: 'appVersion'),
-          meta: any(named: 'meta'),
-        ),
-      ).thenThrow(UvApiException(httpTooManyRequests, 'too many requests'));
+  test('a 429 failure reaches escalationStatusCode end-to-end and is recorded '
+      'as an immediate-banner failure', () async {
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
+      ),
+    ).thenThrow(UvApiException(httpTooManyRequests, 'too many requests'));
 
-      final ProviderContainer container = _makeContainerWith(mockApi);
+    final ProviderContainer container = _makeContainerWith(mockApi);
 
-      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
 
-      final ProxyErrorState state = container.read(proxyErrorProvider);
-      expect(state.immediateStatusCode, httpTooManyRequests);
-      expect(state.consecutiveFailures, 0);
-    },
-  );
+    final ProxyErrorState state = container.read(proxyErrorProvider);
+    expect(state.immediateStatusCode, httpTooManyRequests);
+    expect(state.consecutiveFailures, 0);
+  });
 
-  test(
-    'a status code outside proxyEscalationStatusCodes (e.g. 404) does not '
-    'count toward consecutiveFailures',
-    () async {
-      when(
-        () => mockApi.fetch(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-          uuid: any(named: 'uuid'),
-          appVersion: any(named: 'appVersion'),
-          meta: any(named: 'meta'),
-        ),
-      ).thenThrow(UvApiException(404, 'not found'));
+  test('a status code outside proxyEscalationStatusCodes (e.g. 404) does not '
+      'count toward consecutiveFailures', () async {
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
+      ),
+    ).thenThrow(UvApiException(404, 'not found'));
 
-      final ProviderContainer container = _makeContainerWith(mockApi);
+    final ProviderContainer container = _makeContainerWith(mockApi);
 
-      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
 
-      final ProxyErrorState state = container.read(proxyErrorProvider);
-      expect(state.consecutiveFailures, 0);
-      expect(state.lastStatusCode, isNull);
-    },
-  );
+    final ProxyErrorState state = container.read(proxyErrorProvider);
+    expect(state.consecutiveFailures, 0);
+    expect(state.lastStatusCode, isNull);
+  });
 
-  test(
-    'an unmapped status code (404) between two 500s does not desync the '
-    'escalation threshold for the 500 streak',
-    () async {
-      final ProviderContainer container = _makeContainerWith(mockApi);
+  test('an unmapped status code (404) between two 500s does not desync the '
+      'escalation threshold for the 500 streak', () async {
+    final ProviderContainer container = _makeContainerWith(mockApi);
 
-      when(
-        () => mockApi.fetch(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-          uuid: any(named: 'uuid'),
-          appVersion: any(named: 'appVersion'),
-          meta: any(named: 'meta'),
-        ),
-      ).thenThrow(UvApiException(500, 'server error'));
-      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
+      ),
+    ).thenThrow(UvApiException(500, 'server error'));
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
 
-      when(
-        () => mockApi.fetch(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-          uuid: any(named: 'uuid'),
-          appVersion: any(named: 'appVersion'),
-          meta: any(named: 'meta'),
-        ),
-      ).thenThrow(UvApiException(404, 'not found'));
-      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
+      ),
+    ).thenThrow(UvApiException(404, 'not found'));
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
 
-      when(
-        () => mockApi.fetch(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-          uuid: any(named: 'uuid'),
-          appVersion: any(named: 'appVersion'),
-          meta: any(named: 'meta'),
-        ),
-      ).thenThrow(UvApiException(500, 'server error'));
-      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
+      ),
+    ).thenThrow(UvApiException(500, 'server error'));
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
 
-      final ProxyErrorState state = container.read(proxyErrorProvider);
-      expect(state.consecutiveFailures, 2);
-      expect(state.lastStatusCode, 500);
-    },
-  );
+    final ProxyErrorState state = container.read(proxyErrorProvider);
+    expect(state.consecutiveFailures, 2);
+    expect(state.lastStatusCode, 500);
+  });
 
   test(
     'an active immediate banner (502) stays active through an interrupting '
@@ -503,60 +491,57 @@ void main() {
     },
   );
 
-  test(
-    'an immediate-banner code (400) interrupting an in-progress 500/503/504 '
-    'streak restarts that streak rather than letting it continue',
-    () async {
-      final ProviderContainer container = _makeContainerWith(mockApi);
+  test('an immediate-banner code (400) interrupting an in-progress 500/503/504 '
+      'streak restarts that streak rather than letting it continue', () async {
+    final ProviderContainer container = _makeContainerWith(mockApi);
 
-      when(
-        () => mockApi.fetch(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-          uuid: any(named: 'uuid'),
-          appVersion: any(named: 'appVersion'),
-          meta: any(named: 'meta'),
-        ),
-      ).thenThrow(UvApiException(500, 'server error'));
-      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
-      expect(container.read(proxyErrorProvider).consecutiveFailures, 1);
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
+      ),
+    ).thenThrow(UvApiException(500, 'server error'));
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+    expect(container.read(proxyErrorProvider).consecutiveFailures, 1);
 
-      when(
-        () => mockApi.fetch(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-          uuid: any(named: 'uuid'),
-          appVersion: any(named: 'appVersion'),
-          meta: any(named: 'meta'),
-        ),
-      ).thenThrow(UvApiException(400, 'bad request'));
-      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
+      ),
+    ).thenThrow(UvApiException(400, 'bad request'));
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
 
-      final ProxyErrorState afterInterruption = container.read(
-        proxyErrorProvider,
-      );
-      expect(afterInterruption.immediateStatusCode, httpBadRequest);
-      expect(afterInterruption.consecutiveFailures, 0);
-      expect(afterInterruption.lastStatusCode, isNull);
+    final ProxyErrorState afterInterruption = container.read(
+      proxyErrorProvider,
+    );
+    expect(afterInterruption.immediateStatusCode, httpBadRequest);
+    expect(afterInterruption.consecutiveFailures, 0);
+    expect(afterInterruption.lastStatusCode, isNull);
 
-      when(
-        () => mockApi.fetch(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-          uuid: any(named: 'uuid'),
-          appVersion: any(named: 'appVersion'),
-          meta: any(named: 'meta'),
-        ),
-      ).thenThrow(UvApiException(500, 'server error'));
-      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
-      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
+      ),
+    ).thenThrow(UvApiException(500, 'server error'));
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
 
-      final ProxyErrorState state = container.read(proxyErrorProvider);
-      expect(state.immediateStatusCode, httpBadRequest);
-      expect(state.consecutiveFailures, 2);
-      expect(state.lastStatusCode, 500);
-    },
-  );
+    final ProxyErrorState state = container.read(proxyErrorProvider);
+    expect(state.immediateStatusCode, httpBadRequest);
+    expect(state.consecutiveFailures, 2);
+    expect(state.lastStatusCode, 500);
+  });
 
   test('a successful fetch resets consecutiveFailures to zero', () async {
     when(
@@ -613,10 +598,7 @@ void main() {
         final ProviderContainer container = _makeContainerWith(mockApi);
 
         await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
-        expect(
-          container.read(proxyErrorProvider).immediateStatusCode,
-          code,
-        );
+        expect(container.read(proxyErrorProvider).immediateStatusCode, code);
 
         final UvData data = _makeData();
         when(
@@ -637,47 +619,44 @@ void main() {
     );
   }
 
-  test(
-    'a cache-hit fetch does not reset consecutiveFailures '
-    '(a cache hit is not evidence the proxy recovered)',
-    () async {
-      when(
-        () => mockApi.fetch(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-          uuid: any(named: 'uuid'),
-          appVersion: any(named: 'appVersion'),
-          meta: any(named: 'meta'),
-        ),
-      ).thenThrow(UvApiException(500, 'server error'));
+  test('a cache-hit fetch does not reset consecutiveFailures '
+      '(a cache hit is not evidence the proxy recovered)', () async {
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
+      ),
+    ).thenThrow(UvApiException(500, 'server error'));
 
-      final ProviderContainer container = _makeContainerWith(mockApi);
+    final ProviderContainer container = _makeContainerWith(mockApi);
 
-      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
-      expect(container.read(proxyErrorProvider).consecutiveFailures, 1);
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+    expect(container.read(proxyErrorProvider).consecutiveFailures, 1);
 
-      final UvData data = _makeData();
-      when(
-        () => mockApi.fetch(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-          uuid: any(named: 'uuid'),
-          appVersion: any(named: 'appVersion'),
-          meta: any(named: 'meta'),
-        ),
-      ).thenAnswer((Invocation invocation) async {
-        (invocation.namedArguments[#meta] as UvApiFetchMeta?)?.wasFromCache =
-            true;
-        return data;
-      });
+    final UvData data = _makeData();
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
+      ),
+    ).thenAnswer((Invocation invocation) async {
+      (invocation.namedArguments[#meta] as UvApiFetchMeta?)?.wasFromCache =
+          true;
+      return data;
+    });
 
-      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
 
-      final ProxyErrorState state = container.read(proxyErrorProvider);
-      expect(state.consecutiveFailures, 1);
-      expect(state.lastStatusCode, 500);
-    },
-  );
+    final ProxyErrorState state = container.read(proxyErrorProvider);
+    expect(state.consecutiveFailures, 1);
+    expect(state.lastStatusCode, 500);
+  });
 
   test(
     '426 (force-update) is excluded from the consecutive-failure counter',
@@ -727,116 +706,110 @@ void main() {
     expect(state.lastStatusCode, isNull);
   });
 
-  test(
-    'a parse failure resets an existing consecutive-failure streak '
-    '(500 -> malformed 200 -> the streak must not carry over)',
-    () async {
-      when(
-        () => mockApi.fetch(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-          uuid: any(named: 'uuid'),
-          appVersion: any(named: 'appVersion'),
-          meta: any(named: 'meta'),
-        ),
-      ).thenThrow(UvApiException(500, 'server error'));
+  test('a parse failure resets an existing consecutive-failure streak '
+      '(500 -> malformed 200 -> the streak must not carry over)', () async {
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
+      ),
+    ).thenThrow(UvApiException(500, 'server error'));
 
-      final ProviderContainer container = _makeContainerWith(mockApi);
+    final ProviderContainer container = _makeContainerWith(mockApi);
 
-      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
-      expect(container.read(proxyErrorProvider).consecutiveFailures, 1);
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+    expect(container.read(proxyErrorProvider).consecutiveFailures, 1);
 
-      when(
-        () => mockApi.fetch(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-          uuid: any(named: 'uuid'),
-          appVersion: any(named: 'appVersion'),
-          meta: any(named: 'meta'),
-        ),
-      ).thenAnswer((Invocation invocation) async {
-        (invocation.namedArguments[#meta] as UvApiFetchMeta?)
-                ?.receivedNetwork200 =
-            true;
-        throw UvApiParseException('parse error: bad json');
-      });
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
+      ),
+    ).thenAnswer((Invocation invocation) async {
+      (invocation.namedArguments[#meta] as UvApiFetchMeta?)
+              ?.receivedNetwork200 =
+          true;
+      throw UvApiParseException('parse error: bad json');
+    });
 
-      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
 
-      // The proxy itself answered with a 200 here -- even though the body
-      // didn't parse, that's proof of proxy health, so the streak from the
-      // earlier 500 must not carry over into a subsequent real failure.
-      final ProxyErrorState state = container.read(proxyErrorProvider);
-      expect(state.consecutiveFailures, 0);
-      expect(state.lastStatusCode, isNull);
+    // The proxy itself answered with a 200 here -- even though the body
+    // didn't parse, that's proof of proxy health, so the streak from the
+    // earlier 500 must not carry over into a subsequent real failure.
+    final ProxyErrorState state = container.read(proxyErrorProvider);
+    expect(state.consecutiveFailures, 0);
+    expect(state.lastStatusCode, isNull);
 
-      when(
-        () => mockApi.fetch(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-          uuid: any(named: 'uuid'),
-          appVersion: any(named: 'appVersion'),
-          meta: any(named: 'meta'),
-        ),
-      ).thenThrow(UvApiException(500, 'server error'));
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
+      ),
+    ).thenThrow(UvApiException(500, 'server error'));
 
-      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
 
-      final ProxyErrorState finalState = container.read(proxyErrorProvider);
-      expect(finalState.consecutiveFailures, 1);
-      expect(finalState.lastStatusCode, 500);
-    },
-  );
+    final ProxyErrorState finalState = container.read(proxyErrorProvider);
+    expect(finalState.consecutiveFailures, 1);
+    expect(finalState.lastStatusCode, 500);
+  });
 
-  test(
-    'a failure after a real network 200 resets the streak even when it is '
-    'not a UvApiFailure at all (e.g. Cache.store throwing) '
-    '(500 -> healthy 200 with a post-response failure -> the streak must '
-    'not carry over)',
-    () async {
-      when(
-        () => mockApi.fetch(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-          uuid: any(named: 'uuid'),
-          appVersion: any(named: 'appVersion'),
-          meta: any(named: 'meta'),
-        ),
-      ).thenThrow(UvApiException(500, 'server error'));
+  test('a failure after a real network 200 resets the streak even when it is '
+      'not a UvApiFailure at all (e.g. Cache.store throwing) '
+      '(500 -> healthy 200 with a post-response failure -> the streak must '
+      'not carry over)', () async {
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
+      ),
+    ).thenThrow(UvApiException(500, 'server error'));
 
-      final ProviderContainer container = _makeContainerWith(mockApi);
+    final ProviderContainer container = _makeContainerWith(mockApi);
 
-      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
-      expect(container.read(proxyErrorProvider).consecutiveFailures, 1);
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+    expect(container.read(proxyErrorProvider).consecutiveFailures, 1);
 
-      // Simulates UvApi.fetch receiving a real 200 and parsing it
-      // successfully, but Cache.store throwing afterward -- a raw
-      // exception unrelated to UvApiFailure entirely.
-      when(
-        () => mockApi.fetch(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-          uuid: any(named: 'uuid'),
-          appVersion: any(named: 'appVersion'),
-          meta: any(named: 'meta'),
-        ),
-      ).thenAnswer((Invocation invocation) async {
-        (invocation.namedArguments[#meta] as UvApiFetchMeta?)
-                ?.receivedNetwork200 =
-            true;
-        throw Exception('disk full');
-      });
+    // Simulates UvApi.fetch receiving a real 200 and parsing it
+    // successfully, but Cache.store throwing afterward -- a raw
+    // exception unrelated to UvApiFailure entirely.
+    when(
+      () => mockApi.fetch(
+        lat: any(named: 'lat'),
+        lon: any(named: 'lon'),
+        uuid: any(named: 'uuid'),
+        appVersion: any(named: 'appVersion'),
+        meta: any(named: 'meta'),
+      ),
+    ).thenAnswer((Invocation invocation) async {
+      (invocation.namedArguments[#meta] as UvApiFetchMeta?)
+              ?.receivedNetwork200 =
+          true;
+      throw Exception('disk full');
+    });
 
-      await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
+    await container.read(uvProvider.notifier).fetch(lat: 51.5, lon: -0.1);
 
-      // The proxy answered with a real 200 -- the failure happened purely
-      // client-side (cache write), which is not proxy-health evidence
-      // against the proxy, so the streak from the earlier 500 must reset.
-      final ProxyErrorState state = container.read(proxyErrorProvider);
-      expect(state.consecutiveFailures, 0);
-      expect(state.lastStatusCode, isNull);
-    },
-  );
+    // The proxy answered with a real 200 -- the failure happened purely
+    // client-side (cache write), which is not proxy-health evidence
+    // against the proxy, so the streak from the earlier 500 must reset.
+    final ProxyErrorState state = container.read(proxyErrorProvider);
+    expect(state.consecutiveFailures, 0);
+    expect(state.lastStatusCode, isNull);
+  });
 
   test('a stale fetch failure does not mutate proxyErrorProvider', () async {
     // fetch #1 reaches api.fetch and stalls there (past _fetchWith's

@@ -405,7 +405,7 @@ class UvNotifier extends Notifier<AsyncValue<UvData>> {
     if (!meta.wasFromCache) {
       ref.read(proxyErrorProvider.notifier).recordSuccess();
     }
-    
+
     state = AsyncValue<UvData>.data(data);
   }
 }

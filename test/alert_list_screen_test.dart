@@ -143,29 +143,26 @@ void main() {
     },
   );
 
-  testWidgets(
-    'reflects a later data refresh live, rather than showing a stale '
-    'snapshot from when the screen was opened',
-    (WidgetTester tester) async {
-      final FakeDataUvNotifier notifier = FakeDataUvNotifier(
-        makeUvData(alerts: <WeatherAlert>[_heatAdvisory]),
-      );
+  testWidgets('reflects a later data refresh live, rather than showing a stale '
+      'snapshot from when the screen was opened', (WidgetTester tester) async {
+    final FakeDataUvNotifier notifier = FakeDataUvNotifier(
+      makeUvData(alerts: <WeatherAlert>[_heatAdvisory]),
+    );
 
-      await tester.pumpWidget(
-        _wrap(<WeatherAlert>[_heatAdvisory], notifier: notifier),
-      );
-      expect(find.text(_heatAdvisory.event), findsOneWidget);
-      expect(find.text(_floodWarning.event), findsNothing);
+    await tester.pumpWidget(
+      _wrap(<WeatherAlert>[_heatAdvisory], notifier: notifier),
+    );
+    expect(find.text(_heatAdvisory.event), findsOneWidget);
+    expect(find.text(_floodWarning.event), findsNothing);
 
-      // Simulates a background refresh that adds a new alert while this
-      // screen is already open.
-      notifier.updateData(
-        makeUvData(alerts: <WeatherAlert>[_heatAdvisory, _floodWarning]),
-      );
-      await tester.pump();
+    // Simulates a background refresh that adds a new alert while this
+    // screen is already open.
+    notifier.updateData(
+      makeUvData(alerts: <WeatherAlert>[_heatAdvisory, _floodWarning]),
+    );
+    await tester.pump();
 
-      expect(find.text(_heatAdvisory.event), findsOneWidget);
-      expect(find.text(_floodWarning.event), findsOneWidget);
-    },
-  );
+    expect(find.text(_heatAdvisory.event), findsOneWidget);
+    expect(find.text(_floodWarning.event), findsOneWidget);
+  });
 }
