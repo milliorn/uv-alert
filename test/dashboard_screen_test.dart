@@ -228,16 +228,20 @@ void main() {
     'from uvProvider',
     (WidgetTester tester) async {
       // UvDailyChart drops any daily entry whose location-local date is
-      // before today (see its own doc comment), so its first entry must be
-      // anchored to the real current date rather than a fixed one.
+      // before its own internal DateTime.now() read (see its own doc
+      // comment). Anchoring the fixture's first entry one day past the
+      // moment captured here, rather than at that moment itself, keeps it
+      // ahead of UvDailyChart's own DateTime.now() read inside pumpWidget
+      // even if a UTC midnight falls between the two reads, so the fixture
+      // never straddles the chart's own staleness cutoff.
       final DateTime today = DateTime.now().toUtc();
-      final DateTime todayDate = DateTime.utc(
+      final DateTime firstEntryDate = DateTime.utc(
         today.year,
         today.month,
         today.day,
-      );
-      final String todayAbbreviation =
-          _weekdayAbbreviations[todayDate.weekday - 1];
+      ).add(const Duration(days: 1));
+      final String firstEntryAbbreviation =
+          _weekdayAbbreviations[firstEntryDate.weekday - 1];
 
       final UvData data = makeUvData(
         hourly: <UvForecastEntry>[
@@ -246,8 +250,11 @@ void main() {
           UvForecastEntry(time: DateTime.utc(2024, 6, 1, 16), uvi: 4),
         ],
         daily: <UvForecastEntry>[
-          UvForecastEntry(time: todayDate, uvi: 7.5),
-          UvForecastEntry(time: todayDate.add(const Duration(days: 1)), uvi: 6),
+          UvForecastEntry(time: firstEntryDate, uvi: 7.5),
+          UvForecastEntry(
+            time: firstEntryDate.add(const Duration(days: 1)),
+            uvi: 6,
+          ),
         ],
       );
 
@@ -281,7 +288,7 @@ void main() {
         );
         expect(
           find.bySemanticsLabel(
-            '$todayAbbreviation, UV max 7.5, Very High risk',
+            '$firstEntryAbbreviation, UV max 7.5, Very High risk',
           ),
           findsOneWidget,
         );
