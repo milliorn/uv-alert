@@ -494,9 +494,7 @@ class _LocationOnboardingScreenState
   void _onBack() {
     if (_phase == _Phase.idle) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(
-          builder: (_) => const ThemeOnboardingScreen(),
-        ),
+        MaterialPageRoute<void>(builder: (_) => const ThemeOnboardingScreen()),
       );
       return;
     }

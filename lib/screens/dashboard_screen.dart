@@ -13,7 +13,30 @@ import 'package:uvalert/widgets/dashboard_footer.dart';
 import 'package:uvalert/widgets/dashboard_hero.dart';
 import 'package:uvalert/widgets/dashboard_no_data_view.dart';
 import 'package:uvalert/widgets/proxy_error_banner.dart';
+import 'package:uvalert/widgets/uv_daily_chart.dart';
+import 'package:uvalert/widgets/uv_hourly_chart.dart';
 import 'package:uvalert/widgets/weather_alert_banner.dart';
+
+/// Height reserved for [UvHourlyChart] below the hero, per
+/// `.private/architecture/SCREENS.md`'s Dashboard Screen layout order
+/// (Hero, then Hourly Chart, then Weekly Chart, then Footer).
+const double _hourlyChartHeight = 220;
+
+/// Height reserved for [UvDailyChart], matching [_hourlyChartHeight]'s
+/// role as a fixed size fl_chart needs a bounded constraint to lay out in.
+const double _dailyChartHeight = 180;
+
+/// Vertical gap between the hero, hourly chart, and daily chart sections.
+const double _dashboardSectionGap = 16;
+
+/// Padding around the two chart sections, matching the hero's own implicit
+/// centering so charts don't run edge-to-edge.
+///
+/// Wide enough that the hourly chart's rightmost x-axis label (e.g. "7 PM"),
+/// which fl_chart centers on the axis's own edge rather than insetting it,
+/// isn't clipped by the screen edge, confirmed by screenshotting a
+/// populated dashboard.
+const double _chartHorizontalPadding = 20;
 
 /// The main screen shown after onboarding completes.
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -25,6 +48,9 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  UvData? _lastSeenUvData;
+  LocationState _locationAtLastSeenUvData;
+
   @override
   void initState() {
     super.initState();
@@ -51,7 +77,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     final AsyncValue<UvData> uvState = ref.watch(uvProvider);
     final bool showNoData = uvState.isNoData;
+    final UvData? uvData = uvState.value;
     final LocationState location = ref.watch(locationProvider);
+
+    // uvProvider has no source-location field on UvData itself, and
+    // UvNotifier deliberately keeps serving the previous location's cached
+    // data (via stateOrNull) while a new fetch for a changed location is in
+    // flight, plus UvApi's cache has no per-location key, so a still-valid
+    // cache hit for the OLD location can outlive the fetch entirely. Same
+    // mitigation as DashboardHero's own uvDataMatchesLocation guard: record
+    // which location was current the last time uvData actually changed
+    // value, so a mismatch against the CURRENT location can be detected
+    // here and the charts suppressed rather than shown for the wrong place.
+    // See issue #136 for the proper fix (tagging UvData/cache entries with
+    // their source coordinates).
+    if (uvData != _lastSeenUvData) {
+      _lastSeenUvData = uvData;
+      _locationAtLastSeenUvData = location;
+    }
+    final bool uvDataMatchesLocation = location == _locationAtLastSeenUvData;
     // A 400 means the current request itself is invalid (e.g. bad lat/lon);
     // retrying would just repeat it. See ADR 0010's "do not retry" rule for
     // 400, and DashboardNoDataView's onRetry doc. Checked against uvState's
@@ -95,6 +139,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         onRetry: isInvalidRequest
                             ? null
                             : () {
+                                final LocationState location = ref.read(
+                                  locationProvider,
+                                );
+
                                 if (location == null) return;
 
                                 unawaited(
@@ -107,7 +155,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                 );
                               },
                       )
-                    : const Center(child: DashboardHero()),
+                    : SingleChildScrollView(
+                        child: Column(
+                          spacing: _dashboardSectionGap,
+                          children: <Widget>[
+                            const DashboardHero(),
+                            if (uvData != null &&
+                                uvDataMatchesLocation) ...<Widget>[
+                              _chartSection(
+                                height: _hourlyChartHeight,
+                                child: UvHourlyChart(uvData: uvData),
+                              ),
+                              _chartSection(
+                                height: _dailyChartHeight,
+                                child: UvDailyChart(uvData: uvData),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
               ),
               const DashboardFooter(),
             ],
@@ -116,6 +182,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ),
     );
   }
+}
+
+/// Wraps [child] in the fixed [height] and shared horizontal padding common
+/// to both dashboard chart sections.
+Widget _chartSection({required double height, required Widget child}) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: _chartHorizontalPadding),
+    child: SizedBox(height: height, child: child),
+  );
 }
 
 /// Populates [locationProvider] from a manually saved location the first

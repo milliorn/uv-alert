@@ -54,9 +54,7 @@ Widget _wrap(
           ),
     ),
   ],
-  child: const MaterialApp(
-    home: Scaffold(body: WeatherAlertBanner()),
-  ),
+  child: const MaterialApp(home: Scaffold(body: WeatherAlertBanner())),
 );
 
 void main() {
@@ -183,20 +181,19 @@ void main() {
     },
   );
 
-  testWidgets(
-    'a three-alert set is fully cleared by a single dismiss tap',
-    (WidgetTester tester) async {
-      await tester.pumpWidget(
-        _wrap(<WeatherAlert>[_heatAdvisory, _floodWarning, _redFlagWarning]),
-      );
-      expect(find.textContaining('3 Active Alerts'), findsOneWidget);
+  testWidgets('a three-alert set is fully cleared by a single dismiss tap', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(<WeatherAlert>[_heatAdvisory, _floodWarning, _redFlagWarning]),
+    );
+    expect(find.textContaining('3 Active Alerts'), findsOneWidget);
 
-      await tester.tap(find.byTooltip('Dismiss all alerts'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Dismiss all alerts'));
+    await tester.pumpAndSettle();
 
-      expect(find.byType(MaterialBanner), findsNothing);
-    },
-  );
+    expect(find.byType(MaterialBanner), findsNothing);
+  });
 
   testWidgets(
     'dismissing one alert does not suppress a different still-active alert',
@@ -230,9 +227,7 @@ void main() {
         makeUvData(alerts: alerts),
       );
 
-      await tester.pumpWidget(
-        _wrap(alerts, notifier: notifier),
-      );
+      await tester.pumpWidget(_wrap(alerts, notifier: notifier));
       await tester.tap(find.byTooltip('Dismiss alert'));
       await tester.pumpAndSettle();
       expect(find.text(_heatAdvisory.event), findsNothing);

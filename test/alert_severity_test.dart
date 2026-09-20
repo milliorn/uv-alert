@@ -85,50 +85,44 @@ void main() {
       expect(topAlert(<WeatherAlert>[only]), only);
     });
 
-    test(
-      'breaks a tie between alerts with equal severity and equal start time '
-      'by id, so the result does not depend on payload order',
-      () {
-        final DateTime sameStart = DateTime.utc(2024, 6, 1, 6);
-        final WeatherAlert a = _alert(
-          event: 'Flood Warning',
-          id: 'a',
-          start: sameStart,
-        );
-        final WeatherAlert b = _alert(
-          event: 'Fire Warning',
-          id: 'b',
-          start: sameStart,
-        );
+    test('breaks a tie between alerts with equal severity and equal start time '
+        'by id, so the result does not depend on payload order', () {
+      final DateTime sameStart = DateTime.utc(2024, 6, 1, 6);
+      final WeatherAlert a = _alert(
+        event: 'Flood Warning',
+        id: 'a',
+        start: sameStart,
+      );
+      final WeatherAlert b = _alert(
+        event: 'Fire Warning',
+        id: 'b',
+        start: sameStart,
+      );
 
-        expect(topAlert(<WeatherAlert>[b, a]), a);
-        expect(topAlert(<WeatherAlert>[a, b]), a);
-      },
-    );
+      expect(topAlert(<WeatherAlert>[b, a]), a);
+      expect(topAlert(<WeatherAlert>[a, b]), a);
+    });
 
-    test(
-      'breaks a tie between two distinct alerts sharing an id (same '
-      'senderName/event/start, different description) by description, so '
-      'the result does not depend on payload order even when the '
-      'synthesized id does not disambiguate them',
-      () {
-        final DateTime sameStart = DateTime.utc(2024, 6, 1, 6);
-        final WeatherAlert a = _alert(
-          event: 'Flood Warning',
-          id: 'shared',
-          start: sameStart,
-          description: 'aaa',
-        );
-        final WeatherAlert b = _alert(
-          event: 'Flood Warning',
-          id: 'shared',
-          start: sameStart,
-          description: 'bbb',
-        );
+    test('breaks a tie between two distinct alerts sharing an id (same '
+        'senderName/event/start, different description) by description, so '
+        'the result does not depend on payload order even when the '
+        'synthesized id does not disambiguate them', () {
+      final DateTime sameStart = DateTime.utc(2024, 6, 1, 6);
+      final WeatherAlert a = _alert(
+        event: 'Flood Warning',
+        id: 'shared',
+        start: sameStart,
+        description: 'aaa',
+      );
+      final WeatherAlert b = _alert(
+        event: 'Flood Warning',
+        id: 'shared',
+        start: sameStart,
+        description: 'bbb',
+      );
 
-        expect(topAlert(<WeatherAlert>[b, a]), a);
-        expect(topAlert(<WeatherAlert>[a, b]), a);
-      },
-    );
+      expect(topAlert(<WeatherAlert>[b, a]), a);
+      expect(topAlert(<WeatherAlert>[a, b]), a);
+    });
   });
 }

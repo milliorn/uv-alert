@@ -554,29 +554,27 @@ void main() {
   // GPS timeout (TimeoutException branch in _onUseMyLocation)
   // -------------------------------------------------------------------------
 
-  testWidgets(
-    'GPS timeout shows not-available error message',
-    (WidgetTester tester) async {
-      final FakeGeolocatorPlatform platform = FakeGeolocatorPlatform()
-        ..checkResult = LocationPermission.always
-        ..positionDelay = gpsTimeout + gpsOvershoot
-        ..positionResult = fakePosition();
+  testWidgets('GPS timeout shows not-available error message', (
+    WidgetTester tester,
+  ) async {
+    final FakeGeolocatorPlatform platform = FakeGeolocatorPlatform()
+      ..checkResult = LocationPermission.always
+      ..positionDelay = gpsTimeout + gpsOvershoot
+      ..positionResult = fakePosition();
 
-      await tester.pumpWidget(
-        _wrap(
-          LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
-          platform: platform,
-        ),
-      );
+    await tester.pumpWidget(
+      _wrap(
+        LocationOnboardingScreen(geocodingApi: _fakeGeocodingApi()),
+        platform: platform,
+      ),
+    );
 
-      await tester.tap(find.text('Use My Location'));
-      await tester.pump(gpsTimeout + gpsOvershoot);
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Use My Location'));
+    await tester.pump(gpsTimeout + gpsOvershoot);
+    await tester.pumpAndSettle();
 
-      expect(find.textContaining('Could not get a GPS fix'), findsOneWidget);
-    },
-    timeout: Timeout(gpsTimeout + gpsTestBuffer),
-  );
+    expect(find.textContaining('Could not get a GPS fix'), findsOneWidget);
+  }, timeout: Timeout(gpsTimeout + gpsTestBuffer));
 
   // -------------------------------------------------------------------------
   // CircularProgressIndicator during loading (line 300)
