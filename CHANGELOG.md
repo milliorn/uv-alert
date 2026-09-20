@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.26.0](https://github.com/milliorn/uv-alert/compare/v1.25.1...v1.26.0) (2026-09-20)
+
+
+### Features
+
+* **dashboard:** add hourly and daily UV charts to dashboard screen ([#147](https://github.com/milliorn/uv-alert/issues/147)) ([de7af3b](https://github.com/milliorn/uv-alert/commit/de7af3ba41378851da28a1bdbe7f97f353c44b23))
+
 ## [1.25.1](https://github.com/milliorn/uv-alert/compare/v1.25.0...v1.25.1) (2026-09-16)
 
 
