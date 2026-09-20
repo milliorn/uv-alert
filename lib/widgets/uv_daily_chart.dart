@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/utils/time_format.dart';
 import 'package:uvalert/utils/who_risk.dart';
+import 'package:uvalert/widgets/periodic_rebuild.dart';
 
 /// Number of days shown on the chart, left (current day) to right (last
 /// forecast day).
@@ -64,7 +65,13 @@ typedef _ChartPoint = ({
 /// the current day -- its leftmost position conveys that. Does not support
 /// tap/scrub interaction -- see the "Out of scope" note on the originating
 /// issue for that follow-up.
-class UvDailyChart extends StatelessWidget {
+///
+/// Rebuilds on a fixed interval (see [PeriodicRebuildMixin]) purely to
+/// re-read [DateTime.now()] against a fresh "today". Otherwise a chart
+/// left on-screen across the location-local day boundary, with no provider
+/// update to trigger a rebuild in between, would keep the leftmost bar's
+/// stale-day filtering pinned to whatever "today" was at the last build.
+class UvDailyChart extends StatefulWidget {
   /// Creates a [UvDailyChart] from up to [_daysShown] entries in
   /// [UvData.daily], chronologically sorted with stale (pre-today,
   /// location-local) entries dropped first.
@@ -76,7 +83,18 @@ class UvDailyChart extends StatelessWidget {
   final UvData uvData;
 
   @override
+  State<UvDailyChart> createState() => _UvDailyChartState();
+}
+
+class _UvDailyChartState extends State<UvDailyChart>
+    with PeriodicRebuildMixin<UvDailyChart> {
+  @override
+  Duration get rebuildInterval => const Duration(minutes: 1);
+
+  @override
   Widget build(BuildContext context) {
+    final UvData uvData = widget.uvData;
+
     // A cached UvData payload can still be "fresh" (within Cache's 24h TTL)
     // after its own local calendar day has passed -- e.g. fetched at 11pm,
     // still valid at 11am the next day. Drop any daily entry whose

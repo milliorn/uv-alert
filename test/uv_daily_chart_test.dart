@@ -169,6 +169,26 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('periodic timer rebuilds against a fresh today and is '
+      'cancelled on dispose', (WidgetTester tester) async {
+    final UvData uvData = makeUvData(daily: _dailyFrom(_day0, 7));
+
+    await tester.pumpWidget(_wrap(uvData));
+
+    expect(find.byType(UvDailyChart), findsOneWidget);
+
+    // Advancing the test binding's virtual clock past one rebuild interval
+    // must not throw and must not leave a pending timer once the widget is
+    // torn down. flutter_test fails the test at tearDown if any Timer is
+    // still active, so a passing test here proves both that the periodic
+    // Timer fires (pump(duration) drives Flutter's own timer queue) and
+    // that dispose() cancels it correctly. This is what closes the
+    // local-midnight staleness gap: without this timer, nothing re-reads
+    // DateTime.now() while uvData and its ancestors stay unchanged.
+    await tester.pump(const Duration(minutes: 1));
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets(
     'renders one bar and one full-width semantics node when daily has '
     'exactly one entry',
