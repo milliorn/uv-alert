@@ -7,6 +7,16 @@ import 'package:uvalert/storage/preferences.dart';
 /// Maximum age of cached UV data in hours before it is considered stale.
 const int cacheMaxAgeHours = 24;
 
+/// Decimal places [Cache.locationKey] rounds coordinates to.
+///
+/// 2 decimal places is roughly 1.1km of latitude, comfortably coarser
+/// than `LocationAccuracy.medium`'s ~100m jitter (see
+/// `LocationNotifier.fetchGps` in `location_provider.dart`), so two GPS
+/// fixes for the same physical spot round to the same key. UV index does
+/// not meaningfully vary over a kilometer, so this loses no useful
+/// precision for cache-matching purposes.
+const int _locationKeyDecimals = 2;
+
 /// SharedPreferences-backed cache for [UvData] with a
 /// [cacheMaxAgeHours]-hour TTL, scoped to the coordinates it was fetched
 /// for.
@@ -15,12 +25,19 @@ class Cache {
   Cache(this._prefs);
   final Preferences _prefs;
 
-  /// Encodes [lat]/[lon] into the same string form the cache stores and
-  /// compares against, matching `UvApi.fetch`'s own `lat.toString()`/
-  /// `lon.toString()` query parameters so a coordinate never needs float
-  /// comparison anywhere in the cache-matching path.
+  /// Encodes [lat]/[lon] into the string form the cache stores and compares
+  /// against.
+  ///
+  /// Rounded to [_locationKeyDecimals] places (via `toStringAsFixed`, which
+  /// is fixed-width and deterministic, unlike round-then-interpolate)
+  /// rather than matching `UvApi.fetch`'s full-precision query parameters
+  /// exactly. GPS mode re-acquires a fresh position on every fetch
+  /// (`LocationNotifier.fetchGps`), and comparing raw, unrounded doubles
+  /// would treat routine GPS jitter between fixes as a location change,
+  /// defeating this cache almost entirely for GPS users.
   static String locationKey({required double lat, required double lon}) =>
-      '$lat,$lon';
+      '${lat.toStringAsFixed(_locationKeyDecimals)},'
+      '${lon.toStringAsFixed(_locationKeyDecimals)}';
 
   /// Persists [data] to the cache for the given [lat]/[lon], keying expiry
   /// on the server-provided [UvData.fetchedAt] timestamp.
@@ -50,7 +67,7 @@ class Cache {
     final String? raw = _prefs.cachedPayload;
 
     if (raw == null) return null;
-    
+
     if (_prefs.cachedPayloadLocation != locationKey(lat: lat, lon: lon)) {
       return null;
     }

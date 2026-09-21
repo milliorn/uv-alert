@@ -238,8 +238,8 @@ void main() {
   });
 
   group('Cache.locationKey', () {
-    test("matches UvApi.fetch's own lat.toString()/lon.toString() form", () {
-      expect(Cache.locationKey(lat: 40.7128, lon: -74.006), '40.7128,-74.006');
+    test('rounds to 2 decimal places', () {
+      expect(Cache.locationKey(lat: 40.7128, lon: -74.006), '40.71,-74.01');
     });
 
     test('differs for distinct coordinates', () {
@@ -247,6 +247,31 @@ void main() {
         Cache.locationKey(lat: _lat, lon: _lon),
         isNot(Cache.locationKey(lat: _otherLat, lon: _otherLon)),
       );
+    });
+  });
+
+  group('Cache GPS jitter tolerance', () {
+    test('isValid still matches when coordinates differ only below the '
+        'rounding precision, as with routine GPS fix-to-fix jitter', () async {
+      await cache.store(_makeData(), lat: 40.7128, lon: -74.0060);
+      expect(cache.isValid(lat: 40.712899, lon: -74.006001), isTrue);
+    });
+
+    test('read still returns data when coordinates differ only below the '
+        'rounding precision', () async {
+      final UvData data = _makeData();
+      await cache.store(data, lat: 40.7128, lon: -74.0060);
+
+      final UvData? result = await cache.read(lat: 40.712899, lon: -74.006001);
+
+      expect(result, isNotNull);
+      expect(result!.currentUvi, data.currentUvi);
+    });
+
+    test('isValid is false once coordinates differ enough to round to a '
+        'different key', () async {
+      await cache.store(_makeData(), lat: 40.71, lon: -74.01);
+      expect(cache.isValid(lat: 40.72, lon: -74.01), isFalse);
     });
   });
 }

@@ -61,7 +61,10 @@ void main() {
         ),
       ).thenReturn(true);
       when(
-        () => mockCache.read(lat: any(named: 'lat'), lon: any(named: 'lon')),
+        () => mockCache.read(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+        ),
       ).thenAnswer((_) async => cached);
 
       final UvApi api = UvApi(
@@ -98,7 +101,10 @@ void main() {
         ),
       ).thenReturn(true);
       when(
-        () => mockCache.read(lat: any(named: 'lat'), lon: any(named: 'lon')),
+        () => mockCache.read(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+        ),
       ).thenAnswer((_) async => null);
       when(
         () => mockCache.store(
@@ -176,7 +182,10 @@ void main() {
       cacheValidForSecondCallOnward = true;
       final UvData cached = _makeData();
       when(
-        () => mockCache.read(lat: any(named: 'lat'), lon: any(named: 'lon')),
+        () => mockCache.read(
+          lat: any(named: 'lat'),
+          lon: any(named: 'lon'),
+        ),
       ).thenAnswer((_) async => cached);
 
       final UvApiFetchMeta cacheHitMeta = UvApiFetchMeta();
