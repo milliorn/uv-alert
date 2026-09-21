@@ -192,8 +192,7 @@ Used for both `hourly` (48 h) and `daily` (8 d) lists.
 | `use_gps` | `bool` | `true` |
 | `manual_location` | `String?` | -- |
 | `notifications_enabled` | `bool` | `false` |
-| `cached_payload` | `String?` | -- |
-| `cached_payload_at` | `String?` | -- |
+| `cached_entry` | `String?` | -- |
 
 ## Headless display (Linux)
 
