@@ -8,15 +8,27 @@ import 'package:uvalert/storage/preferences.dart';
 const int cacheMaxAgeHours = 24;
 
 /// SharedPreferences-backed cache for [UvData] with a
-/// [cacheMaxAgeHours]-hour TTL.
+/// [cacheMaxAgeHours]-hour TTL, scoped to the coordinates it was fetched
+/// for.
 class Cache {
   /// Creates a [Cache] backed by the given [Preferences] instance.
   Cache(this._prefs);
   final Preferences _prefs;
 
-  /// Persists [data] to the cache, keying expiry on the server-provided
-  /// [UvData.fetchedAt] timestamp.
-  Future<void> store(UvData data) async {
+  /// Encodes [lat]/[lon] into the same string form the cache stores and
+  /// compares against, matching `UvApi.fetch`'s own `lat.toString()`/
+  /// `lon.toString()` query parameters so a coordinate never needs float
+  /// comparison anywhere in the cache-matching path.
+  static String locationKey({required double lat, required double lon}) =>
+      '$lat,$lon';
+
+  /// Persists [data] to the cache for the given [lat]/[lon], keying expiry
+  /// on the server-provided [UvData.fetchedAt] timestamp.
+  Future<void> store(
+    UvData data, {
+    required double lat,
+    required double lon,
+  }) async {
     final String json = jsonEncode(data.toJson());
 
     await Future.wait(<Future<void>>[
@@ -25,16 +37,23 @@ class Cache {
       // If the server timestamp lags real time, the cache expires sooner than
       // cacheMaxAgeHours - acceptable given UV data changes infrequently.
       _prefs.setCachedPayloadAt(data.fetchedAt.toIso8601String()),
+      _prefs.setCachedPayloadLocation(locationKey(lat: lat, lon: lon)),
     ]);
   }
 
-  /// Returns the cached [UvData], or `null` if empty or the payload is corrupt.
+  /// Returns the cached [UvData] for the given [lat]/[lon], or `null` if
+  /// empty, the payload is corrupt, or the cached entry was stored for
+  /// different coordinates.
   ///
   /// Clears the cache automatically on a corrupt or malformed payload.
-  Future<UvData?> read() async {
+  Future<UvData?> read({required double lat, required double lon}) async {
     final String? raw = _prefs.cachedPayload;
 
     if (raw == null) return null;
+    
+    if (_prefs.cachedPayloadLocation != locationKey(lat: lat, lon: lon)) {
+      return null;
+    }
 
     try {
       final Object? decoded = jsonDecode(raw);
@@ -78,6 +97,14 @@ class Cache {
   /// Whether no payload is currently stored.
   bool get isEmpty => _prefs.cachedPayload == null;
 
-  /// Whether the cache has a payload and it is within the TTL.
-  bool get isValid => !isEmpty && !isStale;
+  /// Whether the cache has a payload for the given [lat]/[lon], it is
+  /// within the TTL, and it was stored for those same coordinates.
+  ///
+  /// A cache entry written before location-keying existed has no stored
+  /// location at all, which compares unequal to any real [locationKey] and
+  /// so is correctly treated as a miss here, not a match.
+  bool isValid({required double lat, required double lon}) =>
+      !isEmpty &&
+      !isStale &&
+      _prefs.cachedPayloadLocation == locationKey(lat: lat, lon: lon);
 }

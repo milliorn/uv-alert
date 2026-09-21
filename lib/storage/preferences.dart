@@ -46,6 +46,8 @@ class Preferences {
       '${_prefix}notifications_enabled';
   static const String _keyCachedPayload = '${_prefix}cached_payload';
   static const String _keyCachedPayloadAt = '${_prefix}cached_payload_at';
+  static const String _keyCachedPayloadLocation =
+      '${_prefix}cached_payload_location';
 
   final SharedPreferences _prefs;
 
@@ -167,13 +169,27 @@ class Preferences {
   Future<void> setCachedPayloadAt(String isoTimestamp) async =>
       _prefs.setString(_keyCachedPayloadAt, isoTimestamp);
 
-  /// Removes the cached UV payload and its timestamp.
+  /// The coordinates the cached payload was fetched for, as `Cache` encodes
+  /// them (see `Cache.locationKey`), or `null` if not set.
   ///
-  /// Throws [StateError] if either key cannot be removed.
+  /// Absent for any cache entry written before this field existed, so a
+  /// `null` here must be treated as a location mismatch (cache miss), not
+  /// as "no location to compare against."
+  String? get cachedPayloadLocation =>
+      _prefs.getString(_keyCachedPayloadLocation);
+
+  /// Stores the [locationKey] the cached payload was fetched for.
+  Future<void> setCachedPayloadLocation(String locationKey) async =>
+      _prefs.setString(_keyCachedPayloadLocation, locationKey);
+
+  /// Removes the cached UV payload, its timestamp, and its location key.
+  ///
+  /// Throws [StateError] if any key cannot be removed.
   Future<void> clearCache() async {
     final List<bool> results = await Future.wait(<Future<bool>>[
       _prefs.remove(_keyCachedPayload),
       _prefs.remove(_keyCachedPayloadAt),
+      _prefs.remove(_keyCachedPayloadLocation),
     ]);
 
     _assertAllRemoved(results, 'clearCache');

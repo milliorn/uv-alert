@@ -57,6 +57,11 @@ void main() {
       expect(prefs.cachedPayloadAt, isNull);
     });
 
+    test('cachedPayloadLocation is null when not set', () async {
+      final Preferences prefs = await Preferences.load();
+      expect(prefs.cachedPayloadLocation, isNull);
+    });
+
     test('manualLocation is null when not set', () async {
       final Preferences prefs = await Preferences.load();
       expect(prefs.manualLocation, isNull);
@@ -139,24 +144,32 @@ void main() {
       expect(prefs.notificationsEnabled, isTrue);
     });
 
-    test('setCachedPayload and setCachedPayloadAt store values', () async {
+    test('setCachedPayload, setCachedPayloadAt, and setCachedPayloadLocation '
+        'store values', () async {
       final Preferences prefs = await Preferences.load();
       await prefs.setCachedPayload('{"foo": 1}');
       await prefs.setCachedPayloadAt('2023-11-14T12:00:00.000Z');
+      await prefs.setCachedPayloadLocation('40.7128,-74.006');
       expect(prefs.cachedPayload, '{"foo": 1}');
       expect(prefs.cachedPayloadAt, '2023-11-14T12:00:00.000Z');
+      expect(prefs.cachedPayloadLocation, '40.7128,-74.006');
     });
   });
 
   group('Preferences clearCache', () {
-    test('clearCache removes cached payload and timestamp', () async {
-      final Preferences prefs = await Preferences.load();
-      await prefs.setCachedPayload('data');
-      await prefs.setCachedPayloadAt('2023-11-14T12:00:00.000Z');
-      await prefs.clearCache();
-      expect(prefs.cachedPayload, isNull);
-      expect(prefs.cachedPayloadAt, isNull);
-    });
+    test(
+      'clearCache removes cached payload, timestamp, and location',
+      () async {
+        final Preferences prefs = await Preferences.load();
+        await prefs.setCachedPayload('data');
+        await prefs.setCachedPayloadAt('2023-11-14T12:00:00.000Z');
+        await prefs.setCachedPayloadLocation('40.7128,-74.006');
+        await prefs.clearCache();
+        expect(prefs.cachedPayload, isNull);
+        expect(prefs.cachedPayloadAt, isNull);
+        expect(prefs.cachedPayloadLocation, isNull);
+      },
+    );
 
     test('clearCache does not affect other preferences', () async {
       final Preferences prefs = await Preferences.load();
@@ -197,6 +210,7 @@ void main() {
       await prefs.setNotificationsEnabled(value: true);
       await prefs.setCachedPayload('data');
       await prefs.setCachedPayloadAt('2023-11-14T12:00:00.000Z');
+      await prefs.setCachedPayloadLocation('40.7128,-74.006');
       await prefs.setFirstLaunchDone();
 
       await prefs.clearAll();
@@ -208,6 +222,7 @@ void main() {
       expect(prefs.notificationsEnabled, isFalse);
       expect(prefs.cachedPayload, isNull);
       expect(prefs.cachedPayloadAt, isNull);
+      expect(prefs.cachedPayloadLocation, isNull);
       expect(prefs.isFirstLaunch, isTrue);
     });
   });
