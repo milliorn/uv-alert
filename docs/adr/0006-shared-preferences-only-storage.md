@@ -21,8 +21,9 @@ database.
 - All keys are prefixed `uvalert_` to prevent collisions
 - The full key set is owned by `lib/storage/preferences.dart` — no other file
   writes to SharedPreferences directly
-- Cache payload is stored as a JSON-encoded string (`uvalert_cached_payload`)
-  with a separate ISO 8601 timestamp key (`uvalert_cached_payload_at`)
+- Cache payload, timestamp, and location key are stored together as one
+  JSON-encoded record (`uvalert_cached_entry`), so they can never be read
+  back as a combination that wasn't written together by the same `store` call
 - `manual_location` is currently a raw string; it will migrate to a structured
   lat/lon representation when the location feature is fully implemented
 - Sufficient for this app's data volume — no relational queries, no large
