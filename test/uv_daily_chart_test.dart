@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uvalert/models/uv_model.dart';
+import 'package:uvalert/utils/time_format.dart';
 import 'package:uvalert/utils/who_risk.dart';
 import 'package:uvalert/widgets/uv_daily_chart.dart';
 
@@ -296,6 +297,44 @@ void main() {
         await tester.pumpWidget(_wrap(uvData));
 
         expect(_chartData(tester).barGroups, hasLength(1));
+      },
+    );
+
+    testWidgets(
+      'drops an entry one hour before location-local midnight and keeps '
+      'one entry one hour after it, for a location-local midnight that '
+      'falls hours away from UTC midnight',
+      (WidgetTester tester) async {
+        // A +5h offset moves location-local midnight away from whatever
+        // UTC midnight the suite happens to run near, pinning the filter's
+        // boundary directly instead of only exercising it close to
+        // wherever real "now" is. startOfLocationLocalDayUtc mirrors
+        // _UvDailyChartState._todayDate's own derivation, so this locates
+        // the true boundary regardless of when the suite runs.
+        const int offsetSeconds = 5 * Duration.secondsPerHour;
+        final DateTime localMidnightUtc = startOfLocationLocalDayUtc(
+          DateTime.now().toUtc(),
+          offsetSeconds,
+        );
+        final UvData uvData = makeUvData(
+          daily: <UvForecastEntry>[
+            UvForecastEntry(
+              time: localMidnightUtc.subtract(const Duration(hours: 1)),
+              uvi: 9,
+            ),
+            UvForecastEntry(
+              time: localMidnightUtc.add(const Duration(hours: 1)),
+              uvi: 3,
+            ),
+          ],
+          timezoneOffset: offsetSeconds,
+        );
+
+        await tester.pumpWidget(_wrap(uvData));
+
+        final List<BarChartGroupData> groups = _chartData(tester).barGroups;
+        expect(groups, hasLength(1));
+        expect(groups.single.barRods.single.toY, 3);
       },
     );
   });

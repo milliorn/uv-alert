@@ -41,11 +41,31 @@ class Cache {
 
   /// Persists [data] to the cache for the given [lat]/[lon], keying expiry
   /// on the server-provided [UvData.fetchedAt] timestamp.
+  ///
+  /// The location key acts as a commit marker for the payload/timestamp it
+  /// vouches for, so it is invalidated first and only written last, after
+  /// the payload and timestamp are durably persisted. Payload and
+  /// timestamp are independent SharedPreferences writes with no shared
+  /// transaction, so an interruption between them (process death, browser
+  /// tab close) could otherwise leave the location key matching a
+  /// payload/timestamp pair it was never actually written for, e.g. an
+  /// old payload left in place while a new location key lands, which
+  /// would make isValid/read serve stale data for the OLD location as if
+  /// it belonged to the new one. Every interruption point here instead
+  /// leaves the location key unset (never equal to a real `locationKey`
+  /// output, which is always `"lat,lon"`), so isValid fails closed and
+  /// the next isValid call simply misses and refetches.
   Future<void> store(
     UvData data, {
     required double lat,
     required double lon,
   }) async {
+    // '' rather than a `Preferences.clearCache`-style remove(): this must
+    // not throw (see clearCache's _assertAllRemoved), and '' compares
+    // unequal to any real locationKey output at every read site, same as
+    // absent entirely.
+    await _prefs.setCachedPayloadLocation('');
+
     final String json = jsonEncode(data.toJson());
 
     await Future.wait(<Future<void>>[
@@ -54,8 +74,9 @@ class Cache {
       // If the server timestamp lags real time, the cache expires sooner than
       // cacheMaxAgeHours - acceptable given UV data changes infrequently.
       _prefs.setCachedPayloadAt(data.fetchedAt.toIso8601String()),
-      _prefs.setCachedPayloadLocation(locationKey(lat: lat, lon: lon)),
     ]);
+
+    await _prefs.setCachedPayloadLocation(locationKey(lat: lat, lon: lon));
   }
 
   /// Returns the cached [UvData] for the given [lat]/[lon], or `null` if

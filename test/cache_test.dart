@@ -1,9 +1,31 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 import 'package:uvalert/constants.dart';
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/storage/cache.dart';
 import 'package:uvalert/storage/preferences.dart';
+
+/// Simulates a write to [_failingKey] never landing (process death, browser
+/// tab close mid-write), while every other key persists normally. Used to
+/// reproduce the specific interleaving `Cache.store` must fail closed
+/// against: the payload/timestamp write is interrupted independently of
+/// the location-key write.
+class _FailingKeyStore extends InMemorySharedPreferencesStore {
+  _FailingKeyStore(this._failingKey) : super.empty();
+
+  final String _failingKey;
+
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async {
+    // Throws rather than returning false: Preferences' setters discard
+    // setString's bool result, so a false return would silently complete
+    // as if the write succeeded and never exercise store()'s fail-closed
+    // ordering at all.
+    if (key == _failingKey) throw Exception('simulated write failure');
+    return super.setValue(valueType, key, value);
+  }
+}
 
 const int _staleHours = cacheMaxAgeHours + 1;
 const int _freshHours = cacheMaxAgeHours - 1;
@@ -240,6 +262,43 @@ void main() {
 
       expect(cache.isValid(lat: _lat, lon: _lon), isFalse);
       expect(cache.isValid(lat: _otherLat, lon: _otherLon), isTrue);
+    });
+
+    test('fails closed rather than committing a new location key over a '
+        'payload write that did not land', () async {
+      // Reproduces the specific interleaving store() must not allow: the
+      // payload/timestamp write is interrupted (process death, browser
+      // tab close) independently of the location-key write. If the
+      // location key were written unconditionally, isValid would then
+      // report a match for the new location while read() actually
+      // serves whatever payload happens to still be on disk (here,
+      // nothing at all, but the same argument applies to a stale
+      // payload from a previous store()).
+      //
+      // setMockInitialValues (not a bare instance swap) is required here:
+      // Preferences.load() caches SharedPreferences.getInstance()'s
+      // result on a static completer, and this file's own setUp already
+      // populated it via its own Preferences.load() call above.
+      // setMockInitialValues nulls that completer, so this Preferences.
+      // load() actually resolves against _FailingKeyStore instead of
+      // silently reusing the already-cached, non-failing instance.
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      SharedPreferencesStorePlatform.instance = _FailingKeyStore(
+        'flutter.uvalert_cached_payload',
+      );
+      final Preferences failingPrefs = await Preferences.load();
+      final Cache failingCache = Cache(failingPrefs);
+
+      await expectLater(
+        () => failingCache.store(_makeData(), lat: _lat, lon: _lon),
+        throwsA(isA<Exception>()),
+      );
+
+      expect(
+        failingPrefs.cachedPayloadLocation,
+        isNot(Cache.locationKey(lat: _lat, lon: _lon)),
+      );
+      expect(failingCache.isValid(lat: _lat, lon: _lon), isFalse);
     });
   });
 
