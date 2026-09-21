@@ -22,6 +22,8 @@ const String _keyCachedEntry = 'flutter.uvalert_cached_entry';
 class _FailingEntryWriteStore extends InMemorySharedPreferencesStore {
   _FailingEntryWriteStore() : super.empty();
 
+  _FailingEntryWriteStore.withData(super.data) : super.withData();
+
   @override
   Future<bool> setValue(String valueType, String key, Object value) async {
     if (key == _keyCachedEntry) return false;
@@ -288,78 +290,67 @@ void main() {
       expect(cache.isValid(lat: _otherLat, lon: _otherLon), isTrue);
     });
 
-    test(
-      "never pairs one call's payload with a different call's location, "
-      'when two store() calls for different locations overlap',
-      () async {
-        // Reproduces the interleaving two overlapping UvApi.fetch calls can
-        // put Cache.store into (a location change superseding an in-flight
-        // fetch, see the class doc on UvApiFetchMeta): call A reaches the
-        // point of committing its own entry only after call B, for a
-        // different location, has already completed in full. Against the
-        // pre-fix three-key shape, this let A's location key persist
-        // alongside B's payload (reproduced directly against that shape
-        // while designing this fix); with a single entry, whichever call's
-        // write lands last wins as one complete, internally consistent
-        // record.
-        SharedPreferences.setMockInitialValues(<String, Object>{});
-        final _GatedEntryWriteStore store = _GatedEntryWriteStore();
-        SharedPreferencesStorePlatform.instance = store;
+    test("never pairs one call's payload with a different call's location, "
+        'when two store() calls for different locations overlap', () async {
+      // Reproduces the interleaving two overlapping UvApi.fetch calls can
+      // put Cache.store into (a location change superseding an in-flight
+      // fetch, see the class doc on UvApiFetchMeta): call A reaches the
+      // point of committing its own entry only after call B, for a
+      // different location, has already completed in full. Against the
+      // pre-fix three-key shape, this let A's location key persist
+      // alongside B's payload (reproduced directly against that shape
+      // while designing this fix); with a single entry, whichever call's
+      // write lands last wins as one complete, internally consistent
+      // record.
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final _GatedEntryWriteStore store = _GatedEntryWriteStore();
+      SharedPreferencesStorePlatform.instance = store;
 
-        final Preferences racePrefs = await Preferences.load();
-        final Cache raceCache = Cache(racePrefs);
+      final Preferences racePrefs = await Preferences.load();
+      final Cache raceCache = Cache(racePrefs);
 
-        // Distinct currentUvi values (rather than _makeData's identical
-        // defaults) so a cross-pairing between A's location key and B's
-        // payload (the exact failure mode this test guards against)
-        // is distinguishable from either call cleanly winning outright.
-        final UvData dataA = _makeData(currentUvi: 1);
-        final UvData dataB = _makeData(currentUvi: 2);
-        final String keyA = Cache.locationKey(lat: _lat, lon: _lon);
+      // Distinct currentUvi values (rather than _makeData's identical
+      // defaults) so a cross-pairing between A's location key and B's
+      // payload (the exact failure mode this test guards against)
+      // is distinguishable from either call cleanly winning outright.
+      final UvData dataA = _makeData(currentUvi: 1);
+      final UvData dataB = _makeData(currentUvi: 2);
+      final String keyA = Cache.locationKey(lat: _lat, lon: _lon);
 
-        store
-          ..gatedValue = jsonEncode(<String, Object>{
-            'payload': jsonEncode(dataA.toJson()),
-            'at': dataA.fetchedAt.toIso8601String(),
-            'location': keyA,
-          })
-          ..release = Completer<void>();
+      store
+        ..gatedValue = jsonEncode(<String, Object>{
+          'payload': jsonEncode(dataA.toJson()),
+          'at': dataA.fetchedAt.toIso8601String(),
+          'location': keyA,
+        })
+        ..release = Completer<void>();
 
-        final Future<void> storeA = raceCache.store(
-          dataA,
-          lat: _lat,
-          lon: _lon,
+      final Future<void> storeA = raceCache.store(dataA, lat: _lat, lon: _lon);
+
+      await raceCache.store(dataB, lat: _otherLat, lon: _otherLon);
+
+      store.release!.complete();
+      await storeA;
+
+      final bool aWon = raceCache.isValid(lat: _lat, lon: _lon);
+      final bool bWon = raceCache.isValid(lat: _otherLat, lon: _otherLon);
+
+      // Exactly one call's entry must have won outright, never a mix.
+      expect(aWon ^ bWon, isTrue);
+      if (aWon) {
+        expect(
+          (await raceCache.read(lat: _lat, lon: _lon))?.currentUvi,
+          dataA.currentUvi,
         );
-
-        await raceCache.store(dataB, lat: _otherLat, lon: _otherLon);
-
-        store.release!.complete();
-        await storeA;
-
-        final bool aWon = raceCache.isValid(lat: _lat, lon: _lon);
-        final bool bWon = raceCache.isValid(
-          lat: _otherLat,
-          lon: _otherLon,
+        expect(await raceCache.read(lat: _otherLat, lon: _otherLon), isNull);
+      } else {
+        expect(await raceCache.read(lat: _lat, lon: _lon), isNull);
+        expect(
+          (await raceCache.read(lat: _otherLat, lon: _otherLon))?.currentUvi,
+          dataB.currentUvi,
         );
-
-        // Exactly one call's entry must have won outright, never a mix.
-        expect(aWon ^ bWon, isTrue);
-        if (aWon) {
-          expect(
-            (await raceCache.read(lat: _lat, lon: _lon))?.currentUvi,
-            dataA.currentUvi,
-          );
-          expect(await raceCache.read(lat: _otherLat, lon: _otherLon), isNull);
-        } else {
-          expect(await raceCache.read(lat: _lat, lon: _lon), isNull);
-          expect(
-            (await raceCache.read(lat: _otherLat, lon: _otherLon))
-                ?.currentUvi,
-            dataB.currentUvi,
-          );
-        }
-      },
-    );
+      }
+    });
 
     test(
       'leaves the previous entry fully intact when the write fails at the '
@@ -369,21 +360,37 @@ void main() {
         // must not leave a stale location paired with a payload that
         // belongs to neither the old nor the new store() call. With one
         // entry, a failed write simply leaves whatever was persisted
-        // before untouched.
+        // before untouched. Seeding a real prior entry (rather than
+        // starting empty) is what makes this test able to tell "preserved"
+        // apart from "there was never anything to preserve".
         SharedPreferences.setMockInitialValues(<String, Object>{});
-        final _FailingEntryWriteStore store = _FailingEntryWriteStore();
+        final InMemorySharedPreferencesStore seedStore =
+            InMemorySharedPreferencesStore.empty();
+        SharedPreferencesStorePlatform.instance = seedStore;
+        final Preferences seedPrefs = await Preferences.load();
+        await Cache(
+          seedPrefs,
+        ).store(_makeData(currentUvi: 1), lat: _lat, lon: _lon);
+        final Map<String, Object> seeded = await seedStore.getAll();
+        final Object? seededEntry = seeded[_keyCachedEntry];
+        expect(seededEntry, isNotNull);
+
+        final _FailingEntryWriteStore store = _FailingEntryWriteStore.withData(
+          seeded,
+        );
         SharedPreferencesStorePlatform.instance = store;
 
         final Preferences failingPrefs = await Preferences.load();
         final Cache failingCache = Cache(failingPrefs);
 
-        final Map<String, Object> persisted = await store.getAll();
-        expect(persisted[_keyCachedEntry], isNull);
-
-        await failingCache.store(_makeData(), lat: _lat, lon: _lon);
+        await failingCache.store(
+          _makeData(currentUvi: 2),
+          lat: _lat,
+          lon: _lon,
+        );
 
         final Map<String, Object> persistedAfter = await store.getAll();
-        expect(persistedAfter[_keyCachedEntry], isNull);
+        expect(persistedAfter[_keyCachedEntry], seededEntry);
       },
     );
   });
