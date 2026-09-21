@@ -190,6 +190,26 @@ void main() {
   });
 
   testWidgets(
+    'periodic timer skips rebuilding when the local day has not changed',
+    (WidgetTester tester) async {
+      final UvData uvData = makeUvData(daily: _dailyFrom(_day0, 7));
+
+      await tester.pumpWidget(_wrap(uvData));
+
+      // shouldRebuild() compares today's date against the date already
+      // recorded by the initial build above, which is still today: a real
+      // day boundary is not exercised here (this suite cannot fake
+      // DateTime.now()), only that a tick with nothing to refresh does not
+      // trigger setState. A skipped rebuild leaves the mounted BarChart's
+      // BarChartData the same object; a rebuild would construct a new one.
+      final BarChartData before = _chartData(tester);
+      await tester.pump(const Duration(minutes: 1));
+
+      expect(identical(_chartData(tester), before), isTrue);
+    },
+  );
+
+  testWidgets(
     'renders one bar and one full-width semantics node when daily has '
     'exactly one entry',
     (WidgetTester tester) async {

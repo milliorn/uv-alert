@@ -16,6 +16,12 @@ const double _lon = -74.006;
 const double _otherLat = 51.5074;
 const double _otherLon = -0.1278;
 
+/// An offset small enough to stay below [Cache]'s rounding precision, so
+/// `_lat + _jitterDelta`/`_lon + _jitterDelta` still round to the same
+/// [Cache.locationKey] as `_lat`/`_lon` -- simulates routine GPS
+/// fix-to-fix jitter between two reads of the same physical spot.
+const double _jitterDelta = 0.000001;
+
 DateTime _staleTimestamp() =>
     DateTime.now().toUtc().subtract(const Duration(hours: _staleHours));
 
@@ -253,16 +259,22 @@ void main() {
   group('Cache GPS jitter tolerance', () {
     test('isValid still matches when coordinates differ only below the '
         'rounding precision, as with routine GPS fix-to-fix jitter', () async {
-      await cache.store(_makeData(), lat: 40.7128, lon: -74.0060);
-      expect(cache.isValid(lat: 40.712899, lon: -74.006001), isTrue);
+      await cache.store(_makeData(), lat: _lat, lon: _lon);
+      expect(
+        cache.isValid(lat: _lat + _jitterDelta, lon: _lon + _jitterDelta),
+        isTrue,
+      );
     });
 
     test('read still returns data when coordinates differ only below the '
         'rounding precision', () async {
       final UvData data = _makeData();
-      await cache.store(data, lat: 40.7128, lon: -74.0060);
+      await cache.store(data, lat: _lat, lon: _lon);
 
-      final UvData? result = await cache.read(lat: 40.712899, lon: -74.006001);
+      final UvData? result = await cache.read(
+        lat: _lat + _jitterDelta,
+        lon: _lon + _jitterDelta,
+      );
 
       expect(result, isNotNull);
       expect(result!.currentUvi, data.currentUvi);
@@ -270,8 +282,10 @@ void main() {
 
     test('isValid is false once coordinates differ enough to round to a '
         'different key', () async {
-      await cache.store(_makeData(), lat: 40.71, lon: -74.01);
-      expect(cache.isValid(lat: 40.72, lon: -74.01), isFalse);
+      await cache.store(_makeData(), lat: _lat, lon: _lon);
+      // 0.01 (the rounding precision itself) rather than _jitterDelta:
+      // large enough to round to a genuinely different key.
+      expect(cache.isValid(lat: _lat + 0.01, lon: _lon), isFalse);
     });
   });
 }

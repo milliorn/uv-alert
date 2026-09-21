@@ -48,9 +48,10 @@ class _DashboardHeroState extends ConsumerState<DashboardHero>
     // uvProvider has no source-location field on UvData itself, and
     // UvNotifier deliberately keeps serving the previous location's cached
     // data (via stateOrNull) while a new fetch for a changed location is in
-    // flight, plus UvApi's cache has no per-location key, so a still-valid
-    // cache hit for the OLD location can outlive the fetch entirely.
-    // Recording which location was current the last time uvData actually
+    // flight, so a still-valid cache hit for the OLD location can outlive
+    // the fetch entirely even though Cache itself is now keyed per
+    // location (see Cache.locationKey). Recording which location was
+    // current the last time uvData actually
     // changed value lets a mismatch against the CURRENT location be
     // detected here, even though nothing in the data itself carries that
     // information.

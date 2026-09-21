@@ -38,6 +38,45 @@ Map<String, Object?> _apiJson() => <String, Object?>{
   'fetched_at': 1699963200,
 };
 
+/// Stubs [mockCache]'s `isValid` to always return [value], for any
+/// coordinates -- most tests here don't care which lat/lon was passed.
+void _stubIsValid(MockCache mockCache, {required bool value}) {
+  when(
+    () => mockCache.isValid(
+      lat: any(named: 'lat'),
+      lon: any(named: 'lon'),
+    ),
+  ).thenReturn(value);
+}
+
+/// Stubs [mockCache]'s `store` to succeed as a no-op, for any data or
+/// coordinates.
+void _stubStoreSucceeds(MockCache mockCache) {
+  when(
+    () => mockCache.store(
+      any(),
+      lat: any(named: 'lat'),
+      lon: any(named: 'lon'),
+    ),
+  ).thenAnswer((_) async {});
+}
+
+/// The invocation matcher for [mockCache]'s `store`, for `verify`/
+/// `verifyNever` calls that don't care which data or coordinates were
+/// passed.
+Future<void> _storeInvocation(MockCache mockCache) => mockCache.store(
+  any(),
+  lat: any(named: 'lat'),
+  lon: any(named: 'lon'),
+);
+
+/// The invocation matcher for [mockCache]'s `read`, for `when` setup that
+/// doesn't care which coordinates were passed.
+Future<UvData?> _readInvocation(MockCache mockCache) => mockCache.read(
+  lat: any(named: 'lat'),
+  lon: any(named: 'lon'),
+);
+
 void main() {
   late MockCache mockCache;
 
@@ -54,18 +93,8 @@ void main() {
   group('UvApi.fetch -- cache hit', () {
     test('returns cached data without making a network request', () async {
       final UvData cached = _makeData();
-      when(
-        () => mockCache.isValid(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-        ),
-      ).thenReturn(true);
-      when(
-        () => mockCache.read(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-        ),
-      ).thenAnswer((_) async => cached);
+      _stubIsValid(mockCache, value: true);
+      when(() => _readInvocation(mockCache)).thenAnswer((_) async => cached);
 
       final UvApi api = UvApi(
         cache: mockCache,
@@ -83,36 +112,14 @@ void main() {
 
       expect(result.currentUvi, cached.currentUvi);
       expect(meta.wasFromCache, isTrue);
-      verifyNever(
-        () => mockCache.store(
-          any(),
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-        ),
-      );
+      verifyNever(() => _storeInvocation(mockCache));
     });
 
     test('recovers from corrupt cache: falls through to network '
         'when isValid but read() returns null', () async {
-      when(
-        () => mockCache.isValid(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-        ),
-      ).thenReturn(true);
-      when(
-        () => mockCache.read(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-        ),
-      ).thenAnswer((_) async => null);
-      when(
-        () => mockCache.store(
-          any(),
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-        ),
-      ).thenAnswer((_) async {});
+      _stubIsValid(mockCache, value: true);
+      when(() => _readInvocation(mockCache)).thenAnswer((_) async => null);
+      _stubStoreSucceeds(mockCache);
 
       final UvApi api = UvApi(
         cache: mockCache,
@@ -131,13 +138,7 @@ void main() {
 
       expect(result.currentUvi, 5.0);
       expect(meta.wasFromCache, isFalse);
-      verify(
-        () => mockCache.store(
-          any(),
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-        ),
-      ).called(1);
+      verify(() => _storeInvocation(mockCache)).called(1);
     });
 
     test('overlapping calls on the same UvApi keep separate meta outcomes '
@@ -154,13 +155,7 @@ void main() {
           lon: any(named: 'lon'),
         ),
       ).thenAnswer((_) => cacheValidForSecondCallOnward);
-      when(
-        () => mockCache.store(
-          any(),
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-        ),
-      ).thenAnswer((_) async {});
+      _stubStoreSucceeds(mockCache);
 
       final UvApi api = UvApi(
         cache: mockCache,
@@ -181,12 +176,7 @@ void main() {
       // and completes via a cache hit before the first resolves.
       cacheValidForSecondCallOnward = true;
       final UvData cached = _makeData();
-      when(
-        () => mockCache.read(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-        ),
-      ).thenAnswer((_) async => cached);
+      when(() => _readInvocation(mockCache)).thenAnswer((_) async => cached);
 
       final UvApiFetchMeta cacheHitMeta = UvApiFetchMeta();
       final UvData cacheHitResult = await api.fetch(
@@ -213,19 +203,8 @@ void main() {
 
   group('UvApi.fetch -- cache miss', () {
     setUp(() {
-      when(
-        () => mockCache.isValid(
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-        ),
-      ).thenReturn(false);
-      when(
-        () => mockCache.store(
-          any(),
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-        ),
-      ).thenAnswer((_) async {});
+      _stubIsValid(mockCache, value: false);
+      _stubStoreSucceeds(mockCache);
     });
 
     test('fetches from network and stores result in cache', () async {
@@ -247,13 +226,7 @@ void main() {
       expect(result.currentUvi, 5.0);
       expect(meta.wasFromCache, isFalse);
       expect(meta.receivedNetwork200, isTrue);
-      verify(
-        () => mockCache.store(
-          any(),
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-        ),
-      ).called(1);
+      verify(() => _storeInvocation(mockCache)).called(1);
     });
 
     test('throws UvApiException on non-200 response', () async {
@@ -336,13 +309,7 @@ void main() {
 
     test('receivedNetwork200 is true even when Cache.store throws after a '
         'real 200 and successful parse', () async {
-      when(
-        () => mockCache.store(
-          any(),
-          lat: any(named: 'lat'),
-          lon: any(named: 'lon'),
-        ),
-      ).thenThrow(Exception('disk full'));
+      when(() => _storeInvocation(mockCache)).thenThrow(Exception('disk full'));
 
       final UvApi api = UvApi(
         cache: mockCache,

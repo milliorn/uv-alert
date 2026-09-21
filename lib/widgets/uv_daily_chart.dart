@@ -91,15 +91,26 @@ class _UvDailyChartState extends State<UvDailyChart>
   @override
   Duration get rebuildInterval => const Duration(minutes: 1);
 
-  @override
-  Widget build(BuildContext context) {
-    final UvData uvData = widget.uvData;
+  /// The location-local date last computed by [build], so [shouldRebuild]
+  /// can tell whether a tick actually crossed the local-day boundary.
+  /// `null` before the first build, so the first tick always rebuilds.
+  DateTime? _lastSeenTodayDate;
 
-    // A cached UvData payload can still be "fresh" (within Cache's 24h TTL)
-    // after its own local calendar day has passed -- e.g. fetched at 11pm,
-    // still valid at 11am the next day. Drop any daily entry whose
-    // location-local date is already in the past so a stale leading day is
-    // never mistaken for "today" by virtue of being the leftmost bar.
+  @override
+  bool shouldRebuild() => _todayDate(widget.uvData) != _lastSeenTodayDate;
+
+  /// Computes today's location-local calendar date for [uvData], as a
+  /// UTC-flagged midnight [DateTime] suitable for comparing against
+  /// [UvForecastEntry.time] values via `isBefore`.
+  ///
+  /// A cached UvData payload can still be "fresh" (within Cache's 24h TTL)
+  /// after its own local calendar day has passed (e.g. fetched at 11pm,
+  /// still valid at 11am the next day). Shared by [build] (to drop any daily
+  /// entry whose location-local date is already in the past, so a stale
+  /// leading day is never mistaken for "today" by virtue of being the
+  /// leftmost bar) and [shouldRebuild] (to skip a rebuild on the ~1439 of
+  /// 1440 per-minute ticks where the local day hasn't actually changed).
+  DateTime _todayDate(UvData uvData) {
     final DateTime today = toLocationLocal(
       DateTime.now().toUtc(),
       uvData.timezoneOffset,
@@ -109,7 +120,14 @@ class _UvDailyChartState extends State<UvDailyChart>
     // comparing a UTC-flagged instant against a device-local-flagged one
     // via isBefore compares absolute instants, not wall-clock fields --
     // silently shifting this boundary by the device's own UTC offset.
-    final DateTime todayDate = DateTime.utc(today.year, today.month, today.day);
+    return DateTime.utc(today.year, today.month, today.day);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final UvData uvData = widget.uvData;
+    final DateTime todayDate = _todayDate(uvData);
+    _lastSeenTodayDate = todayDate;
 
     // UvData.daily has no documented ordering guarantee, so sort explicitly
     // -- an out-of-order list would otherwise draw days out of sequence and
