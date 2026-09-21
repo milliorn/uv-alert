@@ -12,6 +12,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// is no way to construct one with a name but no coordinates or vice versa.
 typedef ManualLocation = ({String name, double lat, double lon});
 
+/// A cached UV payload together with the metadata `Cache` validates it
+/// against: the raw JSON `payload`, the ISO-8601 `at` timestamp it was
+/// fetched at, and the `location` key it was fetched for (see
+/// `Cache.locationKey`).
+///
+/// Always read and written as one JSON value, for the same reason as
+/// [ManualLocation]: `payload`, `at`, and `location` must never be read
+/// back as a combination that wasn't actually written together by the
+/// same `Cache.store` call.
+typedef CachedUvEntry = ({String payload, String at, String location});
+
 // Computed once; ThemeMode.values never changes at runtime.
 final Map<String, ThemeMode> _themeModeByName = ThemeMode.values.asNameMap();
 
@@ -44,10 +55,7 @@ class Preferences {
   static const String _keyManualLocation = '${_prefix}manual_location';
   static const String _keyNotificationsEnabled =
       '${_prefix}notifications_enabled';
-  static const String _keyCachedPayload = '${_prefix}cached_payload';
-  static const String _keyCachedPayloadAt = '${_prefix}cached_payload_at';
-  static const String _keyCachedPayloadLocation =
-      '${_prefix}cached_payload_location';
+  static const String _keyCachedEntry = '${_prefix}cached_entry';
 
   final SharedPreferences _prefs;
 
@@ -155,44 +163,60 @@ class Preferences {
   Future<void> setNotificationsEnabled({required bool value}) async =>
       _prefs.setBool(_keyNotificationsEnabled, value);
 
-  /// The raw JSON string of the cached UV payload, or `null` if not set.
-  String? get cachedPayload => _prefs.getString(_keyCachedPayload);
-
-  /// Stores the raw JSON [json] string as the cached UV payload.
-  Future<void> setCachedPayload(String json) async =>
-      _prefs.setString(_keyCachedPayload, json);
-
-  /// The ISO-8601 timestamp of when the payload was cached, or `null`.
-  String? get cachedPayloadAt => _prefs.getString(_keyCachedPayloadAt);
-
-  /// Stores the ISO-8601 [isoTimestamp] of when the payload was cached.
-  Future<void> setCachedPayloadAt(String isoTimestamp) async =>
-      _prefs.setString(_keyCachedPayloadAt, isoTimestamp);
-
-  /// The coordinates the cached payload was fetched for, as `Cache` encodes
-  /// them (see `Cache.locationKey`), or `null` if not set.
+  /// The cached UV entry (payload, fetch timestamp, and source location),
+  /// or `null` if none is stored.
   ///
-  /// Absent for any cache entry written before this field existed, so a
-  /// `null` here must be treated as a location mismatch (cache miss), not
-  /// as "no location to compare against."
-  String? get cachedPayloadLocation =>
-      _prefs.getString(_keyCachedPayloadLocation);
+  /// Returns `null` (a correctly-treated cache miss, not a crash) if the
+  /// stored JSON is missing a required field or otherwise malformed --
+  /// including any entry written before this field existed, back when the
+  /// payload, timestamp, and location were three independent keys with no
+  /// location at all.
+  CachedUvEntry? get cachedEntry {
+    final String? stored = _prefs.getString(_keyCachedEntry);
 
-  /// Stores the [locationKey] the cached payload was fetched for.
-  Future<void> setCachedPayloadLocation(String locationKey) async =>
-      _prefs.setString(_keyCachedPayloadLocation, locationKey);
+    if (stored == null) return null;
 
-  /// Removes the cached UV payload, its timestamp, and its location key.
+    try {
+      final Object? decoded = jsonDecode(stored);
+
+      if (decoded is! Map<String, Object?>) return null;
+
+      final Object? payload = decoded['payload'];
+      final Object? at = decoded['at'];
+      final Object? location = decoded['location'];
+
+      if (payload is! String || at is! String || location is! String) {
+        return null;
+      }
+
+      return (payload: payload, at: at, location: location);
+    } on FormatException {
+      return null;
+    }
+  }
+
+  /// Stores [entry] as a single JSON value, so its payload, fetch timestamp,
+  /// and source location can never be read back as a combination that
+  /// wasn't actually written together by the same `Cache.store` call --
+  /// including when two overlapping `Cache.store` calls race each other:
+  /// whichever call's write lands last, its own complete entry is what
+  /// persists, never a mix of one call's payload with another's location.
+  Future<void> setCachedEntry(CachedUvEntry entry) async {
+    final String encoded = jsonEncode(<String, Object>{
+      'payload': entry.payload,
+      'at': entry.at,
+      'location': entry.location,
+    });
+    await _prefs.setString(_keyCachedEntry, encoded);
+  }
+
+  /// Removes the cached UV entry.
   ///
-  /// Throws [StateError] if any key cannot be removed.
+  /// Throws [StateError] if the key cannot be removed.
   Future<void> clearCache() async {
-    final List<bool> results = await Future.wait(<Future<bool>>[
-      _prefs.remove(_keyCachedPayload),
-      _prefs.remove(_keyCachedPayloadAt),
-      _prefs.remove(_keyCachedPayloadLocation),
-    ]);
-
-    _assertAllRemoved(results, 'clearCache');
+    if (!await _prefs.remove(_keyCachedEntry)) {
+      throw StateError('clearCache: cached entry could not be removed');
+    }
   }
 
   /// Removes all preferences stored under the app prefix.

@@ -42,41 +42,28 @@ class Cache {
   /// Persists [data] to the cache for the given [lat]/[lon], keying expiry
   /// on the server-provided [UvData.fetchedAt] timestamp.
   ///
-  /// The location key acts as a commit marker for the payload/timestamp it
-  /// vouches for, so it is invalidated first and only written last, after
-  /// the payload and timestamp are durably persisted. Payload and
-  /// timestamp are independent SharedPreferences writes with no shared
-  /// transaction, so an interruption between them (process death, browser
-  /// tab close) could otherwise leave the location key matching a
-  /// payload/timestamp pair it was never actually written for, e.g. an
-  /// old payload left in place while a new location key lands, which
-  /// would make isValid/read serve stale data for the OLD location as if
-  /// it belonged to the new one. Every interruption point here instead
-  /// leaves the location key unset (never equal to a real `locationKey`
-  /// output, which is always `"lat,lon"`), so isValid fails closed and
-  /// the next isValid call simply misses and refetches.
+  /// Written as a single [Preferences.setCachedEntry] call so the payload,
+  /// timestamp, and location key can never be read back as a combination
+  /// that wasn't actually written together, whether the interruption is a
+  /// single call cut short (process death, browser tab close) or two
+  /// `store` calls racing each other (`UvApi.fetch` calls can overlap when
+  /// a location change supersedes an in-flight fetch, see the class doc
+  /// on `UvApiFetchMeta`). Either way, whichever write actually lands is a
+  /// complete, internally consistent entry; there is no window where a
+  /// reader can observe one call's payload paired with another's location.
   Future<void> store(
     UvData data, {
     required double lat,
     required double lon,
   }) async {
-    // '' rather than a `Preferences.clearCache`-style remove(): this must
-    // not throw (see clearCache's _assertAllRemoved), and '' compares
-    // unequal to any real locationKey output at every read site, same as
-    // absent entirely.
-    await _prefs.setCachedPayloadLocation('');
-
-    final String json = jsonEncode(data.toJson());
-
-    await Future.wait(<Future<void>>[
-      _prefs.setCachedPayload(json),
+    await _prefs.setCachedEntry((
+      payload: jsonEncode(data.toJson()),
       // Intentional: use server-provided fetchedAt, not DateTime.now().
       // If the server timestamp lags real time, the cache expires sooner than
       // cacheMaxAgeHours - acceptable given UV data changes infrequently.
-      _prefs.setCachedPayloadAt(data.fetchedAt.toIso8601String()),
-    ]);
-
-    await _prefs.setCachedPayloadLocation(locationKey(lat: lat, lon: lon));
+      at: data.fetchedAt.toIso8601String(),
+      location: locationKey(lat: lat, lon: lon),
+    ));
   }
 
   /// Returns the cached [UvData] for the given [lat]/[lon], or `null` if
@@ -85,16 +72,14 @@ class Cache {
   ///
   /// Clears the cache automatically on a corrupt or malformed payload.
   Future<UvData?> read({required double lat, required double lon}) async {
-    final String? raw = _prefs.cachedPayload;
+    final CachedUvEntry? entry = _prefs.cachedEntry;
 
-    if (raw == null) return null;
+    if (entry == null) return null;
 
-    if (_prefs.cachedPayloadLocation != locationKey(lat: lat, lon: lon)) {
-      return null;
-    }
+    if (entry.location != locationKey(lat: lat, lon: lon)) return null;
 
     try {
-      final Object? decoded = jsonDecode(raw);
+      final Object? decoded = jsonDecode(entry.payload);
 
       if (decoded is! Map<String, Object?>) {
         if (kDebugMode) debugPrint('Cache.read: unexpected payload shape');
@@ -113,16 +98,16 @@ class Cache {
 
   /// Whether the cached data has exceeded the [cacheMaxAgeHours]-hour TTL.
   ///
-  /// Returns `true` when no timestamp is stored or the timestamp is corrupt.
-  bool get isStale {
-    final String? cachedAt = _prefs.cachedPayloadAt;
+  /// Returns `true` when no entry is stored or its timestamp is corrupt.
+  bool get isStale => _isStale(_prefs.cachedEntry);
 
-    if (cachedAt == null) return true;
+  bool _isStale(CachedUvEntry? entry) {
+    if (entry == null) return true;
 
     final DateTime fetched;
 
     try {
-      fetched = DateTime.parse(cachedAt);
+      fetched = DateTime.parse(entry.at);
     } on FormatException {
       return true;
     }
@@ -132,17 +117,20 @@ class Cache {
         const Duration(hours: cacheMaxAgeHours);
   }
 
-  /// Whether no payload is currently stored.
-  bool get isEmpty => _prefs.cachedPayload == null;
+  /// Whether no entry is currently stored.
+  bool get isEmpty => _prefs.cachedEntry == null;
 
-  /// Whether the cache has a payload for the given [lat]/[lon], it is
-  /// within the TTL, and it was stored for those same coordinates.
+  /// Whether the cache has an entry for the given [lat]/[lon], it is within
+  /// the TTL, and it was stored for those same coordinates.
   ///
-  /// A cache entry written before location-keying existed has no stored
-  /// location at all, which compares unequal to any real [locationKey] and
-  /// so is correctly treated as a miss here, not a match.
-  bool isValid({required double lat, required double lon}) =>
-      !isEmpty &&
-      !isStale &&
-      _prefs.cachedPayloadLocation == locationKey(lat: lat, lon: lon);
+  /// A cache entry written before location-keying existed is unreadable as
+  /// a [CachedUvEntry] at all (see [Preferences.cachedEntry]), so it is
+  /// correctly treated as a miss here, not a match.
+  bool isValid({required double lat, required double lon}) {
+    final CachedUvEntry? entry = _prefs.cachedEntry;
+
+    return entry != null &&
+        !_isStale(entry) &&
+        entry.location == locationKey(lat: lat, lon: lon);
+  }
 }
