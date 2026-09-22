@@ -83,14 +83,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // uvProvider has no source-location field on UvData itself, and
     // UvNotifier deliberately keeps serving the previous location's cached
     // data (via stateOrNull) while a new fetch for a changed location is in
-    // flight, plus UvApi's cache has no per-location key, so a still-valid
-    // cache hit for the OLD location can outlive the fetch entirely. Same
-    // mitigation as DashboardHero's own uvDataMatchesLocation guard: record
-    // which location was current the last time uvData actually changed
-    // value, so a mismatch against the CURRENT location can be detected
-    // here and the charts suppressed rather than shown for the wrong place.
-    // See issue #136 for the proper fix (tagging UvData/cache entries with
-    // their source coordinates).
+    // flight, so a still-valid cache hit for the OLD location can outlive
+    // the fetch entirely even though Cache itself is now keyed per
+    // location (see Cache.locationKey). Same mitigation as DashboardHero's
+    // own uvDataMatchesLocation guard: record which location was current
+    // the last time uvData actually changed value, so a mismatch against
+    // the CURRENT location can be detected here and the charts suppressed
+    // rather than shown for the wrong place. See issue #136 for the
+    // remaining half of the proper fix (tagging UvData itself with its
+    // source coordinates, which would let this tracking workaround be
+    // replaced with a direct comparison).
     if (uvData != _lastSeenUvData) {
       _lastSeenUvData = uvData;
       _locationAtLastSeenUvData = location;

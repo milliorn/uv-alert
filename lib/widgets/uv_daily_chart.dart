@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:uvalert/models/uv_model.dart';
 import 'package:uvalert/utils/time_format.dart';
 import 'package:uvalert/utils/who_risk.dart';
+import 'package:uvalert/widgets/periodic_rebuild.dart';
 
 /// Number of days shown on the chart, left (current day) to right (last
 /// forecast day).
@@ -64,7 +65,13 @@ typedef _ChartPoint = ({
 /// the current day -- its leftmost position conveys that. Does not support
 /// tap/scrub interaction -- see the "Out of scope" note on the originating
 /// issue for that follow-up.
-class UvDailyChart extends StatelessWidget {
+///
+/// Rebuilds on a fixed interval (see [PeriodicRebuildMixin]) purely to
+/// re-read [DateTime.now()] against a fresh "today". Otherwise a chart
+/// left on-screen across the location-local day boundary, with no provider
+/// update to trigger a rebuild in between, would keep the leftmost bar's
+/// stale-day filtering pinned to whatever "today" was at the last build.
+class UvDailyChart extends StatefulWidget {
   /// Creates a [UvDailyChart] from up to [_daysShown] entries in
   /// [UvData.daily], chronologically sorted with stale (pre-today,
   /// location-local) entries dropped first.
@@ -76,12 +83,34 @@ class UvDailyChart extends StatelessWidget {
   final UvData uvData;
 
   @override
-  Widget build(BuildContext context) {
-    // A cached UvData payload can still be "fresh" (within Cache's 24h TTL)
-    // after its own local calendar day has passed -- e.g. fetched at 11pm,
-    // still valid at 11am the next day. Drop any daily entry whose
-    // location-local date is already in the past so a stale leading day is
-    // never mistaken for "today" by virtue of being the leftmost bar.
+  State<UvDailyChart> createState() => _UvDailyChartState();
+}
+
+class _UvDailyChartState extends State<UvDailyChart>
+    with PeriodicRebuildMixin<UvDailyChart> {
+  @override
+  Duration get rebuildInterval => const Duration(minutes: 1);
+
+  /// The location-local date last computed by [build], so [shouldRebuild]
+  /// can tell whether a tick actually crossed the local-day boundary.
+  /// `null` before the first build, so the first tick always rebuilds.
+  DateTime? _lastSeenTodayDate;
+
+  @override
+  bool shouldRebuild() => _todayDate(widget.uvData) != _lastSeenTodayDate;
+
+  /// Computes today's location-local calendar date for [uvData], as a
+  /// UTC-flagged midnight [DateTime] suitable for comparing against
+  /// [UvForecastEntry.time] values via `isBefore`.
+  ///
+  /// A cached UvData payload can still be "fresh" (within Cache's 24h TTL)
+  /// after its own local calendar day has passed (e.g. fetched at 11pm,
+  /// still valid at 11am the next day). Shared by [build] (to drop any daily
+  /// entry whose location-local date is already in the past, so a stale
+  /// leading day is never mistaken for "today" by virtue of being the
+  /// leftmost bar) and [shouldRebuild] (to skip a rebuild on the ~1439 of
+  /// 1440 per-minute ticks where the local day hasn't actually changed).
+  DateTime _todayDate(UvData uvData) {
     final DateTime today = toLocationLocal(
       DateTime.now().toUtc(),
       uvData.timezoneOffset,
@@ -91,7 +120,14 @@ class UvDailyChart extends StatelessWidget {
     // comparing a UTC-flagged instant against a device-local-flagged one
     // via isBefore compares absolute instants, not wall-clock fields --
     // silently shifting this boundary by the device's own UTC offset.
-    final DateTime todayDate = DateTime.utc(today.year, today.month, today.day);
+    return DateTime.utc(today.year, today.month, today.day);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final UvData uvData = widget.uvData;
+    final DateTime todayDate = _todayDate(uvData);
+    _lastSeenTodayDate = todayDate;
 
     // UvData.daily has no documented ordering guarantee, so sort explicitly
     // -- an out-of-order list would otherwise draw days out of sequence and

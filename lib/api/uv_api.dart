@@ -88,8 +88,8 @@ class UvApi {
     required String appVersion,
     UvApiFetchMeta? meta,
   }) async {
-    if (_cache.isValid) {
-      final UvData? cached = await _cache.read();
+    if (_cache.isValid(lat: lat, lon: lon)) {
+      final UvData? cached = await _cache.read(lat: lat, lon: lon);
 
       if (cached != null) {
         meta?.wasFromCache = true;
@@ -139,7 +139,7 @@ class UvApi {
       throw UvApiParseException('parse error: $e');
     }
 
-    await _cache.store(data);
+    await _cache.store(data, lat: lat, lon: lon);
     return data;
   }
 }

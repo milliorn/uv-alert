@@ -47,14 +47,9 @@ void main() {
       expect(prefs.uuid, isNull);
     });
 
-    test('cachedPayload is null when not set', () async {
+    test('cachedEntry is null when not set', () async {
       final Preferences prefs = await Preferences.load();
-      expect(prefs.cachedPayload, isNull);
-    });
-
-    test('cachedPayloadAt is null when not set', () async {
-      final Preferences prefs = await Preferences.load();
-      expect(prefs.cachedPayloadAt, isNull);
+      expect(prefs.cachedEntry, isNull);
     });
 
     test('manualLocation is null when not set', () async {
@@ -139,23 +134,54 @@ void main() {
       expect(prefs.notificationsEnabled, isTrue);
     });
 
-    test('setCachedPayload and setCachedPayloadAt store values', () async {
+    test('setCachedEntry stores and retrieves payload, timestamp, and '
+        'location together', () async {
       final Preferences prefs = await Preferences.load();
-      await prefs.setCachedPayload('{"foo": 1}');
-      await prefs.setCachedPayloadAt('2023-11-14T12:00:00.000Z');
-      expect(prefs.cachedPayload, '{"foo": 1}');
-      expect(prefs.cachedPayloadAt, '2023-11-14T12:00:00.000Z');
+      await prefs.setCachedEntry((
+        payload: '{"foo": 1}',
+        at: '2023-11-14T12:00:00.000Z',
+        location: '40.7128,-74.006',
+      ));
+      expect(prefs.cachedEntry, (
+        payload: '{"foo": 1}',
+        at: '2023-11-14T12:00:00.000Z',
+        location: '40.7128,-74.006',
+      ));
     });
+
+    test(
+      'cachedEntry returns null when the stored JSON is malformed',
+      () async {
+        SharedPreferences.setMockInitialValues(<String, Object>{
+          'flutter.uvalert_cached_entry': 'not valid json',
+        });
+        final Preferences prefs = await Preferences.load();
+        expect(prefs.cachedEntry, isNull);
+      },
+    );
+
+    test(
+      'cachedEntry returns null when the stored JSON is missing a field',
+      () async {
+        SharedPreferences.setMockInitialValues(<String, Object>{
+          'flutter.uvalert_cached_entry': '{"payload": "{}"}',
+        });
+        final Preferences prefs = await Preferences.load();
+        expect(prefs.cachedEntry, isNull);
+      },
+    );
   });
 
   group('Preferences clearCache', () {
-    test('clearCache removes cached payload and timestamp', () async {
+    test('clearCache removes the cached entry', () async {
       final Preferences prefs = await Preferences.load();
-      await prefs.setCachedPayload('data');
-      await prefs.setCachedPayloadAt('2023-11-14T12:00:00.000Z');
+      await prefs.setCachedEntry((
+        payload: 'data',
+        at: '2023-11-14T12:00:00.000Z',
+        location: '40.7128,-74.006',
+      ));
       await prefs.clearCache();
-      expect(prefs.cachedPayload, isNull);
-      expect(prefs.cachedPayloadAt, isNull);
+      expect(prefs.cachedEntry, isNull);
     });
 
     test('clearCache does not affect other preferences', () async {
@@ -195,8 +221,11 @@ void main() {
         lon: -71.0589,
       ));
       await prefs.setNotificationsEnabled(value: true);
-      await prefs.setCachedPayload('data');
-      await prefs.setCachedPayloadAt('2023-11-14T12:00:00.000Z');
+      await prefs.setCachedEntry((
+        payload: 'data',
+        at: '2023-11-14T12:00:00.000Z',
+        location: '40.7128,-74.006',
+      ));
       await prefs.setFirstLaunchDone();
 
       await prefs.clearAll();
@@ -206,8 +235,7 @@ void main() {
       expect(prefs.useGps, isTrue);
       expect(prefs.manualLocation, isNull);
       expect(prefs.notificationsEnabled, isFalse);
-      expect(prefs.cachedPayload, isNull);
-      expect(prefs.cachedPayloadAt, isNull);
+      expect(prefs.cachedEntry, isNull);
       expect(prefs.isFirstLaunch, isTrue);
     });
   });
