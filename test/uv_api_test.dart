@@ -115,6 +115,28 @@ void main() {
       verifyNever(() => _storeInvocation(mockCache));
     });
 
+    test('forwards the exact requested coordinates to isValid and read, '
+        'not just any coordinates', () async {
+      final UvData cached = _makeData();
+      _stubIsValid(mockCache, value: true);
+      when(() => _readInvocation(mockCache)).thenAnswer((_) async => cached);
+
+      final UvApi api = UvApi(
+        cache: mockCache,
+        proxyBaseUrl: 'http://example.com',
+      );
+
+      await api.fetch(
+        lat: 40.7,
+        lon: -74,
+        uuid: 'uuid-1',
+        appVersion: 'test-version',
+      );
+
+      verify(() => mockCache.isValid(lat: 40.7, lon: -74)).called(1);
+      verify(() => mockCache.read(lat: 40.7, lon: -74)).called(1);
+    });
+
     test('recovers from corrupt cache: falls through to network '
         'when isValid but read() returns null', () async {
       _stubIsValid(mockCache, value: true);
@@ -227,6 +249,27 @@ void main() {
       expect(meta.wasFromCache, isFalse);
       expect(meta.receivedNetwork200, isTrue);
       verify(() => _storeInvocation(mockCache)).called(1);
+    });
+
+    test('forwards the exact requested coordinates to isValid and store, '
+        'not just any coordinates', () async {
+      final UvApi api = UvApi(
+        cache: mockCache,
+        proxyBaseUrl: 'http://example.com',
+        httpClient: mockClientReturning(200, jsonEncode(_apiJson())),
+      );
+
+      await api.fetch(
+        lat: 40.7,
+        lon: -74,
+        uuid: 'uuid-1',
+        appVersion: 'test-version',
+      );
+
+      verify(() => mockCache.isValid(lat: 40.7, lon: -74)).called(1);
+      verify(
+        () => mockCache.store(any(), lat: 40.7, lon: -74),
+      ).called(1);
     });
 
     test('throws UvApiException on non-200 response', () async {
