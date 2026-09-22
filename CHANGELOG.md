@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.26.1](https://github.com/milliorn/uv-alert/compare/v1.26.0...v1.26.1) (2026-09-22)
+
+
+### Bug Fixes
+
+* **dashboard:** key UV cache by location and rebuild daily chart on a timer ([#150](https://github.com/milliorn/uv-alert/issues/150)) ([e3297e1](https://github.com/milliorn/uv-alert/commit/e3297e1deb9a4f1a2b817949c82baafacba6c608))
+
 ## [1.26.0](https://github.com/milliorn/uv-alert/compare/v1.25.1...v1.26.0) (2026-09-20)
 
 
